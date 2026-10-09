@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Search, Star, X } from "lucide-react";
 import { searchTmdb, getTrending } from "../services/tmdb";
+import { BorderBeam } from "../components/ui/border-beam";
 
 export function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -118,43 +119,47 @@ export function HomePage() {
             What did you watch?
           </h1>
 
-          {/* Centered pill search bar with subtle 5% radial mint glow */}
+          {/* Centered pill search bar with animated BorderBeam */}
           <div className="relative w-full max-w-[620px] group">
-            {/* Faint radial mint glow behind the input */}
-            <div className="absolute -inset-1 bg-[#61F1AC] opacity-[0.05] group-hover:opacity-[0.08] focus-within:opacity-[0.14] blur-xl rounded-full transition-opacity duration-300 pointer-events-none" />
+            <BorderBeam
+              size="md"
+              colorVariant="colorful"
+              borderRadius={27}
+              className="w-full rounded-full"
+            >
+              <div className="relative w-full h-[54px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all">
+                <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                  <Search size={18} className="text-[#61F1AC] shrink-0" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder="Search any movie or series to rate..."
+                    className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]"
+                  />
+                </div>
 
-            <div className="relative w-full h-[54px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all">
-              <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                <Search size={18} className="text-[#61F1AC] shrink-0" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Search any movie or series to rate..."
-                  className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]"
-                />
+                {/* Clear button or shortcut chip */}
+                {isSearchActive ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSearchChange("");
+                      searchInputRef.current?.focus();
+                    }}
+                    className="inline-flex items-center gap-1 text-xs text-[#7A7A7A] hover:text-[#F5F5F5] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] cursor-pointer transition-colors"
+                  >
+                    <X size={14} />
+                    <span>Clear</span>
+                  </button>
+                ) : (
+                  <kbd className="inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors">
+                    /
+                  </kbd>
+                )}
               </div>
-
-              {/* Clear button or shortcut chip */}
-              {isSearchActive ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSearchChange("");
-                    searchInputRef.current?.focus();
-                  }}
-                  className="flex items-center gap-1 text-xs text-[#7A7A7A] hover:text-[#F5F5F5] px-2 py-1 rounded cursor-pointer transition-colors"
-                >
-                  <X size={14} />
-                  <span>Clear</span>
-                </button>
-              ) : (
-                <kbd className="px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-[#141414] border border-[#1C1C1C] rounded group-hover:text-[#F5F5F5] transition-colors">
-                  /
-                </kbd>
-              )}
-            </div>
+            </BorderBeam>
           </div>
         </section>
 
@@ -183,10 +188,10 @@ export function HomePage() {
                       key={filter}
                       type="button"
                       onClick={() => setActiveFilter(filter)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
                         isActive
-                          ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50"
-                          : "text-[#7A7A7A] hover:text-[#F5F5F5] border border-[#1C1C1C]"
+                          ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50 shadow-[0_0_12px_rgba(97,241,172,0.15)]"
+                          : "text-[#7A7A7A] bg-white/[0.04] border border-white/[0.05] hover:text-[#F5F5F5] hover:border-white/10"
                       }`}
                     >
                       {filter}

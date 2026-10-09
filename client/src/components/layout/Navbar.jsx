@@ -153,11 +153,11 @@ export function Navbar({ forceBooksOpen = false }) {
         <div className="flex items-center">
           <button
             type="button"
-            className="w-9 h-9 rounded-full border border-[#1C1C1C] overflow-hidden p-0.5 hover:border-[#61F1AC]/40 transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full overflow-hidden p-0.5 cursor-pointer"
             title="User Profile"
           >
             <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+              src="https://imgs.search.brave.com/NmPZjePZioE_lCWEwu7wkqrQwsFRs9j0toSsN3hn8gY/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9zdGF0/aWMudmVjdGVlenku/Y29tL3N5c3RlbS9y/ZXNvdXJjZXMvdGh1/bWJuYWlscy8wNTMv/NTQ3LzEyMC9zbWFs/bC9nZW5lcmljLXVz/ZXItcHJvZmlsZS1h/dmF0YXItZm9yLW9u/bGluZS1wbGF0Zm9y/bXMtYW5kLXNvY2lh/bC1tZWRpYS12ZWN0/b3IuanBn"
               alt="Avatar"
               className="w-full h-full object-cover rounded-full"
             />
