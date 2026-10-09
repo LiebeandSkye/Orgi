@@ -1,1 +1,69 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-oled: #000000;
+    --card-surface: #0B0B0B;
+    --card-hover: #141414;
+    --border-hairline: #1C1C1C;
+    --text-primary: #F5F5F5;
+    --text-secondary: #B5B5B5;
+    --text-review: #D0D0D0;
+    --text-muted: #7A7A7A;
+    --accent-mint: #61F1AC;
+  }
+
+  body {
+    background-color: #000000;
+    color: #F5F5F5;
+    font-family: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: -0.015em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom utility classes */
+.font-tabular {
+  font-family: "Geist Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.mint-glow-subtle {
+  box-shadow: 0 0 60px -10px rgba(97, 241, 172, 0.05);
+}
+
+.mint-glow-active {
+  box-shadow: 0 0 30px -5px rgba(97, 241, 172, 0.12);
+}
+
+/* Hide scrollbar for cast carousel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Shimmer animation for dark skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #0e0e0e 0%,
+    #181818 50%,
+    #0e0e0e 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite ease-in-out;
+}
