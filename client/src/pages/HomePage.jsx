@@ -1,22 +1,22 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Search, Star, X } from "lucide-react";
-import { HOME_TRENDING_ITEMS, DUNE_SEARCH_DATA } from "../data/mockData";
-import { searchTmdb, getTrending, getTmdbImageUrl } from "../services/tmdb";
+import { searchTmdb, getTrending } from "../services/tmdb";
 
 export function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
-  const [hoveredCardId, setHoveredCardId] = useState("interstellar");
-  const [trendingItems, setTrendingItems] = useState(HOME_TRENDING_ITEMS);
-  const [tmdbResults, setTmdbResults] = useState([]);
+  const [hoveredCardId, setHoveredCardId] = useState(null);
+  const [trendingItems, setTrendingItems] = useState([]);
+  const [isLoadingTrending, setIsLoadingTrending] = useState(true);
+  const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchInputRef = useRef(null);
 
   const handleSearchChange = (val) => {
     setSearchQuery(val);
     if (!val.trim()) {
-      setTmdbResults([]);
+      setSearchResults([]);
       setIsSearching(false);
     }
   };
@@ -41,64 +41,35 @@ export function HomePage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Live TMDB Trending update
+  // Fetch actual live TMDB Trending items on mount
   useEffect(() => {
     let mounted = true;
-    async function loadTmdbData() {
+    async function loadLiveTrending() {
+      setIsLoadingTrending(true);
       try {
-        const liveTrending = await getTrending("movie", "week");
-        if (mounted && liveTrending?.results && liveTrending.results.length >= 6) {
-          const updated = HOME_TRENDING_ITEMS.map((item) => {
-            const match = liveTrending.results.find(
-              (r) => r.id === item.tmdbId || r.title?.toLowerCase() === item.title.toLowerCase()
-            );
-            if (match) {
-              return {
-                ...item,
-                rating: match.vote_average ? match.vote_average.toFixed(1) : item.rating,
-                poster: match.poster_path ? getTmdbImageUrl(match.poster_path, "w780") : item.poster
-              };
-            }
-            return item;
-          });
-          setTrendingItems(updated);
+        const live = await getTrending("all", "week");
+        if (mounted && live?.results && live.results.length > 0) {
+          setTrendingItems(live.results.slice(0, 12));
+          if (live.results[0]) {
+            setHoveredCardId(live.results[0].id);
+          }
         }
-      } catch {
-        // Fall back gracefully
+      } catch (err) {
+        console.error("Failed to fetch live trending from TMDB:", err);
+      } finally {
+        if (mounted) setIsLoadingTrending(false);
       }
     }
-    loadTmdbData();
+
+    loadLiveTrending();
     return () => {
       mounted = false;
     };
   }, []);
 
-  // 1. Instant local matches across trending and Dune catalog
-  const localMatches = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return [];
-
-    const localPool = [
-      ...HOME_TRENDING_ITEMS,
-      ...DUNE_SEARCH_DATA.results.map((d) => ({
-        id: d.id,
-        title: d.title,
-        year: d.year,
-        rating: d.score,
-        poster: d.poster,
-        type: d.type,
-        route: d.type === "SERIES" ? "/series/breaking-bad" : `/movie/${d.id}`
-      }))
-    ];
-
-    return localPool.filter((item) =>
-      item.title.toLowerCase().includes(q)
-    );
-  }, [searchQuery]);
-
-  // 2. Real-time TMDB query debounced 200ms
+  // Real-time live TMDB Search debounced 200ms
   useEffect(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     if (!q) return;
 
     let mounted = true;
@@ -106,20 +77,11 @@ export function HomePage() {
       setIsSearching(true);
       try {
         const tmdbData = await searchTmdb(q);
-        if (mounted && tmdbData?.results && tmdbData.results.length > 0) {
-          const formatted = tmdbData.results.map((item) => ({
-            id: item.id,
-            title: item.title,
-            year: item.year,
-            rating: item.score,
-            poster: item.poster,
-            type: item.type || "MOVIE",
-            route: item.type === "SERIES" ? `/series/${item.id}` : `/movie/${item.id}`
-          }));
-          setTmdbResults(formatted);
+        if (mounted && tmdbData?.results) {
+          setSearchResults(tmdbData.results);
         }
-      } catch {
-        // Fall back gracefully
+      } catch (err) {
+        console.error("Failed to search TMDB:", err);
       } finally {
         if (mounted) setIsSearching(false);
       }
@@ -131,20 +93,6 @@ export function HomePage() {
     };
   }, [searchQuery]);
 
-  // Combined search results
-  const searchResults = useMemo(() => {
-    const seen = new Set();
-    const combined = [];
-    for (const item of [...localMatches, ...tmdbResults]) {
-      const key = item.title.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        combined.push(item);
-      }
-    }
-    return combined;
-  }, [localMatches, tmdbResults]);
-
   const isSearchActive = searchQuery.trim().length > 0;
 
   // Filter search results by category
@@ -152,7 +100,6 @@ export function HomePage() {
     if (activeFilter === "All") return true;
     if (activeFilter === "Movies") return item.type === "MOVIE";
     if (activeFilter === "Series") return item.type === "SERIES";
-    if (activeFilter === "Books") return item.type === "BOOK";
     return true;
   });
 
@@ -163,7 +110,7 @@ export function HomePage() {
         <section className="flex flex-col items-center justify-center pt-8 pb-12 text-center">
           {/* Small tracked uppercase label "MOVIES" */}
           <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
-            MOVIES
+            MOVIES &amp; SERIES
           </span>
 
           {/* Large light-weight white headline */}
@@ -184,7 +131,7 @@ export function HomePage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Search a movie to rate..."
+                  placeholder="Search any movie or series to rate..."
                   className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]"
                 />
               </div>
@@ -249,22 +196,38 @@ export function HomePage() {
               </div>
             </div>
 
-            {/* Results Grid or Empty State */}
-            {filteredResults.length > 0 ? (
+            {/* Results Grid or Skeleton Loader */}
+            {isSearching ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((idx) => (
+                  <div key={idx} className="flex flex-col gap-2">
+                    <div className="aspect-[2/3] w-full rounded-[12px] bg-[#0E0E0E] animate-pulse border border-[#1C1C1C]" />
+                    <div className="h-4 w-3/4 rounded bg-[#161616] animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-[#161616] animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredResults.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {filteredResults.map((item) => (
                   <Link
-                    key={item.id}
+                    key={`${item.type}-${item.id}`}
                     to={item.route}
                     className="group flex flex-col cursor-pointer transition-all"
                   >
                     <div className="relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] border border-[#1C1C1C] group-hover:border-[#61F1AC]/60 group-hover:shadow-[0_0_20px_rgba(97,241,172,0.12)] transition-all duration-300">
-                      <img
-                        src={item.poster}
-                        alt={item.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
-                      />
+                      {item.poster ? (
+                        <img
+                          src={item.poster}
+                          alt={item.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-[#7A7A7A] p-4 text-center">
+                          {item.title}
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
 
@@ -274,35 +237,25 @@ export function HomePage() {
                       </span>
                       <div className="flex items-center justify-between mt-1 text-xs">
                         <span className="text-[#7A7A7A] font-tabular">
-                          {item.year || "2024"}
+                          {item.year || "—"}
                         </span>
                         <div className="flex items-center gap-1 text-[#61F1AC] font-medium font-tabular">
                           <Star size={11} className="fill-[#61F1AC]" />
-                          <span>{item.rating || "8.0"}</span>
+                          <span>{item.score || "—"}</span>
                         </div>
                       </div>
                     </div>
                   </Link>
                 ))}
               </div>
-            ) : isSearching ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                {[1, 2, 3, 4, 5, 6].map((idx) => (
-                  <div key={idx} className="flex flex-col gap-2">
-                    <div className="aspect-[2/3] w-full rounded-[12px] skeleton-shimmer border border-[#1C1C1C]" />
-                    <div className="h-4 w-3/4 rounded skeleton-shimmer" />
-                    <div className="h-3 w-1/2 rounded skeleton-shimmer" />
-                  </div>
-                ))}
-              </div>
             ) : (
               <div className="py-16 text-center">
                 <p className="text-sm text-[#7A7A7A] font-light">
-                  No titles found matching "{searchQuery}".
+                  No titles found matching "{searchQuery}" on TMDB.
                 </p>
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => handleSearchChange("")}
                   className="mt-4 px-4 py-1.5 rounded-full text-xs text-[#61F1AC] border border-[#61F1AC]/40 hover:bg-[#61F1AC]/10 transition-colors cursor-pointer"
                 >
                   Clear search &amp; show trending
@@ -311,63 +264,84 @@ export function HomePage() {
             )}
           </section>
         ) : (
-          /* DEFAULT: TRENDING THIS WEEK */
+          /* DEFAULT: LIVE TMDB TRENDING THIS WEEK */
           <section className="mt-4 animate-in fade-in duration-200">
             {/* Section Header */}
-            <div className="mb-5">
+            <div className="mb-5 flex items-center justify-between">
               <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]">
-                TRENDING THIS WEEK
+                TRENDING THIS WEEK ON TMDB
+              </span>
+              <span className="text-xs text-[#7A7A7A] font-mono">
+                Live TMDB Feed
               </span>
             </div>
 
-            {/* 6-Column Grid of Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {trendingItems.map((item) => {
-                const isSelected = hoveredCardId === item.id;
+            {/* 6-Column Grid of Live Cards or Skeletons */}
+            {isLoadingTrending ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((idx) => (
+                  <div key={idx} className="flex flex-col gap-2">
+                    <div className="aspect-[2/3] w-full rounded-[12px] bg-[#0E0E0E] animate-pulse border border-[#1C1C1C]" />
+                    <div className="h-4 w-3/4 rounded bg-[#161616] animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-[#161616] animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                {trendingItems.map((item) => {
+                  const isSelected = hoveredCardId === item.id;
 
-                return (
-                  <Link
-                    key={item.id}
-                    to={item.route}
-                    onMouseEnter={() => setHoveredCardId(item.id)}
-                    className="group flex flex-col cursor-pointer transition-all"
-                  >
-                    {/* Poster Thumbnail */}
-                    <div
-                      className={`relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] transition-all duration-300 ${
-                        isSelected
-                          ? "border border-[#61F1AC] shadow-[0_0_24px_rgba(97,241,172,0.14)]"
-                          : "border border-[#1C1C1C] group-hover:border-[#61F1AC]/50"
-                      }`}
+                  return (
+                    <Link
+                      key={`${item.type}-${item.id}`}
+                      to={item.route}
+                      onMouseEnter={() => setHoveredCardId(item.id)}
+                      className="group flex flex-col cursor-pointer transition-all"
                     >
-                      <img
-                        src={item.poster}
-                        alt={item.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
+                      {/* Poster Thumbnail */}
+                      <div
+                        className={`relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] transition-all duration-300 ${
+                          isSelected
+                            ? "border border-[#61F1AC] shadow-[0_0_24px_rgba(97,241,172,0.14)]"
+                            : "border border-[#1C1C1C] group-hover:border-[#61F1AC]/50"
+                        }`}
+                      >
+                        {item.poster ? (
+                          <img
+                            src={item.poster}
+                            alt={item.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-[#7A7A7A] p-4 text-center">
+                            {item.title}
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
 
-                    {/* Card Metadata */}
-                    <div className="mt-3 flex flex-col">
-                      <span className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white transition-colors">
-                        {item.title}
-                      </span>
-                      <div className="flex items-center justify-between mt-1 text-xs">
-                        <span className="text-[#7A7A7A] font-tabular">
-                          {item.year}
+                      {/* Movie Meta */}
+                      <div className="mt-3 flex flex-col">
+                        <span className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white transition-colors">
+                          {item.title}
                         </span>
-                        <div className="flex items-center gap-1 text-[#61F1AC] font-medium font-tabular">
-                          <Star size={11} className="fill-[#61F1AC]" />
-                          <span>{item.rating}</span>
+                        <div className="flex items-center justify-between mt-1 text-xs">
+                          <span className="text-[#7A7A7A] font-tabular">
+                            {item.year || "—"}
+                          </span>
+                          <div className="flex items-center gap-1 text-[#61F1AC] font-medium font-tabular">
+                            <Star size={11} className="fill-[#61F1AC]" />
+                            <span>{item.rating || "—"}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
       </div>

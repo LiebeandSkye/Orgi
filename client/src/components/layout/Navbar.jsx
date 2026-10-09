@@ -149,7 +149,7 @@ export function Navbar({ forceBooksOpen = false }) {
           </div>
         </nav>
 
-        {/* Right side: Round User Avatar (search button removed as requested) */}
+        {/* Right side: User Avatar */}
         <div className="flex items-center">
           <button
             type="button"

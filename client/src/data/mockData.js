@@ -1,4 +1,4 @@
-// mockData.js — High-fidelity curated data for the "rate." cinematic platform
+// mockData.js — Books / literature data for the "rate." platform
 
 export const HOME_TRENDING_ITEMS = [
   {
@@ -13,6 +13,28 @@ export const HOME_TRENDING_ITEMS = [
     isActive: true
   },
   {
+    id: "dune-part-two",
+    tmdbId: 693134,
+    title: "Dune: Part Two",
+    year: "2024",
+    rating: "8.5",
+    poster: "https://image.tmdb.org/t/p/w780/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
+    type: "MOVIE",
+    route: "/movie/dune-part-two",
+    isActive: false
+  },
+  {
+    id: "oppenheimer",
+    tmdbId: 872585,
+    title: "Oppenheimer",
+    year: "2023",
+    rating: "8.1",
+    poster: "https://image.tmdb.org/t/p/w780/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+    type: "MOVIE",
+    route: "/movie/oppenheimer",
+    isActive: false
+  },
+  {
     id: "breaking-bad",
     tmdbId: 1396,
     title: "Breaking Bad",
@@ -24,14 +46,69 @@ export const HOME_TRENDING_ITEMS = [
     isActive: false
   },
   {
-    id: "dune-2021",
-    tmdbId: 438631,
-    title: "Dune",
-    year: "2021",
-    rating: "8.0",
-    poster: "https://image.tmdb.org/t/p/w780/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+    id: "inception",
+    tmdbId: 27205,
+    title: "Inception",
+    year: "2010",
+    rating: "8.4",
+    poster: "https://image.tmdb.org/t/p/w780/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
     type: "MOVIE",
-    route: "/movie/dune",
+    route: "/movie/inception",
+    isActive: false
+  },
+  {
+    id: "the-dark-knight",
+    tmdbId: 155,
+    title: "The Dark Knight",
+    year: "2008",
+    rating: "8.5",
+    poster: "https://image.tmdb.org/t/p/w780/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+    type: "MOVIE",
+    route: "/movie/the-dark-knight",
+    isActive: false
+  },
+  {
+    id: "better-call-saul",
+    tmdbId: 60059,
+    title: "Better Call Saul",
+    year: "2015",
+    rating: "8.7",
+    poster: "https://image.tmdb.org/t/p/w780/fC2HDm5t0kHsf7TmFEeOx8q2umH.jpg",
+    type: "SERIES",
+    route: "/series/better-call-saul",
+    isActive: false
+  },
+  {
+    id: "parasite",
+    tmdbId: 496243,
+    title: "Parasite",
+    year: "2019",
+    rating: "8.5",
+    poster: "https://image.tmdb.org/t/p/w780/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+    type: "MOVIE",
+    route: "/movie/parasite",
+    isActive: false
+  },
+  {
+    id: "severance",
+    tmdbId: 95396,
+    title: "Severance",
+    year: "2022",
+    rating: "8.4",
+    poster: "https://image.tmdb.org/t/p/w780/p2fCFqHk1Y1f6bZ2qg700u6U2B7.jpg",
+    type: "SERIES",
+    route: "/series/severance",
+    isActive: false
+  },
+  {
+    id: "spider-man-across-the-spider-verse",
+    tmdbId: 569094,
+    title: "Across the Spider-Verse",
+    year: "2023",
+    rating: "8.4",
+    poster: "https://image.tmdb.org/t/p/w780/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+    type: "MOVIE",
+    route: "/movie/spider-man-across-the-spider-verse",
     isActive: false
   },
   {
@@ -46,25 +123,14 @@ export const HOME_TRENDING_ITEMS = [
     isActive: false
   },
   {
-    id: "the-batman",
-    tmdbId: 414906,
-    title: "The Batman",
-    year: "2022",
-    rating: "8.2",
-    poster: "https://image.tmdb.org/t/p/w780/74xTEgt7R36Fpooo50r9T25onhq.jpg",
-    type: "MOVIE",
-    route: "/movie/the-batman",
-    isActive: false
-  },
-  {
-    id: "spirited-away",
-    tmdbId: 129,
-    title: "Spirited Away",
-    year: "2001",
+    id: "the-last-of-us",
+    tmdbId: 100088,
+    title: "The Last of Us",
+    year: "2023",
     rating: "8.6",
-    poster: "https://image.tmdb.org/t/p/w780/393mhKxAvOhgn0f3vRndURqaipG.jpg",
-    type: "MOVIE",
-    route: "/movie/spirited-away",
+    poster: "https://image.tmdb.org/t/p/w780/uKvVjF013yt44bNXk2gV89O80gW.jpg",
+    type: "SERIES",
+    route: "/series/the-last-of-us",
     isActive: false
   }
 ];

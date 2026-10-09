@@ -1,58 +1,60 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Star, Plus, Share2, ChevronDown, ThumbsUp, Reply, MoreHorizontal } from "lucide-react";
-import { BREAKING_BAD_DATA } from "../data/mockData";
 import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
 
 export function BreakingBadPage() {
-  const [seriesData, setSeriesData] = useState(BREAKING_BAD_DATA);
+  const { id } = useParams();
+  const [seriesData, setSeriesData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Episodes");
   const [selectedSeason, setSelectedSeason] = useState("Season 1");
   const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false);
   const [hoveredEpisodeIndex, setHoveredEpisodeIndex] = useState(0); // Row 0 shows hover state by default as requested
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
-  const [episodesList, setEpisodesList] = useState(BREAKING_BAD_DATA.episodes);
+  const [episodesList, setEpisodesList] = useState([]);
   const [newThought, setNewThought] = useState("");
   const [selectedStars, setSelectedStars] = useState(0);
   const [likedReviews, setLikedReviews] = useState({});
 
-  const seasonsList = ["Season 1", "Season 2", "Season 3", "Season 4", "Season 5"];
-
   useEffect(() => {
     let mounted = true;
     async function loadTmdbSeries() {
+      setIsLoading(true);
       try {
-        const live = await getSeriesDetails(1396);
+        const live = await getSeriesDetails(id || 1396);
         if (mounted && live) {
-          setSeriesData((prev) => ({
-            ...prev,
-            ...live,
-            details: live.details || prev.details,
-            cast: live.cast || prev.cast,
-            reviews: live.reviews || prev.reviews
-          }));
+          setSeriesData(live);
           if (live.episodes && live.episodes.length > 0) {
             setEpisodesList(live.episodes);
           }
+          if (live.seasons && live.seasons.length > 0) {
+            setSelectedSeason(live.seasons[0]);
+          }
         }
-      } catch {
-        // Fall back to curated data
+      } catch (err) {
+        console.error("Failed to load TMDB series:", err);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     }
     loadTmdbSeries();
+
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [id]);
 
   const handleSeasonChange = async (season) => {
     setSelectedSeason(season);
     setSeasonDropdownOpen(false);
     const seasonNum = parseInt(season.replace("Season ", ""), 10) || 1;
+    const seriesTmdbId = seriesData?.tmdbId || 1396;
     try {
-      const liveEps = await getSeasonEpisodes(1396, seasonNum);
+      const liveEps = await getSeasonEpisodes(seriesTmdbId, seasonNum);
       if (liveEps && liveEps.length > 0) {
         setEpisodesList(liveEps);
       }
@@ -67,6 +69,30 @@ export function BreakingBadPage() {
       [reviewId]: !prev[reviewId]
     }));
   };
+
+  const seasonsList = seriesData?.seasons?.length > 0
+    ? seriesData.seasons
+    : ["Season 1", "Season 2", "Season 3", "Season 4", "Season 5"];
+
+  if (isLoading || !seriesData) {
+    return (
+      <div className="min-h-screen bg-[#000000] text-[#F5F5F5] select-none pt-12 pb-24">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex flex-col md:flex-row gap-12">
+          <div className="w-[320px] aspect-[2/3] rounded-[12px] bg-[#0E0E0E] animate-pulse border border-[#1C1C1C] shrink-0 hidden md:block" />
+          <div className="flex-1 flex flex-col gap-4 pt-4">
+            <div className="w-20 h-4 rounded bg-[#161616] animate-pulse" />
+            <div className="w-3/4 h-12 rounded bg-[#161616] animate-pulse" />
+            <div className="w-1/2 h-5 rounded bg-[#161616] animate-pulse" />
+            <div className="flex items-center gap-6 mt-4">
+              <div className="w-24 h-24 rounded-full bg-[#161616] animate-pulse" />
+              <div className="w-20 h-20 rounded-full bg-[#161616] animate-pulse" />
+            </div>
+            <div className="w-full h-24 rounded bg-[#161616] animate-pulse mt-4" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24 select-none">

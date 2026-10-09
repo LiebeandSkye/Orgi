@@ -3,8 +3,12 @@ import express from "express";
 const router = express.Router();
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
+function getApiKey() {
+  return process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY || "b4ff80e1e0be756a6ca3ca60510e1231";
+}
+
 async function fetchTmdbApi(endpoint, params = {}) {
-  const apiKey = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
     throw new Error("TMDB_API_KEY not configured on server");
   }
@@ -22,7 +26,7 @@ async function fetchTmdbApi(endpoint, params = {}) {
 // GET /api/tmdb/trending
 router.get("/trending", async (req, res, next) => {
   try {
-    const { type = "movie", window = "week" } = req.query;
+    const { type = "all", window = "week" } = req.query;
     const data = await fetchTmdbApi(`/trending/${type}/${window}`);
     res.json({ success: true, data });
   } catch (err) {
@@ -35,7 +39,7 @@ router.get("/movie/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const data = await fetchTmdbApi(`/movie/${id}`, {
-      append_to_response: "credits,reviews,similar"
+      append_to_response: "credits,reviews,release_dates,similar"
     });
     res.json({ success: true, data });
   } catch (err) {
@@ -48,8 +52,19 @@ router.get("/tv/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const data = await fetchTmdbApi(`/tv/${id}`, {
-      append_to_response: "credits,season/1"
+      append_to_response: "credits,reviews,season/1"
     });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/tmdb/tv/:id/season/:season
+router.get("/tv/:id/season/:season", async (req, res, next) => {
+  try {
+    const { id, season } = req.params;
+    const data = await fetchTmdbApi(`/tv/${id}/season/${season}`);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -60,7 +75,10 @@ router.get("/tv/:id", async (req, res, next) => {
 router.get("/search", async (req, res, next) => {
   try {
     const { q, page = 1 } = req.query;
-    const data = await fetchTmdbApi("/search/multi", { query: q || "dune", page });
+    if (!q || !q.trim()) {
+      return res.json({ success: true, data: { results: [], total_results: 0 } });
+    }
+    const data = await fetchTmdbApi("/search/multi", { query: q.trim(), page });
     res.json({ success: true, data });
   } catch (err) {
     next(err);

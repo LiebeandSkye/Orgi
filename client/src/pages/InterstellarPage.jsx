@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { Star, Plus, Share2, ThumbsUp, Reply, MoreHorizontal, ChevronDown } from "lucide-react";
-import { INTERSTELLAR_DATA, HOME_TRENDING_ITEMS } from "../data/mockData";
 import { getMovieDetails } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
@@ -12,47 +11,28 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
   const { id } = useParams();
   const isReviewsUrl = location.pathname.includes("/reviews");
 
-  const [movieData, setMovieData] = useState(INTERSTELLAR_DATA);
+  const [movieData, setMovieData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
 
   useEffect(() => {
     let mounted = true;
     async function loadTmdbMovie() {
-      // Map known slugs to TMDB IDs
-      const slugMap = {
-        interstellar: 157336,
-        dune: 438631,
-        "dune-2021": 438631,
-        "your-name": 372058,
-        "the-batman": 414906,
-        "spirited-away": 129
-      };
-
-      const targetId = slugMap[id?.toLowerCase()] || parseInt(id, 10) || 157336;
-
+      setIsLoading(true);
       try {
-        const live = await getMovieDetails(targetId);
-        if (mounted && live) {
-          // If viewing another movie from trending items, blend title and poster if needed
-          const matchedCurated = HOME_TRENDING_ITEMS.find((item) => item.id === id || String(item.tmdbId) === String(targetId));
-          if (matchedCurated && live.id === "interstellar" && targetId !== 157336) {
-            setMovieData({
-              ...INTERSTELLAR_DATA,
-              title: matchedCurated.title,
-              year: matchedCurated.year,
-              tmdbRating: matchedCurated.rating,
-              poster: matchedCurated.poster
-            });
-          } else {
-            setMovieData(live);
-          }
+        const data = await getMovieDetails(id || 157336);
+        if (mounted && data) {
+          setMovieData(data);
         }
-      } catch {
-        // Fall back to curated
+      } catch (err) {
+        console.error("Failed to load TMDB movie:", err);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     }
     loadTmdbMovie();
+
     return () => {
       mounted = false;
     };
@@ -94,6 +74,26 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
       [reviewId]: !prev[reviewId]
     }));
   };
+
+  if (isLoading || !movieData) {
+    return (
+      <div className="min-h-screen bg-[#000000] text-[#F5F5F5] select-none pt-12 pb-24">
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex flex-col md:flex-row gap-12">
+          <div className="w-[320px] aspect-[2/3] rounded-[12px] bg-[#0E0E0E] animate-pulse border border-[#1C1C1C] shrink-0 hidden md:block" />
+          <div className="flex-1 flex flex-col gap-4 pt-4">
+            <div className="w-20 h-4 rounded bg-[#161616] animate-pulse" />
+            <div className="w-3/4 h-12 rounded bg-[#161616] animate-pulse" />
+            <div className="w-1/2 h-5 rounded bg-[#161616] animate-pulse" />
+            <div className="flex items-center gap-6 mt-4">
+              <div className="w-24 h-24 rounded-full bg-[#161616] animate-pulse" />
+              <div className="w-20 h-20 rounded-full bg-[#161616] animate-pulse" />
+            </div>
+            <div className="w-full h-24 rounded bg-[#161616] animate-pulse mt-4" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24">
