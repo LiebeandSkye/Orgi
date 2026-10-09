@@ -35,26 +35,50 @@ async function fetchFromTMDB(endpoint, params = {}) {
     }
 
     export const tmdbService = {
+        //TRENDING
         async getTrending(mediaType = "all", timeWindow = "week"){
             const data = await fetchFromTMDB(`/trending/${mediaType}/${timeWindow}`);
             return data.results.map((item) => formatTMDBItem(item, item.media_tyoe));
         },
 
+        //KDRAMA
         async getKDramas(page = 1){
             const data = await fetchFromTMDB("/discover/tv",{with_original_language: "ko", sort_by: "popularity.desc", page,});
             return data.results.map((item) => formatTMDBItem(item, "tv"));
         },
 
+
+        //CDRAMA
         async getCDramas(page = 1){
             const data = await fetchFromTMDB("/discover/tv",{with_original_language: "zh", sort_by: "popularity.desc", page,});
             return data.results.map((item) => formatTMDBItem(item, "tv"));
         },
 
+        //BOLLYWOOD
         async getBollywood(page = 1){
             const data = await fetchFromTMDB("/discover/movie",{with_original_language: "hi", sort_by:"popularity.desc", page,});
             return data.results.map((item) => formatTMDBItem(item,"movie"));
         },
 
+        //HOLLYWOOD
+        async getHollywood(page =1){
+            const data = await fetchFromTMDB("/discover/movie",{with_original_language: "en", sort_by:"popularity.desc", page,});
+            return data.results.map((item)=> formatTMDBItem(item,"movie"));
+        },
+        
+        //ANIME
+        async getAnimeSeries(page=1){
+            const data = await fetchFromTMDB("/discover/tv", {with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc", page,});
+            return data.results.map((item) => formatTMDBItem(item, "tv"));
+        },
+
+        async getAnimeMovie(page=1){
+            const data = await fetchFromTMDB("/discover/movie", {with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc", page,});
+            return data.results.map((item) => formatTMDBItem(item, "movie"));
+        },
+
+
+        //SEARCH
         async search(query, page=1){
             const data = await fetchFromTMDB("/search/multi", { query, page, include_adult: "true",});
             return data.results.filter((item) => item.media_type === "movie" || item.media_type === "tv").map((item) => formatTMDBItem(item, item.media_type));
