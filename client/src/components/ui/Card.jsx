@@ -1,12 +1,21 @@
-export function Card({ children, className = "", title, description }) {
+import React from "react";
+
+export function Card({
+  children,
+  className = "",
+  hoverable = false,
+  bordered = true,
+  ...props
+}) {
   return (
-    <div className={`bg-slate-800 border border-slate-700/80 rounded-xl p-6 shadow-sm ${className}`}>
-      {(title || description) && (
-        <div className="mb-4">
-          {title && <h3 className="text-lg font-semibold text-white">{title}</h3>}
-          {description && <p className="text-sm text-slate-400 mt-1">{description}</p>}
-        </div>
-      )}
+    <div
+      className={`bg-[#0B0B0B] rounded-[12px] ${
+        bordered ? "border border-[#1C1C1C]" : ""
+      } ${
+        hoverable ? "transition-colors hover:border-[#61F1AC]/50 hover:bg-[#141414]" : ""
+      } ${className}`}
+      {...props}
+    >
       {children}
     </div>
   );
