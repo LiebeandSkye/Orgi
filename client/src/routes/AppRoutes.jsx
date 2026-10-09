@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { Layout } from "../components/layout/Layout";
 import { HomePage } from "../pages/HomePage";
-import { InterstellarPage } from "../pages/InterstellarPage";
+import { MovieDetailsPage } from "../pages/MovieDetailsPage";
 import { BreakingBadPage } from "../pages/BreakingBadPage";
 import { SearchPage } from "../pages/SearchPage";
 import { ManhwaPage } from "../pages/ManhwaPage";
@@ -17,12 +17,12 @@ export function AppRoutes() {
         <Route path="/movies" element={<HomePage />} />
 
         {/* Movie Detail Pages */}
-        <Route path="/movie/interstellar" element={<InterstellarPage initialTab="Cast" />} />
+        <Route path="/movie/interstellar" element={<MovieDetailsPage initialTab="Cast" />} />
         <Route
           path="/movie/interstellar/reviews"
-          element={<InterstellarPage initialTab="Reviews" initialCropHero={true} />}
+          element={<MovieDetailsPage initialTab="Reviews" initialCropHero={true} />}
         />
-        <Route path="/movie/:id" element={<InterstellarPage initialTab="Cast" />} />
+        <Route path="/movie/:id" element={<MovieDetailsPage initialTab="Cast" />} />
 
         {/* Series Detail Pages */}
         <Route path="/series" element={<BreakingBadPage />} />
