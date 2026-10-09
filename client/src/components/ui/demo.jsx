@@ -99,7 +99,7 @@ export default function Demo() {
         borderRadius: 24,
       }}
     >
-      <BorderBeam size="md" colorVariant="colorful">
+      <BorderBeam size="md" colorVariant="mint">
         <ChatInput />
       </BorderBeam>
     </div>

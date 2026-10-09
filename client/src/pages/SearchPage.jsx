@@ -81,7 +81,7 @@ export function SearchPage() {
           <div className="w-full max-w-[760px]">
             <BorderBeam
               size="md"
-              colorVariant="colorful"
+              colorVariant="mint"
               borderRadius={34}
               className="w-full rounded-full"
             >

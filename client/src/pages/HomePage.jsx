@@ -123,7 +123,7 @@ export function HomePage() {
           <div className="relative w-full max-w-[620px] group">
             <BorderBeam
               size="md"
-              colorVariant="colorful"
+              colorVariant="mint"
               borderRadius={27}
               className="w-full rounded-full"
             >
@@ -256,7 +256,7 @@ export function HomePage() {
             ) : (
               <div className="py-16 text-center">
                 <p className="text-sm text-[#7A7A7A] font-light">
-                  No titles found matching "{searchQuery}" on TMDB.
+                  No titles found matching "{searchQuery}".
                 </p>
                 <button
                   type="button"
@@ -272,12 +272,9 @@ export function HomePage() {
           /* DEFAULT: LIVE TMDB TRENDING THIS WEEK */
           <section className="mt-4 animate-in fade-in duration-200">
             {/* Section Header */}
-            <div className="mb-5 flex items-center justify-between">
+            <div className="mb-5 flex items-center">
               <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]">
-                TRENDING THIS WEEK ON TMDB
-              </span>
-              <span className="text-xs text-[#7A7A7A] font-mono">
-                Live TMDB Feed
+                TRENDING THIS WEEK
               </span>
             </div>
 
