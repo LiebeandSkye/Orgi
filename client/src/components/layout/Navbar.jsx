@@ -151,7 +151,7 @@ export function Navbar({ forceBooksOpen = false }) {
           to="/"
           className="justify-self-start flex items-center text-xl font-semibold tracking-tighter text-[#F5F5F5] hover:opacity-90 transition-opacity select-none"
         >
-          <span>rate</span>
+          <span>orgi</span>
           <span className="text-[#61F1AC]">.</span>
         </Link>
 
