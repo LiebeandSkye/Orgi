@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import apiRoutes from "./src/routes/index.js";
+import { errorHandler } from "./src/middlewares/errorHandler.js";
 
 dotenv.config();
 
@@ -11,10 +13,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Sample Routes
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Server is running smoothly!" });
-});
+// API Routes
+app.use("/api", apiRoutes);
+
+// Global Error Handler
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
