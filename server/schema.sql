@@ -67,3 +67,94 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
     resolved_at TIMESTAMPTZ 
 ); 
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY; 
+ALTER TABLE items ENABLE ROW LEVEL SECURITY; 
+ALTER TABLE user_collections ENABLE ROW LEVEL SECURITY; 
+ALTER TABLE ratings ENABLE ROW LEVEL SECURITY; 
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY; 
+ALTER TABLE reports ENABLE ROW LEVEL SECURITY; 
+
+CREATE POLICY "Allow public read access to users" 
+ON users FOR SELECT 
+USING (true); 
+
+CREATE POLICY "Allow users to insert their own profile" 
+ON users FOR INSERT 
+WITH CHECK (auth.uid() = id); 
+
+CREATE POLICY "Allow users to update own profile" 
+ON users FOR UPDATE 
+USING (auth.uid() = id); 
+
+CREATE POLICY "Allow public read access to items" 
+ON items FOR SELECT 
+USING (true); 
+
+CREATE POLICY "Allow users to read own collections" 
+ON user_collections FOR SELECT 
+USING (auth.uid() = user_id); 
+
+CREATE POLICY "Allow users to insert own collections" 
+ON user_collections FOR INSERT 
+WITH CHECK (auth.uid() = user_id); 
+
+CREATE POLICY "Allow users to update own collections" 
+ON user_collections FOR UPDATE 
+USING (auth.uid() = user_id); 
+
+CREATE POLICY "Allow users to delete own collections" 
+ON user_collections FOR DELETE 
+USING (auth.uid() = user_id); 
+
+CREATE POLICY "Allow public read access to ratings" 
+ON ratings FOR SELECT 
+USING (true); 
+
+CREATE POLICY "Allow users to insert own ratings" 
+ON ratings FOR INSERT 
+WITH CHECK (auth.uid() = user_id); 
+
+CREATE POLICY "Allow users to update own ratings" 
+ON ratings FOR UPDATE 
+USING (auth.uid() = user_id); 
+
+CREATE POLICY "Allow public read access to non-deleted comments" 
+ON comments FOR SELECT 
+USING (NOT is_deleted); 
+
+CREATE POLICY "Allow users to insert own comments" 
+ON comments FOR INSERT 
+WITH CHECK (auth.uid() = user_id); 
+
+CREATE POLICY "Allow users to update own comments" 
+ON comments FOR UPDATE 
+USING (auth.uid() = user_id); 
+
+CREATE POLICY "Allow users to create reports" 
+ON reports FOR INSERT 
+WITH CHECK (auth.uid() = reporter_id); 
+
+CREATE POLICY "Allow reporters to read own reports" 
+ON reports FOR SELECT 
+USING (auth.uid() = reporter_id); 
+
+CREATE OR REPLACE FUNCTION public.handle_new_user() 
+RETURNS TRIGGER AS $$ 
+BEGIN 
+    INSERT INTO public.users (id, public_id, user_name, email, anonymous) 
+    VALUES ( 
+        NEW.id, 
+        UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 16)), 
+        COALESCE(NEW.raw_user_meta_data->>'user_name', 'Unnamed Orgi_' || SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 4)), 
+        NEW.email, 
+        COALESCE(NEW.is_anonymous, false) 
+    ) 
+    ON CONFLICT (id) DO NOTHING; 
+    RETURN NEW; 
+END; 
+$$ LANGUAGE plpgsql SECURITY DEFINER; 
+
+CREATE OR REPLACE TRIGGER on_auth_user_created 
+    AFTER INSERT ON auth.users 
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user(); 

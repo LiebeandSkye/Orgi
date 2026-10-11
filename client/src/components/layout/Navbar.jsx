@@ -1,27 +1,29 @@
-import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ChevronDown, BookOpen, Layers, Smartphone, Bookmark, User, LayoutDashboard, Settings } from "lucide-react"; 
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react"; 
+import { Link, useLocation } from "react-router-dom"; 
+import { ChevronDown, BookOpen, Layers, Smartphone, Bookmark, User, LayoutDashboard, Settings, LogOut, LogIn } from "lucide-react"; 
+import { useAuth } from "../../context/AuthContext"; 
 
 const BOOK_ITEMS = [ 
-  { to: "/books/novels", label: "Novels", icon: BookOpen, match: ["/books/novels"] }, 
-  { to: "/books/manga", label: "Manga", icon: Layers, match: ["/books/manga"] }, 
-  { to: "/books/manhwa", label: "Manhwa", icon: Smartphone, match: ["/books/manhwa", "/books"] }, 
-  { to: "/books/light-novels", label: "Light Novels", icon: Bookmark, match: ["/books/light-novels"] }, 
+    { to: "/books/novels", label: "Novels", icon: BookOpen, match: ["/books/novels"] }, 
+    { to: "/books/manga", label: "Manga", icon: Layers, match: ["/books/manga"] }, 
+    { to: "/books/manhwa", label: "Manhwa", icon: Smartphone, match: ["/books/manhwa", "/books"] }, 
+    { to: "/books/light-novels", label: "Light Novels", icon: Bookmark, match: ["/books/light-novels"] }, 
 ]; 
 
 const PROFILE_ITEMS = [ 
-  { to: "/profile", label: "Profile", icon: User }, 
-  { to: "/collection", label: "Collection", icon: Bookmark }, 
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, 
-  { to: "/setting", label: "Setting", icon: Settings }, 
+    { to: "/profile", label: "Profile", icon: User }, 
+    { to: "/collection", label: "Collection", icon: Bookmark }, 
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, 
+    { to: "/setting", label: "Setting", icon: Settings }, 
 ]; 
 
 export function Navbar({ forceBooksOpen = false }) { 
-  const location = useLocation(); 
-  const [dropdownOpen, setDropdownOpen] = useState(false); 
-  const dropdownRef = useRef(null); 
-  const [profileOpen, setProfileOpen] = useState(false); 
-  const profileDropdownRef = useRef(null); 
+    const location = useLocation(); 
+    const { user, logout } = useAuth(); 
+    const [dropdownOpen, setDropdownOpen] = useState(false); 
+    const dropdownRef = useRef(null); 
+    const [profileOpen, setProfileOpen] = useState(false); 
+    const profileDropdownRef = useRef(null); 
 
   const navRef = useRef(null); 
   const labelRefs = useRef({}); 
@@ -242,49 +244,74 @@ export function Navbar({ forceBooksOpen = false }) {
         </nav>
 
         {/* Right side: User Avatar */} 
-        <div className="justify-self-end relative flex items-center" ref={profileDropdownRef}> 
-          <button 
-            type="button" 
-            onClick={() => setProfileOpen((prev) => !prev)} 
-            className="w-9 h-9 rounded-full overflow-hidden cursor-pointer bg-[#141414] ring-1 ring-[#1C1C1C] hover:ring-[#61F1AC] transition-all" 
-            title="User Profile" 
-          > 
-            {/* scale-125 crops away the baked-in light edge/background of the source image */} 
-            <img 
-              src="https://imgs.search.brave.com/NmPZjePZioE_lCWEwu7wkqrQwsFRs9j0toSsN3hn8gY/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9zdGF0/aWMudmVjdGVlenku/Y29tL3N5c3RlbS9y/ZXNvdXJjZXMvdGh1/bWJuYWlscy8wNTMv/NTQ3LzEyMC9zbWFs/bC9nZW5lcmljLXVz/ZXItcHJvZmlsZS1h/dmF0YXItZm9yLW9u/bGluZS1wbGF0Zm9y/bXMtYW5kLXNvY2lh/bC1tZWRpYS12ZWN0/b3IuanBn" 
-              alt="Avatar" 
-              className="w-full h-full object-cover scale-125" 
-            /> 
-          </button> 
-          {profileOpen && ( 
-            <div 
-              role="menu" 
-              className="absolute top-[calc(100%+8px)] right-0 w-48 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-100" 
-            > 
-              {PROFILE_ITEMS.map(({ to, label, icon: Icon }) => { 
-                const isActive = location.pathname === to; 
-                return ( 
-                  <Link 
-                    key={to} 
-                    to={to} 
-                    role="menuitem" 
-                    onClick={() => setProfileOpen(false)} 
-                    className={`flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg transition-colors ${ 
-                      isActive 
-                        ? "text-[#61F1AC] bg-[#141414] font-medium" 
-                        : "text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414]" 
-                    }`} 
-                  > 
-                    <Icon size={15} strokeWidth={1.75} className="shrink-0 text-[#F5F5F5]" /> 
-                    <span className="flex-1">{label}</span> 
-                    {isActive && ( 
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" /> 
-                    )} 
-                  </Link> 
-                ); 
-              })} 
-            </div> 
-          )} 
+        <div className="justify-self-end relative flex items-center" ref={profileDropdownRef}>
+            <button 
+                type="button" 
+                onClick={() => setProfileOpen((prev) => !prev)} 
+                className="w-9 h-9 rounded-full overflow-hidden cursor-pointer bg-[#141414] ring-1 ring-[#1C1C1C] hover:ring-[#61F1AC]" 
+                title="User Profile" 
+            >
+                {/* scale-125 crops away the baked-in light edge/background of the source image */} 
+                <img 
+                    src="https://imgs.search.brave.com/NmPZjePZioE_lCWEwu7wkqrQwsFRs9j0toSsN3hn8gY/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9zdGF0/aWMudmVjdGVlenku/Y29tL3N5c3RlbS9y/ZXNvdXJjZXMvdGh1/bWJuYWlscy8wNTMv/NTQ3LzEyMC9zbWFs/bC9nZW5lcmljLXVz/ZXItcHJvZmlsZS1h/dmF0YXItZm9yLW9u/bGluZS1wbGF0Zm9y/bXMtYW5kLXNvY2lh/bC1tZWRpYS12ZWN0/b3IuanBn" 
+                    alt="Avatar" 
+                    className="w-full h-full object-cover scale-125" 
+                />
+            </button>
+            {profileOpen && (
+                <div 
+                    role="menu" 
+                    className="absolute top-[calc(100%+8px)] right-0 w-48 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-1.5 shadow-2xl z-50"
+                >
+                    {PROFILE_ITEMS.map(({ to, label, icon: Icon }) => { 
+                        const isActive = location.pathname === to; 
+                        return ( 
+                            <Link 
+                                key={to} 
+                                to={to} 
+                                role="menuitem" 
+                                onClick={() => setProfileOpen(false)} 
+                                className={`flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg ${ 
+                                    isActive 
+                                        ? "text-[#61F1AC] bg-[#141414] font-medium" 
+                                        : "text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414]" 
+                                }`}
+                            >
+                                <Icon size={15} strokeWidth={1.75} className="shrink-0 text-[#F5F5F5]" />
+                                <span className="flex-1">{label}</span>
+                                {isActive && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" />
+                                )}
+                            </Link>
+                        ); 
+                    })}
+                    <div className="my-1 border-t border-[#1C1C1C]" />
+                    {user ? (
+                        <button 
+                            type="button" 
+                            role="menuitem" 
+                            onClick={() => { 
+                                logout(); 
+                                setProfileOpen(false); 
+                            }} 
+                            className="w-full flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg text-rose-400 hover:bg-[#141414] cursor-pointer"
+                        >
+                            <LogOut size={15} strokeWidth={1.75} className="shrink-0" />
+                            <span className="flex-1 text-left">Log Out</span>
+                        </button>
+                    ) : (
+                        <Link 
+                            to="/login" 
+                            role="menuitem" 
+                            onClick={() => setProfileOpen(false)} 
+                            className="w-full flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg text-[#61F1AC] hover:bg-[#141414] cursor-pointer"
+                        >
+                            <LogIn size={15} strokeWidth={1.75} className="shrink-0" />
+                            <span className="flex-1 text-left">Log In</span>
+                        </Link>
+                    )}
+                </div>
+            )}
         </div> 
       </div>
     </header>
