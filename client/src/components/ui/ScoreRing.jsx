@@ -1,4 +1,6 @@
 import React from "react";
+import { useEffect } from "react";
+import { useState } from "react";
 
 export function ScoreRing({
   score = "8.4",
@@ -10,13 +12,21 @@ export function ScoreRing({
   const numScore = parseFloat(score);
   const percentage = Math.min(Math.max((numScore / maxScore) * 100, 0), 100);
 
+  const [animatedPercentage, setAnimatedPercentage] = useState(0);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setAnimatedPercentage(percentage);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [percentage]);
+
   if (size === "sm" && variant === "inline") {
     // Smaller ring with side label: "Community 8.9" with "342 ratings"
     const radius = 24;
     const stroke = 3.5;
     const normalizedRadius = radius - stroke;
     const circumference = normalizedRadius * 2 * Math.PI;
-    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+    const strokeDashoffset = circumference - (animatedPercentage / 100) * circumference;
 
     return (
       <div className="flex items-center gap-3">
@@ -29,6 +39,7 @@ export function ScoreRing({
               r={normalizedRadius}
               cx={radius}
               cy={radius}
+              className="transition-[stroke-dashoffset] duration-1000 ease-out"
             />
             <circle
               stroke="#61F1AC"
@@ -40,6 +51,7 @@ export function ScoreRing({
               r={normalizedRadius}
               cx={radius}
               cy={radius}
+              className="transition-[stroke-dashoffset] duration-1000 ease-out"
             />
           </svg>
           <span className="absolute font-tabular text-xs font-semibold text-[#F5F5F5]">
@@ -59,7 +71,7 @@ export function ScoreRing({
   const stroke = 4;
   const normalizedRadius = radius - stroke;
   const circumference = normalizedRadius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const strokeDashoffset = circumference - (animatedPercentage / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center">
@@ -72,6 +84,7 @@ export function ScoreRing({
             r={normalizedRadius}
             cx={radius}
             cy={radius}
+            className="transition-[stroke-dashoffset] duration-1000 ease-out"
           />
           <circle
             stroke="#61F1AC"
@@ -83,6 +96,7 @@ export function ScoreRing({
             r={normalizedRadius}
             cx={radius}
             cy={radius}
+            className="transition-[stroke-dashoffset] duration-1000 ease-out"
           />
         </svg>
         <span className="absolute font-tabular text-xl font-medium tracking-tight text-[#F5F5F5]">
