@@ -12,6 +12,7 @@ import { CollectionPage } from "../pages/CollectionPage";
 import { DashboardPage } from "../pages/DashboardPage"; 
 import { SettingPage } from "../pages/SettingPage"; 
 import { LoginPage } from "../pages/LoginPage"; 
+import { AuthCallbackPage } from "../pages/AuthCallbackPage"; 
 
 export function AppRoutes() { 
     return ( 
@@ -46,6 +47,7 @@ export function AppRoutes() {
                 <Route path="/books/:category" element={<ManhwaPage />} /> 
 
                 <Route path="/login" element={<LoginPage />} /> 
+                <Route path="/auth/callback" element={<AuthCallbackPage />} /> 
                 <Route path="/profile" element={<ProfilePage />} /> 
                 <Route path="/collection" element={<CollectionPage />} /> 
                 <Route path="/dashboard" element={<DashboardPage />} /> 
@@ -56,5 +58,5 @@ export function AppRoutes() {
                 <Route path="*" element={<NotFoundPage />} /> 
             </Route> 
         </Routes> 
-    ); 
-} 
+    )
+}
