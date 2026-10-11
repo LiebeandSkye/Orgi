@@ -7,6 +7,6 @@ import {tmdbService} from "./tmdbService.js";
 async function runTest(){
     console.log("K-Dramas: ");
     const kdramas = await tmdbService.getKDramas(1);
-    console.log("First item:", kdramas[0]);
+    console.log("First item:", kdramas[1]);
 }
 runTest();

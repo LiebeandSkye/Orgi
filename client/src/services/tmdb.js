@@ -4,7 +4,7 @@
 const API_BASE_URL = "/api/tmdb";
 const TMDB_DIRECT_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
-const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY || "b4ff80e1e0be756a6ca3ca60510e1231";
+const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY  ; 
 
 /**
  * Build a full TMDB image URL
@@ -14,7 +14,7 @@ export function getTmdbImageUrl(path, size = "w500") {
   if (path.startsWith("http")) return path;
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
 }
-
+  
 /**
  * Format runtime minutes to "Xh Ym"
  */
