@@ -9,9 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     anonymous BOOLEAN NOT NULL DEFAULT false, 
     profile_url TEXT, 
     banner_url TEXT, 
-    current_status TEXT NOT NULL DEFAULT 'Online', 
-    setting_preference JSONB NOT NULL DEFAULT '{}'::jsonb, 
-    inventory JSONB NOT NULL DEFAULT '{"collections": {"Ring": 0, "Cloud": 0, "Box": 0}}'::jsonb, 
+    collection JSONB, -- 'item_1:{external_id:"",provider:"tmdb",type:"movie"}, item_2:{external_id:"",provider:"mangadex",type:"manga"}'::jonb, 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
     last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW() 
 ); 
@@ -19,8 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS items ( 
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(), 
     external_id TEXT NOT NULL, 
-    provider TEXT NOT NULL, 
-    type TEXT NOT NULL, 
+    provider TEXT NOT NULL, -- tmdb, mangadex, google_books, spotify, etc... 
+    type TEXT NOT NULL, -- movie, manga, manhwa, book, music, etc... 
     title TEXT NOT NULL, 
     cover_url TEXT, 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), 

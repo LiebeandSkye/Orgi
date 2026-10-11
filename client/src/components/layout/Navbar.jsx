@@ -1,21 +1,22 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react"; 
 import { Link, useLocation } from "react-router-dom"; 
-import { ChevronDown, BookOpen, Layers, Smartphone, Bookmark, User, LayoutDashboard, Settings, LogOut, LogIn } from "lucide-react"; 
+import { ChevronDown, BookOpen, Layers, Smartphone, Bookmark, User, LayoutDashboard, Settings, LogOut, LogIn, Trash2, AlertTriangle } from "lucide-react"; 
 import { useAuth } from "../../context/AuthContext"; 
+import { authApi } from "../../feature/auth/services/authApi"; 
 
 const BOOK_ITEMS = [ 
     { to: "/books/novels", label: "Novels", icon: BookOpen, match: ["/books/novels"] }, 
     { to: "/books/manga", label: "Manga", icon: Layers, match: ["/books/manga"] }, 
     { to: "/books/manhwa", label: "Manhwa", icon: Smartphone, match: ["/books/manhwa", "/books"] }, 
     { to: "/books/light-novels", label: "Light Novels", icon: Bookmark, match: ["/books/light-novels"] }, 
-]; 
+]
 
 const PROFILE_ITEMS = [ 
     { to: "/profile", label: "Profile", icon: User }, 
     { to: "/collection", label: "Collection", icon: Bookmark }, 
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, 
     { to: "/setting", label: "Setting", icon: Settings }, 
-]; 
+]
 
 export function Navbar({ forceBooksOpen = false }) { 
     const location = useLocation(); 
@@ -24,6 +25,26 @@ export function Navbar({ forceBooksOpen = false }) {
     const dropdownRef = useRef(null); 
     const [profileOpen, setProfileOpen] = useState(false); 
     const profileDropdownRef = useRef(null); 
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false); 
+    const [isDeleting, setIsDeleting] = useState(false); 
+    const [deleteError, setDeleteError] = useState(null); 
+    
+    const handleDeleteAccount = async () => { 
+        setIsDeleting(true); 
+        setDeleteError(null); 
+        try { 
+            await authApi.deleteAccount(); 
+            logout(); 
+            setConfirmDeleteOpen(false); 
+            setProfileOpen(false); 
+        }
+        catch (err) { 
+            setDeleteError(err.message || "Failed to delete account"); 
+        }
+        finally { 
+            setIsDeleting(false); 
+        }
+    }
 
   const navRef = useRef(null); 
   const labelRefs = useRef({}); 
@@ -56,24 +77,24 @@ export function Navbar({ forceBooksOpen = false }) {
         !dropdownRef.current.contains(event.target) 
       ) { 
         setDropdownOpen(false); 
-      } 
+      }
       if ( 
         profileDropdownRef.current && 
         !profileDropdownRef.current.contains(event.target) 
       ) { 
         setProfileOpen(false); 
-      } 
-    } 
+      }
+    }
     function handleKey(event) { 
       if (event.key === "Escape" && !forceBooksOpen) setDropdownOpen(false); 
       if (event.key === "Escape") setProfileOpen(false); 
-    } 
+    }
     document.addEventListener("mousedown", handleClickOutside); 
     document.addEventListener("keydown", handleKey); 
     return () => { 
       document.removeEventListener("mousedown", handleClickOutside); 
       document.removeEventListener("keydown", handleKey); 
-    }; 
+    }
   }, [forceBooksOpen]); 
 
   // Measure the label of a tab relative to the nav
@@ -91,7 +112,7 @@ export function Navbar({ forceBooksOpen = false }) {
     if (!ind || !rect) return;
     ind.style.width = `${rect.w}px`;
     ind.style.transform = `translateX(${rect.x}px)`;
-  };
+  }
 
   // Animate the underline: float down, glide across, float up
   useLayoutEffect(() => {
@@ -138,7 +159,7 @@ export function Navbar({ forceBooksOpen = false }) {
           },
         ],
         { duration: 250 }
-      );
+      )
     }
     prevRect.current = next;
   }, [active, measure]);
@@ -161,7 +182,8 @@ export function Navbar({ forceBooksOpen = false }) {
       isActive ? "text-[#F5F5F5]" : "text-[#7A7A7A] hover:text-[#F5F5F5]"
     }`;
 
-  return (
+  return ( 
+    <> 
     <header className="sticky top-0 z-40 h-16 w-full bg-[#000000]/90 backdrop-blur-md border-b border-[#1C1C1C]">
       {/* 3-column grid keeps the nav truly centered regardless of logo/avatar width */}
       <div className="max-w-[1440px] h-full mx-auto px-6 lg:px-[120px] grid grid-cols-[1fr_auto_1fr] items-center">
@@ -228,7 +250,7 @@ export function Navbar({ forceBooksOpen = false }) {
                         <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" />
                       )}
                     </Link>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -283,37 +305,89 @@ export function Navbar({ forceBooksOpen = false }) {
                                     <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" />
                                 )}
                             </Link>
-                        ); 
+                        )
                     })}
-                    <div className="my-1 border-t border-[#1C1C1C]" />
-                    {user ? (
-                        <button 
-                            type="button" 
-                            role="menuitem" 
-                            onClick={() => { 
-                                logout(); 
-                                setProfileOpen(false); 
-                            }} 
-                            className="w-full flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg text-rose-400 hover:bg-[#141414] cursor-pointer"
-                        >
-                            <LogOut size={15} strokeWidth={1.75} className="shrink-0" />
-                            <span className="flex-1 text-left">Log Out</span>
-                        </button>
-                    ) : (
+                    <div className="my-1 border-t border-[#1C1C1C]" /> 
+                    {user ? ( 
+                        <> 
+                            <button 
+                                type="button" 
+                                role="menuitem" 
+                                onClick={() => { 
+                                    logout(); 
+                                    setProfileOpen(false); 
+                                }}
+                                className="w-full flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414] cursor-pointer" 
+                            > 
+                                <LogOut size={15} strokeWidth={1.75} className="shrink-0" /> 
+                                <span className="flex-1 text-left">Log Out</span> 
+                            </button> 
+                            <button 
+                                type="button" 
+                                role="menuitem" 
+                                onClick={() => { 
+                                    setProfileOpen(false); 
+                                    setDeleteError(null); 
+                                    setConfirmDeleteOpen(true); 
+                                }}
+                                className="w-full flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg text-rose-400 hover:bg-[#141414] cursor-pointer" 
+                            > 
+                                <Trash2 size={15} strokeWidth={1.75} className="shrink-0" /> 
+                                <span className="flex-1 text-left">Delete Account</span> 
+                            </button> 
+                        </> 
+                    ) : ( 
                         <Link 
                             to="/login" 
                             role="menuitem" 
                             onClick={() => setProfileOpen(false)} 
-                            className="w-full flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg text-[#61F1AC] hover:bg-[#141414] cursor-pointer"
-                        >
-                            <LogIn size={15} strokeWidth={1.75} className="shrink-0" />
-                            <span className="flex-1 text-left">Log In</span>
-                        </Link>
+                            className="w-full flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg text-[#61F1AC] hover:bg-[#141414] cursor-pointer" 
+                        > 
+                            <LogIn size={15} strokeWidth={1.75} className="shrink-0" /> 
+                            <span className="flex-1 text-left">Log In</span> 
+                        </Link> 
                     )}
-                </div>
+                </div> 
             )}
         </div> 
-      </div>
-    </header>
-  );
+      </div> 
+    </header> 
+    {confirmDeleteOpen && ( 
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
+            <div className="w-full max-w-sm bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-6 text-[#F5F5F5]"> 
+                <div className="flex items-center gap-3 text-rose-400 mb-3"> 
+                    <AlertTriangle size={20} /> 
+                    <h2 className="text-base font-bold text-[#F5F5F5]">Delete Account</h2> 
+                </div> 
+                <p className="text-xs text-[#B5B5B5] leading-relaxed mb-4"> 
+                    Warning: This action is permanent and cannot be undone. All your saved profile information, collections, and account data will be permanently removed. 
+                </p> 
+                {deleteError && ( 
+                    <div className="p-2 mb-4 text-xs text-rose-400 bg-rose-950/40 border border-rose-900 rounded"> 
+                        {deleteError} 
+                    </div> 
+                )}
+                <div className="flex justify-end gap-2"> 
+                    <button 
+                        type="button" 
+                        disabled={isDeleting} 
+                        onClick={() => setConfirmDeleteOpen(false)} 
+                        className="px-3 py-1.5 text-xs border border-[#1C1C1C] rounded text-[#B5B5B5] bg-[#141414] hover:bg-[#1C1C1C] cursor-pointer" 
+                    > 
+                        Cancel 
+                    </button> 
+                    <button 
+                        type="button" 
+                        disabled={isDeleting} 
+                        onClick={handleDeleteAccount} 
+                        className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded cursor-pointer disabled:opacity-50" 
+                    > 
+                        {isDeleting ? "Deleting..." : "Delete Account"} 
+                    </button> 
+                </div> 
+            </div> 
+        </div> 
+    )}
+    </> 
+  )
 }

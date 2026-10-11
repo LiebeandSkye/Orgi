@@ -3,6 +3,33 @@ import { useNavigate } from "react-router-dom";
 import { authApi } from "../services/authApi"; 
 import { useAuth } from "../../../context/AuthContext"; 
 
+function GoogleIcon() { 
+    return ( 
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"> 
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/> 
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/> 
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/> 
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/> 
+        </svg> 
+    )
+}
+
+function DiscordIcon() { 
+    return ( 
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="#5865F2"> 
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/> 
+        </svg> 
+    )
+}
+
+function GithubIcon() { 
+    return ( 
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"> 
+            <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/> 
+        </svg> 
+    )
+}
+
 export function AuthForm() { 
     const navigate = useNavigate(); 
     const { saveSession } = useAuth(); 
@@ -18,35 +45,33 @@ export function AuthForm() {
         setError(null); 
         setLoading(true); 
         try { 
+            const normalizedEmail = email.trim().toLowerCase(); 
             let res; 
             if (isSignUp) { 
-                res = await authApi.signup({ email, password, user_name: userName }); 
+                res = await authApi.signup({ email: normalizedEmail, password, user_name: userName }); 
                 if (!res.data?.session) { 
                     setError("Account created! Please check your email to confirm your account before logging in."); 
                     setIsSignUp(false); 
                     return; 
-                } 
+                }
             } else { 
-                res = await authApi.login({ email, password }); 
-            } 
+                res = await authApi.login({ email: normalizedEmail, password }); 
+            }
             saveSession(res.data?.session || res.data); 
             navigate("/"); 
         }
         catch (err) { setError(err.message) }
         finally { setLoading(false) }
-    } 
+    }
     
-    const handleAnonymous = async () => { 
+    const handleOAuth = async (provider) => { 
         setError(null); 
-        setLoading(true); 
         try { 
-            const res = await authApi.anonymous(); 
-            saveSession(res.data?.session || res.data); 
-            navigate("/"); 
+            const res = await authApi.getOAuthUrl(provider); 
+            if (res.url) window.location.href = res.url; 
         }
         catch (err) { setError(err.message) }
-        finally { setLoading(false) }
-    } 
+    }
     
     return ( 
         <div className="w-full max-w-sm p-6 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl text-[#F5F5F5]">
@@ -87,14 +112,41 @@ export function AuthForm() {
                     {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
                 </button>
             </form>
-            <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-[#1C1C1C] text-xs">
+            <div className="relative flex items-center justify-center my-4">
+                <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#1C1C1C]" />
+                </div>
+                <div className="relative px-2 text-[11px] uppercase tracking-wider text-[#7A7A7A] bg-[#0B0B0B]">
+                    Or continue with
+                </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
                 <button 
                     type="button" 
-                    onClick={handleAnonymous} 
-                    className="w-full py-2 text-center text-[#B5B5B5] bg-[#141414] border border-[#1C1C1C] rounded cursor-pointer"
+                    onClick={() => handleOAuth("google")} 
+                    className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium text-[#F5F5F5] bg-[#141414] hover:bg-[#1C1C1C] border border-[#1C1C1C] rounded-lg transition-colors cursor-pointer" 
                 >
-                    Continue as Guest
+                    <GoogleIcon />
+                    <span>Google</span>
                 </button>
+                <button 
+                    type="button" 
+                    onClick={() => handleOAuth("discord")} 
+                    className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium text-[#F5F5F5] bg-[#141414] hover:bg-[#1C1C1C] border border-[#1C1C1C] rounded-lg transition-colors cursor-pointer" 
+                >
+                    <DiscordIcon />
+                    <span>Discord</span>
+                </button>
+                <button 
+                    type="button" 
+                    onClick={() => handleOAuth("github")} 
+                    className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium text-[#F5F5F5] bg-[#141414] hover:bg-[#1C1C1C] border border-[#1C1C1C] rounded-lg transition-colors cursor-pointer" 
+                >
+                    <GithubIcon />
+                    <span>GitHub</span>
+                </button>
+            </div>
+            <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-[#1C1C1C] text-xs">
                 <button 
                     type="button" 
                     onClick={() => setIsSignUp(!isSignUp)} 
@@ -104,5 +156,5 @@ export function AuthForm() {
                 </button>
             </div>
         </div>
-    ); 
-} 
+    )
+}
