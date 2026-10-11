@@ -4,8 +4,13 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 import {tmdbService} from "./tmdbService.js";
 import {mangadexService} from "./mangadex.js";
+import { bookService } from "./bookService.js";
 
 async function runTest(){
+    console.log("Book: ")
+    const books = await bookService.getPopularBooks("fiction", 2);
+    console.log("Top Book:", books[0]);
+
     console.log("K-Dramas: ");
     const kdramas = await tmdbService.getKDramas(1);
     console.log("First item:", kdramas[0]);
