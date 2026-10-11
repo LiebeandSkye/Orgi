@@ -1,10 +1,10 @@
-import express from "express";
-import healthRoutes from "./healthRoutes.js";
-import tmdbRoutes from "./tmdbRoutes.js";
+import express from "express"; 
+import healthRoutes from "./healthRoutes.js"; 
+import tmdbRoutes from "./tmdbRoutes.js"; 
 
-const router = express.Router();
+const router = express.Router(); 
 
-router.use("/health", healthRoutes);
-router.use("/tmdb", tmdbRoutes);
+router.use("/health", healthRoutes); 
+router.use("/tmdb", tmdbRoutes); 
 
-export default router;
+export default router; 
