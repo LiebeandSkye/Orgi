@@ -1,6 +1,7 @@
 import React from "react";
 import { useEffect } from "react";
 import { useState } from "react";
+import CountUp from "./CountUp";
 
 export function ScoreRing({
   score = "8.4",
@@ -55,7 +56,7 @@ export function ScoreRing({
             />
           </svg>
           <span className="absolute font-tabular text-xs font-semibold text-[#F5F5F5]">
-            {score}
+            <CountUp value={numScore} duration={1800} />
           </span>
         </div>
         <div className="flex flex-col">
@@ -100,7 +101,7 @@ export function ScoreRing({
           />
         </svg>
         <span className="absolute font-tabular text-xl font-medium tracking-tight text-[#F5F5F5]">
-          {score}
+          <CountUp value={numScore} duration={1800} />
         </span>
       </div>
       {label && (
