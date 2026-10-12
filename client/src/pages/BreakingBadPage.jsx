@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Star, Plus, Share2, ChevronDown, ThumbsUp, Reply, MoreHorizontal } from "lucide-react";
+import {
+  Star,
+  Plus,
+  Share2,
+  ChevronDown,
+  ChevronUp,
+  ThumbsUp,
+  Reply,
+  MoreHorizontal,
+} from "lucide-react";
 import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
+import MediaItems from "../components/ui/MediaItems";
 import { StarRating } from "../components/ui/StarRating";
 
 export function BreakingBadPage() {
@@ -66,13 +76,14 @@ export function BreakingBadPage() {
   const toggleLike = (reviewId) => {
     setLikedReviews((prev) => ({
       ...prev,
-      [reviewId]: !prev[reviewId]
+      [reviewId]: !prev[reviewId],
     }));
   };
 
-  const seasonsList = seriesData?.seasons?.length > 0
-    ? seriesData.seasons
-    : ["Season 1", "Season 2", "Season 3", "Season 4", "Season 5"];
+  const seasonsList =
+    seriesData?.seasons?.length > 0
+      ? seriesData.seasons
+      : ["Season 1", "Season 2", "Season 3", "Season 4", "Season 5"];
 
   if (isLoading || !seriesData) {
     return (
@@ -137,11 +148,15 @@ export function BreakingBadPage() {
               {seriesData.title}
             </h1>
 
+            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-4 flex items-center gap-2">
+              <span className="shrink-0 rounded-full border border-white/30 px-4 py-2 font-medium leading-6 text-white transition-all duration-200 hover:border-[#61F1AC]/40 hover:bg-white/10">
+                {seriesData.genres}
+              </span>
+            </div>
+
             {/* One muted meta line "2008–2013 · Crime, Drama · 5 seasons · 62 episodes" */}
-            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-8 flex items-center gap-2">
+            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-8 mx-2 flex items-center gap-2">
               <span>{seriesData.year}</span>
-              <span>·</span>
-              <span>{seriesData.genres}</span>
               <span>·</span>
               <span>{seriesData.seasonsCount}</span>
               <span>·</span>
@@ -205,16 +220,36 @@ export function BreakingBadPage() {
 
             {/* 3-line synopsis in #B5B5B5 at 16px with mint "Read more" link */}
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
-              <p className={synopsisExpanded ? "" : "line-clamp-3"}>
-                {seriesData.synopsis}
-                {!synopsisExpanded && " As their crystal meth empire expands, Walter grapples with ruthless cartels, DEA agent brother-in-law Hank Schrader, and his own moral decay."}
-              </p>
+              <div
+                className={`relative overflow-hidden transition-[max-height] duration-700 ease-in-out ${
+                  synopsisExpanded ? "max-h-[1000px]" : "max-h-[5.5rem]"
+                }`}
+              >
+                <p
+                  className={`transition-[filter] duration-700 ease-in-out ${
+                    synopsisExpanded ? "" : "line-clamp-3"
+                  }`}
+                >
+                  {seriesData.synopsis}
+                  {!synopsisExpanded &&
+                    "As their crystal meth empire expands, Walter grapples with ruthless cartels, DEA agent brother-in-law Hank Schrader, and his own moral decay."}
+                </p>
+
+                {!synopsisExpanded && (
+                  <div className="pointer-events-none absolute bottom-0 left-0 h-6 w-full backdrop-brightness-50 bg-gradient-to-t from-[#000000] to-transparent" />
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setSynopsisExpanded(!synopsisExpanded)}
-                className="mt-1 text-sm font-medium text-[#61F1AC] hover:underline cursor-pointer inline-block"
+                className="mt-1 text-sm font-medium text-[#61F1AC]  cursor-pointer inline-flex items-center gap-2 transition-colors"
               >
                 {synopsisExpanded ? "Show less" : "Read more"}
+                {synopsisExpanded ? (
+                  <ChevronUp size={18} />
+                ) : (
+                  <ChevronDown size={18} />
+                )}
               </button>
             </div>
           </div>
@@ -225,7 +260,7 @@ export function BreakingBadPage() {
       <div className="sticky top-16 z-30 bg-[#000000]/95 backdrop-blur-md border-b border-[#1C1C1C]">
         <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
           <div className="flex items-center gap-8 h-12">
-            {["Episodes", "Cast", "Reviews", "Details"].map((tab) => {
+            {["Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
@@ -233,7 +268,9 @@ export function BreakingBadPage() {
                   type="button"
                   onClick={() => setActiveTab(tab)}
                   className={`relative h-full flex items-center text-sm font-medium transition-colors cursor-pointer ${
-                    isActive ? "text-[#F5F5F5]" : "text-[#7A7A7A] hover:text-[#F5F5F5]"
+                    isActive
+                      ? "text-[#F5F5F5]"
+                      : "text-[#7A7A7A] hover:text-[#F5F5F5]"
                   }`}
                 >
                   <span>{tab}</span>
@@ -363,7 +400,9 @@ export function BreakingBadPage() {
         {activeTab === "Cast" && (
           <div className="animate-in fade-in duration-300">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">Series Cast</h2>
+              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
+                Series Cast
+              </h2>
               <button
                 type="button"
                 className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors cursor-pointer"
@@ -479,7 +518,9 @@ export function BreakingBadPage() {
                           <span className="text-sm font-semibold text-[#F5F5F5]">
                             {rev.author}
                           </span>
-                          <span className="text-xs text-[#7A7A7A]">· {rev.time}</span>
+                          <span className="text-xs text-[#7A7A7A]">
+                            · {rev.time}
+                          </span>
                         </div>
                       </div>
 
@@ -501,7 +542,10 @@ export function BreakingBadPage() {
                           isLiked ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]"
                         }`}
                       >
-                        <ThumbsUp size={13} className={isLiked ? "fill-[#61F1AC]" : ""} />
+                        <ThumbsUp
+                          size={13}
+                          className={isLiked ? "fill-[#61F1AC]" : ""}
+                        />
                         <span className="font-tabular">{likeCount}</span>
                       </button>
 
@@ -527,6 +571,13 @@ export function BreakingBadPage() {
           </div>
         )}
 
+        {/* 3. MEDIA TAB CONTENT */}
+        {activeTab === "Media" && (
+          <div className="animate-in fade-in duration-300">
+            <MediaItems seriesData={seriesData} />
+          </div>
+        )}
+
         {/* ======================================================== */}
         {/* 4. DETAILS TAB CONTENT                                   */}
         {/* ======================================================== */}
@@ -538,27 +589,45 @@ export function BreakingBadPage() {
             <div className="divide-y divide-[#1C1C1C] text-sm">
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Creator</span>
-                <span className="text-[#F5F5F5]">{seriesData.details?.creator || BREAKING_BAD_DATA.details.creator}</span>
+                <span className="text-[#F5F5F5]">
+                  {seriesData.details?.creator ||
+                    BREAKING_BAD_DATA.details.creator}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Head Writers</span>
-                <span className="text-[#F5F5F5]">{seriesData.details?.writers || BREAKING_BAD_DATA.details.writers}</span>
+                <span className="text-[#F5F5F5]">
+                  {seriesData.details?.writers ||
+                    BREAKING_BAD_DATA.details.writers}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Original Network</span>
-                <span className="text-[#F5F5F5]">{seriesData.details?.network || BREAKING_BAD_DATA.details.network}</span>
+                <span className="text-[#F5F5F5]">
+                  {seriesData.details?.network ||
+                    BREAKING_BAD_DATA.details.network}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Original Broadcast</span>
-                <span className="text-[#F5F5F5] font-tabular">{seriesData.details?.originalAirDates || BREAKING_BAD_DATA.details.originalAirDates}</span>
+                <span className="text-[#F5F5F5] font-tabular">
+                  {seriesData.details?.originalAirDates ||
+                    BREAKING_BAD_DATA.details.originalAirDates}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Accolades</span>
-                <span className="text-[#F5F5F5]">{seriesData.details?.awards || BREAKING_BAD_DATA.details.awards}</span>
+                <span className="text-[#F5F5F5]">
+                  {seriesData.details?.awards ||
+                    BREAKING_BAD_DATA.details.awards}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Production Studios</span>
-                <span className="text-[#F5F5F5]">{seriesData.details?.studio || BREAKING_BAD_DATA.details.studio}</span>
+                <span className="text-[#F5F5F5]">
+                  {seriesData.details?.studio ||
+                    BREAKING_BAD_DATA.details.studio}
+                </span>
               </div>
             </div>
           </div>

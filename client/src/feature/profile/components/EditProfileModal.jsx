@@ -4,6 +4,7 @@ export function EditProfileModal({ profile, onClose, onSave }) {
     const [userName, setUserName] = useState(profile?.user_name || ""); 
     const [profileUrl, setProfileUrl] = useState(profile?.profile_url || ""); 
     const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || ""); 
+    const [status, setStatus] = useState(profile?.current_status || "Online"); 
 
     const handleSubmit = (e) => { 
         e.preventDefault(); 
@@ -11,6 +12,7 @@ export function EditProfileModal({ profile, onClose, onSave }) {
             user_name: userName, 
             profile_url: profileUrl, 
             banner_url: bannerUrl, 
+            current_status: status 
         }); 
     } 
 
@@ -43,6 +45,15 @@ export function EditProfileModal({ profile, onClose, onSave }) {
                             type="text" 
                             value={bannerUrl} 
                             onChange={(e) => setBannerUrl(e.target.value)} 
+                            className="w-full mt-1 px-3 py-2 text-sm bg-[#141414] border border-[#1C1C1C] rounded text-[#F5F5F5] outline-none" 
+                        />
+                    </label>
+                    <label className="text-xs text-[#B5B5B5]">
+                        Status
+                        <input 
+                            type="text" 
+                            value={status} 
+                            onChange={(e) => setStatus(e.target.value)} 
                             className="w-full mt-1 px-3 py-2 text-sm bg-[#141414] border border-[#1C1C1C] rounded text-[#F5F5F5] outline-none" 
                         />
                     </label>

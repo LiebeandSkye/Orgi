@@ -53,25 +53,28 @@ export function AuthForm() {
                     setError("Account created! Please check your email to confirm your account before logging in."); 
                     setIsSignUp(false); 
                     return; 
-                }
+                } 
             } else { 
-                res = await authApi.login({ email: normalizedEmail, password }); 
-            }
+                res = await authApi.login({ email, password }); 
+            } 
             saveSession(res.data?.session || res.data); 
             navigate("/"); 
         }
         catch (err) { setError(err.message) }
         finally { setLoading(false) }
-    }
+    } 
     
-    const handleOAuth = async (provider) => { 
+    const handleAnonymous = async () => { 
         setError(null); 
+        setLoading(true); 
         try { 
-            const res = await authApi.getOAuthUrl(provider); 
-            if (res.url) window.location.href = res.url; 
+            const res = await authApi.anonymous(); 
+            saveSession(res.data?.session || res.data); 
+            navigate("/"); 
         }
         catch (err) { setError(err.message) }
-    }
+        finally { setLoading(false) }
+    } 
     
     return ( 
         <div className="w-full max-w-sm p-6 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl text-[#F5F5F5]">
@@ -112,41 +115,14 @@ export function AuthForm() {
                     {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
                 </button>
             </form>
-            <div className="relative flex items-center justify-center my-4">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#1C1C1C]" />
-                </div>
-                <div className="relative px-2 text-[11px] uppercase tracking-wider text-[#7A7A7A] bg-[#0B0B0B]">
-                    Or continue with
-                </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-                <button 
-                    type="button" 
-                    onClick={() => handleOAuth("google")} 
-                    className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium text-[#F5F5F5] bg-[#141414] hover:bg-[#1C1C1C] border border-[#1C1C1C] rounded-lg transition-colors cursor-pointer" 
-                >
-                    <GoogleIcon />
-                    <span>Google</span>
-                </button>
-                <button 
-                    type="button" 
-                    onClick={() => handleOAuth("discord")} 
-                    className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium text-[#F5F5F5] bg-[#141414] hover:bg-[#1C1C1C] border border-[#1C1C1C] rounded-lg transition-colors cursor-pointer" 
-                >
-                    <DiscordIcon />
-                    <span>Discord</span>
-                </button>
-                <button 
-                    type="button" 
-                    onClick={() => handleOAuth("github")} 
-                    className="flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium text-[#F5F5F5] bg-[#141414] hover:bg-[#1C1C1C] border border-[#1C1C1C] rounded-lg transition-colors cursor-pointer" 
-                >
-                    <GithubIcon />
-                    <span>GitHub</span>
-                </button>
-            </div>
             <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-[#1C1C1C] text-xs">
+                <button 
+                    type="button" 
+                    onClick={handleAnonymous} 
+                    className="w-full py-2 text-center text-[#B5B5B5] bg-[#141414] border border-[#1C1C1C] rounded cursor-pointer"
+                >
+                    Continue as Guest
+                </button>
                 <button 
                     type="button" 
                     onClick={() => setIsSignUp(!isSignUp)} 
@@ -156,5 +132,5 @@ export function AuthForm() {
                 </button>
             </div>
         </div>
-    )
-}
+    ); 
+} 
