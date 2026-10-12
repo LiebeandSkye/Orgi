@@ -4,6 +4,7 @@ import { Layout } from "../components/layout/Layout";
 import { HomePage } from "../pages/HomePage";
 import { MovieDetailsPage } from "../pages/MovieDetailsPage";
 import { SearchPage } from "../pages/SearchPage";
+import { BreakingBadPage } from "../pages/BreakingBadPage";
 import { ManhwaPage } from "../pages/ManhwaPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProfilePage } from "../pages/ProfilePage"; 
