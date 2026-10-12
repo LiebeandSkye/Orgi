@@ -270,7 +270,7 @@ export function Navbar({ forceBooksOpen = false }) {
             <button 
                 type="button" 
                 onClick={() => setProfileOpen((prev) => !prev)} 
-                className="w-9 h-9 rounded-full overflow-hidden cursor-pointer bg-[#141414] ring-1 ring-[#1C1C1C] hover:ring-[#61F1AC]" 
+                className="w-9 h-9 rounded-full overflow-hidden cursor-pointer bg-[#141414] ring-1 ring-[#1C1C1C] " 
                 title="User Profile" 
             >
                 {/* scale-125 crops away the baked-in light edge/background of the source image */} 
