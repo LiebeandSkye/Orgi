@@ -1,22 +1,39 @@
-import React, { useState } from "react";
-import { useParams } from "react-router-dom";
-import { Star, Grid, List } from "lucide-react";
-import { MANHWA_DATA } from "../data/mockData";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useSearchParams, Link } from "react-router-dom";
+import { Star, Grid, List, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { fetchMangaDexByCategory, fetchBooks } from "../services/mediaApi";
+import { BorderBeam } from "../components/ui/border-beam";
+import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 
 export function ManhwaPage() {
   const { category } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState("grid");
-  const [currentPage, setCurrentPage] = useState(1);
+  const currentPage = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
   const [hoveredCardId, setHoveredCardId] = useState("m1"); // Card 1 in hover state with 1px mint border by default
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const searchInputRef = useRef(null);
+  const prevCategoryRef = useRef(category);
+
+  const setCurrentPage = (newPage) => {
+    const next = Math.max(1, newPage);
+    if (next === currentPage) return;
+    setSearchParams(next === 1 ? {} : { page: String(next) });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const categoryTitles = {
-    novels: { title: "Novels", desc: "Literary fiction, modern classics, and serialized web novels" },
+    novels: { title: "Books & Novels", desc: "Literary fiction, modern classics, and serialized web novels" },
+    books: { title: "Books & Novels", desc: "Literary fiction, modern classics, and serialized web novels" },
     manga: { title: "Manga", desc: "Japanese serialized comics, print graphic novels, and tankōbon" },
     manhwa: { title: "Manhwa", desc: "Korean webcomics, vertical scrolls, and webtoons" },
+    manhua: { title: "Manhua", desc: "Chinese comics, martial arts cultivation, and webcomics" },
     "light-novels": { title: "Light Novels", desc: "Japanese illustrated light novels and serialized fiction" }
   };
 
-  const activeCat = categoryTitles[category?.toLowerCase()] || categoryTitles.manhwa;
+  const activeCategorySlug = category?.toLowerCase() || "manhwa";
+  const activeCat = categoryTitles[activeCategorySlug] || categoryTitles.manhwa;
 
   const [genreOpen, setGenreOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -26,17 +43,134 @@ export function ManhwaPage() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedSort, setSelectedSort] = useState("Top rated");
 
+  const [items, setItems] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setisLoading] = useState(true);
+
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        setSearchQuery("");
+        searchInputRef.current?.blur();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+
+  useEffect(() => {
+    if (searchQuery === debouncedQuery) return;
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+      setSearchParams({});
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery, debouncedQuery, setSearchParams]);
+
+
+  useEffect(() => {
+    if (prevCategoryRef.current !== category) {
+      prevCategoryRef.current = category;
+      setSearchQuery("");
+      setDebouncedQuery("");
+    }
+  }, [category]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadData() {
+      setisLoading(true);
+      try {
+        const cat = category?.toLowerCase() || "manhwa";
+        let data = [];
+        if (cat === "novels" || cat === "books" || cat === "light-novels") {
+          data = await fetchBooks(currentPage, debouncedQuery);
+        } else {
+          data = await fetchMangaDexByCategory(cat, currentPage, debouncedQuery);
+        }
+        if (mounted) {
+          setItems(data);
+          setTotalPages(data.totalPages || (data.length < 18 ? currentPage : 18));
+          if (data[0]) setHoveredCardId(data[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch media:", err);
+      } finally {
+        if (mounted) setisLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      mounted = false;
+    };
+  }, [category, currentPage, debouncedQuery]);
+
+  const isSearchActive = searchQuery.trim().length > 0;
+
   return (
     <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24 pt-8 select-none">
       <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px]">
-        {/* Large light title */}
-        <div className="mb-6">
-          <h1 className="text-4xl lg:text-5xl font-light tracking-tight text-[#F5F5F5]">
-            {activeCat.title}
-          </h1>
-          <p className="text-xs text-[#7A7A7A] mt-1 font-normal">
-            {activeCat.desc}
-          </p>
+        {/* Header + Search Box */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+          <div>
+            <h1 className="text-4xl lg:text-5xl font-light tracking-tight text-[#F5F5F5]">
+              {activeCat.title}
+            </h1>
+            <p className="text-xs text-[#7A7A7A] mt-1 font-normal">
+              {activeCat.desc}
+            </p>
+          </div>
+
+          <div className="relative w-full md:max-w-[440px] group">
+            <BorderBeam
+              size="md"
+              colorVariant="mint"
+              borderRadius={27}
+              className="w-full rounded-full"
+            >
+              <div className="relative w-full h-[50px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all">
+                <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                  <Search size={18} className="text-[#61F1AC] shrink-0" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={`Search ${activeCat.title.toLowerCase()}...`}
+                    className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]"
+                  />
+                </div>
+
+                {isSearchActive ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      searchInputRef.current?.focus();
+                    }}
+                    className="inline-flex items-center gap-1 text-xs text-[#7A7A7A] hover:text-[#F5F5F5] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] cursor-pointer transition-colors"
+                  >
+                    <X size={14} />
+                    <span>Clear</span>
+                  </button>
+                ) : (
+                  <kbd className="inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors">
+                    /
+                  </kbd>
+                )}
+              </div>
+            </BorderBeam>
+          </div>
         </div>
 
         {/* Thin filter row: chips "Genre ⌄", "Status ⌄" (Ongoing / Completed), "Sort: Top rated ⌄", and grid/list toggle at right */}
@@ -53,7 +187,7 @@ export function ManhwaPage() {
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/50 hover:text-[#F5F5F5] transition-colors cursor-pointer"
               >
-                <span>{selectedGenre === "All" ? "Genre ⌄" : `Genre: ${selectedGenre} ⌄`}</span>
+                <span>{selectedGenre === "All" ? "Genre" : `Genre: ${selectedGenre} ⌄`}</span>
               </button>
 
               {genreOpen && (
@@ -92,7 +226,7 @@ export function ManhwaPage() {
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/50 hover:text-[#F5F5F5] transition-colors cursor-pointer"
               >
-                <span>{selectedStatus === "All" ? "Status ⌄" : `Status: ${selectedStatus} ⌄`}</span>
+                <span>{selectedStatus === "All" ? "Status" : `Status: ${selectedStatus} ⌄`}</span>
               </button>
 
               {statusOpen && (
@@ -129,7 +263,7 @@ export function ManhwaPage() {
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/50 hover:text-[#F5F5F5] transition-colors cursor-pointer"
               >
-                <span>Sort: {selectedSort} ⌄</span>
+                <span>Sort: {selectedSort}</span>
               </button>
 
               {sortOpen && (
@@ -183,91 +317,171 @@ export function ManhwaPage() {
           </div>
         </div>
 
-        {/* 6-column grid of portrait cover cards with 16px gaps */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {MANHWA_DATA.map((item) => {
-            const isHovered = hoveredCardId === item.id;
+        {/* Results Grid, Skeleton Loader, or Empty State */}
+        {isLoading ? (
+          <CardSkeletonGrid count={18} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" />
+        ) : items.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {items.map((item) => {
+              const isHovered = hoveredCardId === item.id;
 
-            return (
-              <div
-                key={item.id}
-                onMouseEnter={() => setHoveredCardId(item.id)}
-                className="group flex flex-col cursor-pointer transition-all"
-              >
-                {/* Cover with 12px radius, 1px border. One card in hover state with 1px mint border */}
-                <div
-                  className={`relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] transition-all duration-200 mb-2.5 ${
-                    isHovered
-                      ? "border border-[#61F1AC] shadow-[0_0_20px_rgba(97,241,172,0.12)] scale-102"
-                      : "border border-[#1C1C1C] group-hover:border-[#61F1AC]/50"
-                  }`}
+              return (
+                <Link
+                  to={`/books/${activeCategorySlug}/${item.id}`}
+                  key={item.id}
+                  onMouseEnter={() => setHoveredCardId(item.id)}
+                  className="group flex flex-col cursor-pointer transition-all"
                 >
-                  <img
-                    src={item.cover}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-
-                {/* Title in white */}
-                <h3 className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white">
-                  {item.title}
-                </h3>
-
-                {/* Author in muted grey */}
-                <span className="text-xs text-[#7A7A7A] truncate font-light mt-0.5">
-                  {item.author}
-                </span>
-
-                {/* Small mint score and "Ch. 120" in muted */}
-                <div className="flex items-center justify-between text-xs mt-1.5 pt-1 border-t border-[#1C1C1C]/40">
-                  <div className="flex items-center gap-1 font-tabular text-[#61F1AC] font-medium">
-                    <Star size={11} className="fill-[#61F1AC]" />
-                    <span>{item.rating}</span>
+                  {/* Cover with 12px radius, 1px border. One card in hover state with 1px mint border */}
+                  <div
+                    className={`relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] transition-all duration-200 mb-2.5 ${
+                      isHovered
+                        ? "border border-[#61F1AC] shadow-[0_0_20px_rgba(97,241,172,0.12)] scale-102"
+                        : "border border-[#1C1C1C] group-hover:border-[#61F1AC]/50"
+                    }`}
+                  >
+                    <img
+                      src={item.cover}
+                      alt={item.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
 
-                  <span className="text-[11px] text-[#7A7A7A] font-tabular">
-                    {item.chapters}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  {/* Title in white */}
+                  <h3 className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white">
+                    {item.title}
+                  </h3>
 
-        {/* Minimal numbered pagination at bottom with current page in mint */}
-        <div className="mt-16 flex items-center justify-center gap-2 text-xs font-tabular">
-          {[1, 2, 3, 4].map((page) => {
-            const isCurrent = currentPage === page;
-            return (
+                  {/* Author in muted grey */}
+                  <span className="text-xs text-[#7A7A7A] truncate font-light mt-0.5">
+                    {item.author}
+                  </span>
+
+                  {/* Small mint score and "Ch. 120" in muted */}
+                  <div className="flex items-center justify-between text-xs mt-1.5 pt-1 border-t border-[#1C1C1C]/40">
+                    <div className="flex items-center gap-1 font-tabular text-[#61F1AC] font-medium">
+                      <Star size={11} className="fill-[#61F1AC]" />
+                      <span>{item.rating}</span>
+                    </div>
+
+                    <span className="text-[11px] text-[#7A7A7A] font-tabular">
+                      {item.chapters}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-16 text-center">
+            <p className="text-sm text-[#7A7A7A] font-light">
+              No titles found{isSearchActive ? ` matching "${searchQuery}"` : ""}.
+            </p>
+            {isSearchActive && (
               <button
-                key={page}
                 type="button"
-                onClick={() => setCurrentPage(page)}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                  isCurrent
-                    ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50 font-semibold"
-                    : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B]"
-                }`}
+                onClick={() => {
+                  setSearchQuery("");
+                  searchInputRef.current?.focus();
+                }}
+                className="mt-4 px-4 py-1.5 rounded-full text-xs text-[#61F1AC] border border-[#61F1AC]/40 hover:bg-[#61F1AC]/10 transition-colors cursor-pointer"
               >
-                {page}
+                Clear search
               </button>
-            );
-          })}
-          <span className="text-[#3A3A3A] px-1">…</span>
-          <button
-            type="button"
-            onClick={() => setCurrentPage(18)}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-              currentPage === 18
-                ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50 font-semibold"
-                : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B]"
-            }`}
-          >
-            18
-          </button>
-        </div>
+            )}
+          </div>
+        )}
+
+        {/* Minimal numbered pagination at bottom limited strictly to pages with data */}
+        {!isLoading && items.length > 0 && totalPages > 1 && (
+          <div className="mt-16 flex items-center justify-center gap-2 text-xs font-tabular">
+            {/* Previous 1 page button */}
+            <button
+              type="button"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+              title="Previous page"
+            >
+              <ChevronLeft size={14} />
+            </button>
+
+            {(() => {
+              const pages = [];
+              const start = Math.max(1, Math.min(currentPage - 1, totalPages - 3));
+              const end = Math.min(totalPages, start + 3);
+              for (let p = start; p <= end; p++) {
+                pages.push(p);
+              }
+              return (
+                <>
+                  {start > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(1)}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B] transition-colors cursor-pointer"
+                      >
+                        1
+                      </button>
+                      {start > 2 && <span className="text-[#3A3A3A] px-1">…</span>}
+                    </>
+                  )}
+
+                  {pages.map((page) => {
+                    const isCurrent = currentPage === page;
+                    return (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                          isCurrent
+                            ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50 font-semibold"
+                            : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B]"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+
+                  {end < totalPages && (
+                    <>
+                      {end < totalPages - 1 && (
+                        <span className="text-[#3A3A3A] px-1">…</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(totalPages)}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                          currentPage === totalPages
+                            ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50 font-semibold"
+                            : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B]"
+                        }`}
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+                </>
+              );
+            })()}
+
+            {/* Next 1 page button */}
+            <button
+              type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+              title="Next page"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

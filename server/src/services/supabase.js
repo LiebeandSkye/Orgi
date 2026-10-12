@@ -11,8 +11,8 @@ export const supabaseAdmin = createClient(
             autoRefreshToken: false, 
             persistSession: false, 
         }, 
-    } 
-); 
+    }
+)
 
 export const createAuthClient = () => { 
     return createClient( 
@@ -24,7 +24,7 @@ export const createAuthClient = () => {
                 persistSession: false, 
             }, 
         } 
-    ); 
-}; 
+    )
+}
 
 export const supabase = supabaseAdmin; 

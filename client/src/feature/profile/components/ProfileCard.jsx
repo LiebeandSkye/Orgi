@@ -29,9 +29,6 @@ export function ProfileCard({ profile, onEdit }) {
                 </div>
                 <div className="flex items-center gap-2">
                     <h1 className="text-xl font-bold">{profile?.user_name || "Unnamed Orgi"}</h1>
-                    <span className="px-2 py-0.5 text-[10px] rounded bg-[#141414] border border-[#1C1C1C] text-[#61F1AC]">
-                        {profile?.current_status || "Online"}
-                    </span>
                 </div>
                 <p className="text-xs text-[#7A7A7A] mt-1">{profile?.email || "No email"}</p>
             </div>
