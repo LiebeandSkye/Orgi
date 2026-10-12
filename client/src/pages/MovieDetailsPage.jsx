@@ -1,13 +1,27 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { Star, Plus, Share2, ThumbsUp, Reply, MoreHorizontal, ChevronDown } from "lucide-react";
+import {
+  Star,
+  Plus,
+  Share2,
+  ThumbsUp,
+  Reply,
+  MoreHorizontal,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { getMovieDetails } from "../services/tmdb";
+import { getMovieMedia } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
-import { INTERSTELLAR_DATA } from "../data/mockData"; 
+import { INTERSTELLAR_DATA } from "../data/mockData";
+import MediaItems from "../components/ui/MediaItems";
 
-export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false }) {
+export function MovieDetailsPage({
+  initialTab = "Cast",
+  initialCropHero = false,
+}) {
   const location = useLocation();
   const { id } = useParams();
   const isReviewsUrl = location.pathname.includes("/reviews");
@@ -39,13 +53,55 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
     };
   }, [id]);
 
-  const activeTab = selectedTabOverride !== null 
-    ? selectedTabOverride 
-    : (isReviewsUrl ? "Reviews" : initialTab);
+  const { movieId } = useParams();
 
-  const cropHero = cropHeroOverride !== null 
-    ? cropHeroOverride 
-    : (isReviewsUrl ? true : initialCropHero);
+  const [mediaData, setMediaData] = useState({
+    images: {
+      backdrops: [],
+      posters: [],
+    },
+    videos: {
+      results: [],
+    },
+  });
+
+  useEffect(() => {
+    if (!movieId) return;
+
+    let cancelled = false;
+
+    async function fetchMedia() {
+      try {
+        const data = await getMovieMedia(movieId);
+
+        if (!cancelled) {
+          setMediaData(data);
+        }
+      } catch (error) {
+        console.error("Failed to load movie media:", error);
+      }
+    }
+
+    fetchMedia();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movieId]);
+
+  const activeTab =
+    selectedTabOverride !== null
+      ? selectedTabOverride
+      : isReviewsUrl
+        ? "Reviews"
+        : initialTab;
+
+  const cropHero =
+    cropHeroOverride !== null
+      ? cropHeroOverride
+      : isReviewsUrl
+        ? true
+        : initialCropHero;
 
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
   const [newThought, setNewThought] = useState("");
@@ -72,7 +128,7 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
   const toggleLike = (reviewId) => {
     setLikedReviews((prev) => ({
       ...prev,
-      [reviewId]: !prev[reviewId]
+      [reviewId]: !prev[reviewId],
     }));
   };
 
@@ -121,7 +177,9 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
         {/* Hero Content: Two-column layout with 120px side margins */}
         <div
           className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-10 pb-8 flex items-start gap-12 transition-transform duration-500 ${
-            cropHero ? "-translate-y-48 opacity-40 pointer-events-none" : "translate-y-0 opacity-100"
+            cropHero
+              ? "-translate-y-48 opacity-40 pointer-events-none"
+              : "translate-y-0 opacity-100"
           }`}
         >
           {/* LEFT: 2:3 portrait poster, 320px wide, 12px rounded corners, 1px border */}
@@ -148,12 +206,16 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
               {movieData.title}
             </h1>
 
+            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-4 flex items-center gap-2">
+              <span className="shrink-0 rounded-full border border-white/30 px-4 py-2 font-medium leading-6 text-white transition-all duration-200 hover:border-[#61F1AC]/40 hover:bg-white/10">
+                {movieData.genres}
+              </span>
+            </div>
+
             {/* One muted meta line "2014 · Sci-Fi, Adventure · 2h 49m · PG-13" */}
-            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-8 flex items-center gap-2">
+            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-8 mx-2 flex items-center gap-2">
               <span>{movieData.year}</span>
-              <span>·</span>
-              <span>{movieData.genres}</span>
-              <span>·</span>
+              <span className="">·</span>
               <span>{movieData.runtime}</span>
               <span>·</span>
               <span>{movieData.certificate}</span>
@@ -217,17 +279,39 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
             </div>
 
             {/* 3-line synopsis in #B5B5B5 at 16px with mint "Read more" link */}
+
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
-              <p className={synopsisExpanded ? "" : "line-clamp-3"}>
-                {movieData.synopsis}
-                {!synopsisExpanded && " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."}
-              </p>
+              <div
+                className={`relative overflow-hidden transition-[max-height] duration-700 ease-in-out ${
+                  synopsisExpanded ? "max-h-[1000px]" : "max-h-[5.5rem]"
+                }`}
+              >
+                <p
+                  className={`transition-[filter] duration-700 ease-in-out ${
+                    synopsisExpanded ? "" : "line-clamp-3"
+                  }`}
+                >
+                  {movieData.synopsis}
+                  {!synopsisExpanded &&
+                    " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."}
+                </p>
+
+                {!synopsisExpanded && (
+                  <div className="pointer-events-none absolute bottom-0 left-0 h-6 w-full backdrop-brightness-50 bg-gradient-to-t from-[#000000] to-transparent" />
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => setSynopsisExpanded(!synopsisExpanded)}
-                className="mt-1 text-sm font-medium text-[#61F1AC] hover:underline cursor-pointer inline-block"
+                className="mt-1 text-sm font-medium text-[#61F1AC]  cursor-pointer inline-flex items-center gap-2 transition-colors"
               >
                 {synopsisExpanded ? "Show less" : "Read more"}
+                {synopsisExpanded ? (
+                  <ChevronUp size={18} />
+                ) : (
+                  <ChevronDown size={18} />
+                )}
               </button>
             </div>
           </div>
@@ -241,7 +325,7 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
           <div className="flex items-center gap-8 h-12">
-            {["Cast", "Reviews", "Details"].map((tab) => {
+            {["Cast", "Reviews", "Media", "Details"].map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
@@ -249,7 +333,9 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
                   type="button"
                   onClick={() => handleTabChange(tab)}
                   className={`relative h-full flex items-center text-sm font-medium transition-colors cursor-pointer ${
-                    isActive ? "text-[#F5F5F5]" : "text-[#7A7A7A] hover:text-[#F5F5F5]"
+                    isActive
+                      ? "text-[#F5F5F5]"
+                      : "text-[#7A7A7A] hover:text-[#F5F5F5]"
                   }`}
                 >
                   <span>{tab}</span>
@@ -285,7 +371,9 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
           <div className="animate-in fade-in duration-300">
             {/* Header row with "Cast" and small "See all" link at right */}
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">Cast</h2>
+              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
+                Cast
+              </h2>
               <button
                 type="button"
                 className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors cursor-pointer"
@@ -399,23 +487,25 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
 
                 {sortDropdownOpen && (
                   <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-xl z-20">
-                    {["Top", "Newest", "Highest Rated", "Lowest Rated"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          setSortBy(opt);
-                          setSortDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                          sortBy === opt
-                            ? "text-[#61F1AC] bg-[#141414]"
-                            : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
+                    {["Top", "Newest", "Highest Rated", "Lowest Rated"].map(
+                      (opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            setSortBy(opt);
+                            setSortDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                            sortBy === opt
+                              ? "text-[#61F1AC] bg-[#141414]"
+                              : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]"
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ),
+                    )}
                   </div>
                 )}
               </div>
@@ -469,7 +559,10 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
                             isLiked ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]"
                           }`}
                         >
-                          <ThumbsUp size={13} className={isLiked ? "fill-[#61F1AC]" : ""} />
+                          <ThumbsUp
+                            size={13}
+                            className={isLiked ? "fill-[#61F1AC]" : ""}
+                          />
                           <span className="font-tabular">{likeCount}</span>
                         </button>
 
@@ -497,7 +590,9 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
                           className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1"
                         >
                           <span>
-                            {repliesExpanded ? "Hide replies" : `View ${rev.repliesCount} replies ⌄`}
+                            {repliesExpanded
+                              ? "Hide replies"
+                              : `View ${rev.repliesCount} replies ⌄`}
                           </span>
                         </button>
                       )}
@@ -518,7 +613,9 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
                                 {reply.author}
                               </span>
                               <span className="text-[#7A7A7A]">·</span>
-                              <span className="text-[#7A7A7A]">{reply.time}</span>
+                              <span className="text-[#7A7A7A]">
+                                {reply.time}
+                              </span>
                             </div>
                             <p className="text-[#B5B5B5] leading-relaxed pl-7">
                               {reply.content}
@@ -547,6 +644,15 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
         )}
 
         {/* ======================================================== */}
+        {/* 3.  MEDIA TAB CONTENT                                   */}
+        {/* ======================================================== */}
+        {activeTab === "Media" && (
+          <div className="animate-in fade-in duration-300">
+            <MediaItems movieData={movieData} />
+          </div>
+        )}
+
+        {/* ======================================================== */}
         {/* 3. DETAILS TAB CONTENT                                   */}
         {/* ======================================================== */}
         {activeTab === "Details" && (
@@ -557,31 +663,51 @@ export function MovieDetailsPage({ initialTab = "Cast", initialCropHero = false 
             <div className="divide-y divide-[#1C1C1C] text-sm">
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Director</span>
-                <span className="text-[#F5F5F5]">{movieData.details?.director || INTERSTELLAR_DATA.details.director}</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.director ||
+                    INTERSTELLAR_DATA.details.director}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Writers</span>
-                <span className="text-[#F5F5F5]">{movieData.details?.writers || INTERSTELLAR_DATA.details.writers}</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.writers ||
+                    INTERSTELLAR_DATA.details.writers}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Original Score</span>
-                <span className="text-[#F5F5F5]">{movieData.details?.music || INTERSTELLAR_DATA.details.music}</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.music || INTERSTELLAR_DATA.details.music}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Cinematography</span>
-                <span className="text-[#F5F5F5]">{movieData.details?.cinematography || INTERSTELLAR_DATA.details.cinematography}</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.cinematography ||
+                    INTERSTELLAR_DATA.details.cinematography}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Box Office</span>
-                <span className="text-[#F5F5F5] font-tabular">{movieData.details?.boxOffice || INTERSTELLAR_DATA.details.boxOffice}</span>
+                <span className="text-[#F5F5F5] font-tabular">
+                  {movieData.details?.boxOffice ||
+                    INTERSTELLAR_DATA.details.boxOffice}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Aspect Ratio</span>
-                <span className="text-[#F5F5F5] font-tabular">{movieData.details?.aspectRatio || INTERSTELLAR_DATA.details.aspectRatio}</span>
+                <span className="text-[#F5F5F5] font-tabular">
+                  {movieData.details?.aspectRatio ||
+                    INTERSTELLAR_DATA.details.aspectRatio}
+                </span>
               </div>
               <div className="py-3 flex justify-between">
                 <span className="text-[#7A7A7A]">Studio</span>
-                <span className="text-[#F5F5F5]">{movieData.details?.studio || INTERSTELLAR_DATA.details.studio}</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.studio ||
+                    INTERSTELLAR_DATA.details.studio}
+                </span>
               </div>
             </div>
           </div>
