@@ -4,58 +4,29 @@ import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { CardSkeleton } from "./CardSkeleton";
 
 /* ------------------------------------------------------------------ */
-/*  Rank ribbon — a bookmark that hangs off the top of the poster.      */
-/*  #1 is solid mint with a glow; the rest are dark glass + mint edge.  */
+/*  Rank number — big silver numeral in the top-left of the poster,     */
+/*  over a faint top scrim so it stays readable on bright artwork.      */
 /* ------------------------------------------------------------------ */
-const RIBBON_SHAPE = "polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%)";
-
-function RankRibbon({ rank }) {
-  const isFirst = rank === 1;
-
+function RankNumber({ rank }) {
   return (
-    <div
-      aria-hidden="true"
-      className={`absolute top-0 left-2.5 z-10 transition-transform duration-300 ease-out group-hover:translate-y-0.5 ${
-        isFirst
-          ? "drop-shadow-[0_6px_14px_rgba(97,241,172,0.35)]"
-          : "drop-shadow-[0_6px_10px_rgba(0,0,0,0.65)]"
-      }`}
-    >
-      {/* Outer layer = the 1px gradient edge */}
+    <>
+      {/* Soft top scrim */}
       <div
-        className="relative w-9 h-11"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-24 z-10 bg-gradient-to-b from-black/40 via-black/10 to-transparent"
+      />
+      {/* Silver numeral */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1 left-2.5 z-10 select-none leading-none font-semibold tracking-[-0.04em] text-[42px] sm:text-[46px] md:text-[54px] text-transparent bg-clip-text drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]"
         style={{
-          clipPath: RIBBON_SHAPE,
-          background: isFirst
-            ? "linear-gradient(180deg, #C9FFE6 0%, #3FD890 100%)"
-            : "linear-gradient(180deg, rgba(97,241,172,0.75) 0%, rgba(97,241,172,0.1) 100%)",
+          backgroundImage:
+            "linear-gradient(180deg, #FFFFFF 0%, #F1F1F5 30%, #BDBDC6 68%, #8D8D96 100%)",
         }}
       >
-        {/* Inner layer = the fill */}
-        <div
-          className="absolute inset-[1px]"
-          style={{
-            clipPath: RIBBON_SHAPE,
-            background: isFirst
-              ? "linear-gradient(180deg, #86FFC6 0%, #4BE39A 55%, #2FBF7D 100%)"
-              : "linear-gradient(180deg, #1A1A1A 0%, #0A0A0A 100%)",
-          }}
-        />
-        {/* Soft top gloss */}
-        <div
-          className="absolute inset-x-[1px] top-[1px] h-4 bg-gradient-to-b from-white/20 to-transparent"
-          style={{ clipPath: RIBBON_SHAPE }}
-        />
-        {/* Number */}
-        <span
-          className={`absolute inset-x-0 top-0 h-[34px] flex items-center justify-center text-[15px] font-extrabold tracking-tight font-tabular ${
-            isFirst ? "text-[#04170D]" : "text-[#61F1AC]"
-          }`}
-        >
-          {rank}
-        </span>
-      </div>
-    </div>
+        {rank}
+      </span>
+    </>
   );
 }
 
@@ -221,8 +192,8 @@ export function MediaCarousel({
               >
                 {/* Poster Card */}
                 <div className="relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] border border-[#1C1C1C] group-hover:border-[#61F1AC]/60 group-hover:shadow-[0_0_20px_rgba(97,241,172,0.12)] transition-all duration-300">
-                  {/* Rank ribbon for Top 10 */}
-                  {showRank && <RankRibbon rank={idx + 1} />}
+                  {/* Rank number for Top 10 */}
+                  {showRank && <RankNumber rank={idx + 1} />}
 
                   {item.poster ? (
                     <img
