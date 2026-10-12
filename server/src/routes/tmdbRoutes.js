@@ -37,6 +37,159 @@ router.get("/trending", async (req, res, next) => {
   } 
 }); 
 
+router.get("/trending-month", async (req, res, next) => {
+  try {
+    const { type = "all" } = req.query;
+    const cacheKey = `tmdb:trending-month:${type}`;
+    const data = await getOrSetCache(cacheKey, 3 * 3600, async () => {
+      const now = new Date();
+      const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const nowStr = now.toISOString().split("T")[0];
+      const pastStr = past30.toISOString().split("T")[0];
+
+      if (type === "movie") {
+        const res = await fetchTmdbApi("/discover/movie", {
+          sort_by: "popularity.desc",
+          "primary_release_date.gte": pastStr,
+          "primary_release_date.lte": nowStr
+        });
+        return {
+          results: (res.results || []).map((m) => ({ ...m, media_type: "movie" }))
+        };
+      }
+
+      if (type === "tv") {
+        const res = await fetchTmdbApi("/discover/tv", {
+          sort_by: "popularity.desc",
+          "first_air_date.gte": pastStr,
+          "first_air_date.lte": nowStr
+        });
+        return {
+          results: (res.results || []).map((t) => ({ ...t, media_type: "tv" }))
+        };
+      }
+
+      const [resM, resT] = await Promise.all([
+        fetchTmdbApi("/discover/movie", {
+          sort_by: "popularity.desc",
+          "primary_release_date.gte": pastStr,
+          "primary_release_date.lte": nowStr
+        }),
+        fetchTmdbApi("/discover/tv", {
+          sort_by: "popularity.desc",
+          "first_air_date.gte": pastStr,
+          "first_air_date.lte": nowStr
+        })
+      ]);
+
+      const mList = (resM.results || []).map((m) => ({ ...m, media_type: "movie" }));
+      const tList = (resT.results || []).map((t) => ({ ...t, media_type: "tv" }));
+      const combined = [...mList, ...tList].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
+      return { results: combined };
+    });
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/top-rated", async (req, res, next) => {
+  try {
+    const { type = "all", page = 1 } = req.query;
+    const cacheKey = `tmdb:top-rated:${type}:${page}`;
+    const data = await getOrSetCache(cacheKey, 6 * 3600, async () => {
+      if (type === "movie") {
+        const res = await fetchTmdbApi("/movie/top_rated", { page });
+        return {
+          results: (res.results || []).map((m) => ({ ...m, media_type: "movie" }))
+        };
+      }
+      if (type === "tv") {
+        const res = await fetchTmdbApi("/tv/top_rated", { page });
+        return {
+          results: (res.results || []).map((t) => ({ ...t, media_type: "tv" }))
+        };
+      }
+
+      const [resM, resT] = await Promise.all([
+        fetchTmdbApi("/movie/top_rated", { page }),
+        fetchTmdbApi("/tv/top_rated", { page })
+      ]);
+
+      const mList = (resM.results || []).map((m) => ({ ...m, media_type: "movie" }));
+      const tList = (resT.results || []).map((t) => ({ ...t, media_type: "tv" }));
+      const combined = [];
+      const maxLen = Math.max(mList.length, tList.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (mList[i]) combined.push(mList[i]);
+        if (tList[i]) combined.push(tList[i]);
+      }
+
+      return { results: combined };
+    });
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/latest", async (req, res, next) => {
+  try {
+    const { type = "all" } = req.query;
+    const cacheKey = `tmdb:latest:${type}`;
+    const data = await getOrSetCache(cacheKey, 3 * 3600, async () => {
+      const now = new Date();
+      const past60 = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      const nowStr = now.toISOString().split("T")[0];
+      const pastStr = past60.toISOString().split("T")[0];
+
+      if (type === "movie") {
+        const res = await fetchTmdbApi("/movie/now_playing");
+        return {
+          results: (res.results || []).map((m) => ({ ...m, media_type: "movie" }))
+        };
+      }
+      if (type === "tv") {
+        const res = await fetchTmdbApi("/discover/tv", {
+          sort_by: "popularity.desc",
+          "first_air_date.gte": pastStr,
+          "first_air_date.lte": nowStr
+        });
+        return {
+          results: (res.results || []).map((t) => ({ ...t, media_type: "tv" }))
+        };
+      }
+
+      const [resM, resT] = await Promise.all([
+        fetchTmdbApi("/movie/now_playing"),
+        fetchTmdbApi("/discover/tv", {
+          sort_by: "popularity.desc",
+          "first_air_date.gte": pastStr,
+          "first_air_date.lte": nowStr
+        })
+      ]);
+
+      const mList = (resM.results || []).map((m) => ({ ...m, media_type: "movie" }));
+      const tList = (resT.results || []).map((t) => ({ ...t, media_type: "tv" }));
+      const combined = [];
+      const maxLen = Math.max(mList.length, tList.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (mList[i]) combined.push(mList[i]);
+        if (tList[i]) combined.push(tList[i]);
+      }
+
+      return { results: combined };
+    });
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}); 
+
 router.get("/movie/:id", async (req, res, next) => { 
   try { 
     const { id } = req.params; 

@@ -18,6 +18,27 @@ test("tmdbRoutes has all expected route endpoints", async () => {
     const json = await res.json();
     assert.equal(json.success, true);
     assert.deepEqual(json.data.results, []);
+
+    // Check trending-month endpoint
+    const resMonth = await fetch(`http://localhost:${port}/api/tmdb/trending-month`);
+    assert.equal(resMonth.status, 200);
+    const jsonMonth = await resMonth.json();
+    assert.equal(jsonMonth.success, true);
+    assert.ok(Array.isArray(jsonMonth.data.results));
+
+    // Check top-rated endpoint
+    const resTop = await fetch(`http://localhost:${port}/api/tmdb/top-rated`);
+    assert.equal(resTop.status, 200);
+    const jsonTop = await resTop.json();
+    assert.equal(jsonTop.success, true);
+    assert.ok(Array.isArray(jsonTop.data.results));
+
+    // Check latest endpoint
+    const resLatest = await fetch(`http://localhost:${port}/api/tmdb/latest`);
+    assert.equal(resLatest.status, 200);
+    const jsonLatest = await resLatest.json();
+    assert.equal(jsonLatest.success, true);
+    assert.ok(Array.isArray(jsonLatest.data.results));
   } finally {
     server.close();
   }

@@ -1,16 +1,36 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Search, Star, X } from "lucide-react";
-import { searchTmdb, getTrending } from "../services/tmdb";
+import {
+  searchTmdb,
+  getTrending,
+  getTop10Trending,
+  getTrendingMonth,
+  getFanFavorites,
+  getLatestMedia,
+} from "../services/tmdb";
 import { BorderBeam } from "../components/ui/border-beam";
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
+import { MediaCarousel } from "../components/ui/MediaCarousel";
 
 export function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
-  const [hoveredCardId, setHoveredCardId] = useState(null);
   const [trendingItems, setTrendingItems] = useState([]);
   const [isLoadingTrending, setIsLoadingTrending] = useState(true);
+
+  const [top10Items, setTop10Items] = useState([]);
+  const [isLoadingTop10, setIsLoadingTop10] = useState(true);
+
+  const [trendingMonthItems, setTrendingMonthItems] = useState([]);
+  const [isLoadingTrendingMonth, setIsLoadingTrendingMonth] = useState(true);
+
+  const [fanFavoritesItems, setFanFavoritesItems] = useState([]);
+  const [isLoadingFanFavorites, setIsLoadingFanFavorites] = useState(true);
+
+  const [latestItems, setLatestItems] = useState([]);
+  const [isLoadingLatest, setIsLoadingLatest] = useState(true);
+
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchInputRef = useRef(null);
@@ -43,27 +63,70 @@ export function HomePage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Fetch actual live TMDB Trending items on mount
+  // Fetch actual live TMDB categories on mount
   useEffect(() => {
     let mounted = true;
-    async function loadLiveTrending() {
-      setIsLoadingTrending(true);
-      try {
-        const live = await getTrending("all", "week");
-        if (mounted && live?.results && live.results.length > 0) {
-          setTrendingItems(live.results.slice(0, 12));
-          if (live.results[0]) {
-            setHoveredCardId(live.results[0].id);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch live trending from TMDB:", err);
-      } finally {
-        if (mounted) setIsLoadingTrending(false);
-      }
-    }
 
-    loadLiveTrending();
+    // 1. Trending this week
+    getTrending("all", "week")
+      .then((live) => {
+        if (mounted && live?.results) {
+          setTrendingItems(live.results.slice(0, 16));
+        }
+      })
+      .catch((err) => console.error("Failed to fetch trending this week:", err))
+      .finally(() => {
+        if (mounted) setIsLoadingTrending(false);
+      });
+
+    // 2. Top 10 trending
+    getTop10Trending()
+      .then((live) => {
+        if (mounted && live?.results) {
+          setTop10Items(live.results);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch top 10:", err))
+      .finally(() => {
+        if (mounted) setIsLoadingTop10(false);
+      });
+
+    // 3. Trending this month
+    getTrendingMonth()
+      .then((live) => {
+        if (mounted && live?.results) {
+          setTrendingMonthItems(live.results.slice(0, 16));
+        }
+      })
+      .catch((err) => console.error("Failed to fetch trending this month:", err))
+      .finally(() => {
+        if (mounted) setIsLoadingTrendingMonth(false);
+      });
+
+    // 4. Fan favorites
+    getFanFavorites()
+      .then((live) => {
+        if (mounted && live?.results) {
+          setFanFavoritesItems(live.results.slice(0, 16));
+        }
+      })
+      .catch((err) => console.error("Failed to fetch fan favorites:", err))
+      .finally(() => {
+        if (mounted) setIsLoadingFanFavorites(false);
+      });
+
+    // 5. Latest movies and series
+    getLatestMedia()
+      .then((live) => {
+        if (mounted && live?.results) {
+          setLatestItems(live.results.slice(0, 16));
+        }
+      })
+      .catch((err) => console.error("Failed to fetch latest media:", err))
+      .finally(() => {
+        if (mounted) setIsLoadingLatest(false);
+      });
+
     return () => {
       mounted = false;
     };
@@ -262,74 +325,41 @@ export function HomePage() {
             )}
           </section>
         ) : (
-          /* DEFAULT: LIVE TMDB TRENDING THIS WEEK */
-          <section className="mt-4 animate-in fade-in duration-200">
-            {/* Section Header */}
-            <div className="mb-5 flex items-center">
-              <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]">
-                TRENDING THIS WEEK
-              </span>
-            </div>
+          /* ======================================================== */
+          /* HOME CATEGORIES AS USERS SCROLL                          */
+          /* ======================================================== */
+          <div className="space-y-6 animate-in fade-in duration-200 pb-12">
+            <MediaCarousel
+              title="Trending this week"
+              items={trendingItems}
+              isLoading={isLoadingTrending}
+            />
 
-            {/* 6-Column Grid of Live Cards or Skeletons */}
-            {isLoadingTrending ? (
-              <CardSkeletonGrid count={12} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4" />
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                {trendingItems.map((item) => {
-                  const isSelected = hoveredCardId === item.id;
+            <MediaCarousel
+              title="Trending this month"
+              items={trendingMonthItems}
+              isLoading={isLoadingTrendingMonth}
+            />
 
-                  return (
-                    <Link
-                      key={`${item.type}-${item.id}`}
-                      to={item.route}
-                      onMouseEnter={() => setHoveredCardId(item.id)}
-                      className="group flex flex-col cursor-pointer transition-all"
-                    >
-                      {/* Poster Thumbnail */}
-                      <div
-                        className={`relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] transition-all duration-300 ${
-                          isSelected
-                            ? "border border-[#61F1AC] shadow-[0_0_24px_rgba(97,241,172,0.14)]"
-                            : "border border-[#1C1C1C] group-hover:border-[#61F1AC]/50"
-                        }`}
-                      >
-                        {item.poster ? (
-                          <img
-                            src={item.poster}
-                            alt={item.title}
-                            loading="lazy"
-                            className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs text-[#7A7A7A] p-4 text-center">
-                            {item.title}
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
+            <MediaCarousel
+              title="Fan favorites"
+              items={fanFavoritesItems}
+              isLoading={isLoadingFanFavorites}
+            />
 
-                      {/* Movie Meta */}
-                      <div className="mt-3 flex flex-col">
-                        <span className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white transition-colors">
-                          {item.title}
-                        </span>
-                        <div className="flex items-center justify-between mt-1 text-xs">
-                          <span className="text-[#7A7A7A] font-tabular">
-                            {item.year || "—"}
-                          </span>
-                          <div className="flex items-center gap-1 text-[#61F1AC] font-medium font-tabular">
-                            <Star size={11} className="fill-[#61F1AC]" />
-                            <span>{item.rating || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+            <MediaCarousel
+              title="Top 10 trending"
+              items={top10Items}
+              isLoading={isLoadingTop10}
+              showRank={true}
+            />
+
+            <MediaCarousel
+              title="Latest movies and series"
+              items={latestItems}
+              isLoading={isLoadingLatest}
+            />
+          </div>
         )}
       </div>
     </div>
