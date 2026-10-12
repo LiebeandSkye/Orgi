@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Link } from "react-router-dom";
 import { Star, Grid, List, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { fetchMangaDexByCategory, fetchBooks } from "../services/mediaApi";
 import { BorderBeam } from "../components/ui/border-beam";
+import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 
 export function ManhwaPage() {
   const { category } = useParams();
@@ -316,63 +317,85 @@ export function ManhwaPage() {
           </div>
         </div>
 
-        {/* 6-column grid of portrait cover cards with 16px gaps */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {items.map((item) => {
-            const isHovered = hoveredCardId === item.id;
+        {/* Results Grid, Skeleton Loader, or Empty State */}
+        {isLoading ? (
+          <CardSkeletonGrid count={18} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" />
+        ) : items.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {items.map((item) => {
+              const isHovered = hoveredCardId === item.id;
 
-                        return (
-              <Link
-                to={`/books/${activeCategorySlug}/${item.id}`}
-                key={item.id}
-                onMouseEnter={() => setHoveredCardId(item.id)}
-                className="group flex flex-col cursor-pointer transition-all"
-              >
-                {/* Cover with 12px radius, 1px border. One card in hover state with 1px mint border */}
-                <div
-                  className={`relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] transition-all duration-200 mb-2.5 ${
-                    isHovered
-                      ? "border border-[#61F1AC] shadow-[0_0_20px_rgba(97,241,172,0.12)] scale-102"
-                      : "border border-[#1C1C1C] group-hover:border-[#61F1AC]/50"
-                  }`}
+              return (
+                <Link
+                  to={`/books/${activeCategorySlug}/${item.id}`}
+                  key={item.id}
+                  onMouseEnter={() => setHoveredCardId(item.id)}
+                  className="group flex flex-col cursor-pointer transition-all"
                 >
-                  <img
-                    src={item.cover}
-                    alt={item.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-
-                {/* Title in white */}
-                <h3 className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white">
-                  {item.title}
-                </h3>
-
-                {/* Author in muted grey */}
-                <span className="text-xs text-[#7A7A7A] truncate font-light mt-0.5">
-                  {item.author}
-                </span>
-
-                {/* Small mint score and "Ch. 120" in muted */}
-                <div className="flex items-center justify-between text-xs mt-1.5 pt-1 border-t border-[#1C1C1C]/40">
-                  <div className="flex items-center gap-1 font-tabular text-[#61F1AC] font-medium">
-                    <Star size={11} className="fill-[#61F1AC]" />
-                    <span>{item.rating}</span>
+                  {/* Cover with 12px radius, 1px border. One card in hover state with 1px mint border */}
+                  <div
+                    className={`relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] transition-all duration-200 mb-2.5 ${
+                      isHovered
+                        ? "border border-[#61F1AC] shadow-[0_0_20px_rgba(97,241,172,0.12)] scale-102"
+                        : "border border-[#1C1C1C] group-hover:border-[#61F1AC]/50"
+                    }`}
+                  >
+                    <img
+                      src={item.cover}
+                      alt={item.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
 
-                  <span className="text-[11px] text-[#7A7A7A] font-tabular">
-                    {item.chapters}
+                  {/* Title in white */}
+                  <h3 className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white">
+                    {item.title}
+                  </h3>
+
+                  {/* Author in muted grey */}
+                  <span className="text-xs text-[#7A7A7A] truncate font-light mt-0.5">
+                    {item.author}
                   </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+
+                  {/* Small mint score and "Ch. 120" in muted */}
+                  <div className="flex items-center justify-between text-xs mt-1.5 pt-1 border-t border-[#1C1C1C]/40">
+                    <div className="flex items-center gap-1 font-tabular text-[#61F1AC] font-medium">
+                      <Star size={11} className="fill-[#61F1AC]" />
+                      <span>{item.rating}</span>
+                    </div>
+
+                    <span className="text-[11px] text-[#7A7A7A] font-tabular">
+                      {item.chapters}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-16 text-center">
+            <p className="text-sm text-[#7A7A7A] font-light">
+              No titles found{isSearchActive ? ` matching "${searchQuery}"` : ""}.
+            </p>
+            {isSearchActive && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  searchInputRef.current?.focus();
+                }}
+                className="mt-4 px-4 py-1.5 rounded-full text-xs text-[#61F1AC] border border-[#61F1AC]/40 hover:bg-[#61F1AC]/10 transition-colors cursor-pointer"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Minimal numbered pagination at bottom limited strictly to pages with data */}
-        {items.length > 0 && totalPages > 1 && (
+        {!isLoading && items.length > 0 && totalPages > 1 && (
           <div className="mt-16 flex items-center justify-center gap-2 text-xs font-tabular">
             {/* Previous 1 page button */}
             <button

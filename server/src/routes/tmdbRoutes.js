@@ -1,4 +1,5 @@
 import express from "express"; 
+import { getOrSetCache } from "../services/cacheService.js";
 
 const router = express.Router(); 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3"; 
@@ -26,7 +27,10 @@ async function fetchTmdbApi(endpoint, params = {}) {
 router.get("/trending", async (req, res, next) => { 
   try { 
     const { type = "all", window = "week" } = req.query; 
-    const data = await fetchTmdbApi(`/trending/${type}/${window}`); 
+    const cacheKey = `tmdb:trending:${type}:${window}`;
+    const data = await getOrSetCache(cacheKey, 3 * 3600, () =>
+      fetchTmdbApi(`/trending/${type}/${window}`)
+    );
     res.json({ success: true, data }); 
   } catch (err) { 
     next(err); 
@@ -36,7 +40,10 @@ router.get("/trending", async (req, res, next) => {
 router.get("/movie/:id", async (req, res, next) => { 
   try { 
     const { id } = req.params; 
-    const data = await fetchTmdbApi(`/movie/${id}`, { append_to_response: "credits,reviews,release_dates,similar" }); 
+    const cacheKey = `tmdb:movie:${id}`;
+    const data = await getOrSetCache(cacheKey, 24 * 3600, () =>
+      fetchTmdbApi(`/movie/${id}`, { append_to_response: "credits,reviews,release_dates,similar" })
+    );
     res.json({ success: true, data }); 
   } catch (err) { 
     next(err); 
@@ -46,7 +53,10 @@ router.get("/movie/:id", async (req, res, next) => {
 router.get("/tv/:id", async (req, res, next) => { 
   try { 
     const { id } = req.params; 
-    const data = await fetchTmdbApi(`/tv/${id}`, { append_to_response: "credits,reviews,season/1" }); 
+    const cacheKey = `tmdb:tv:${id}`;
+    const data = await getOrSetCache(cacheKey, 24 * 3600, () =>
+      fetchTmdbApi(`/tv/${id}`, { append_to_response: "credits,reviews,season/1" })
+    );
     res.json({ success: true, data }); 
   } catch (err) { 
     next(err); 
@@ -56,7 +66,10 @@ router.get("/tv/:id", async (req, res, next) => {
 router.get("/tv/:id/season/:season", async (req, res, next) => { 
   try { 
     const { id, season } = req.params; 
-    const data = await fetchTmdbApi(`/tv/${id}/season/${season}`); 
+    const cacheKey = `tmdb:tv:${id}:season:${season}`;
+    const data = await getOrSetCache(cacheKey, 24 * 3600, () =>
+      fetchTmdbApi(`/tv/${id}/season/${season}`)
+    );
     res.json({ success: true, data }); 
   } catch (err) { 
     next(err); 
@@ -67,7 +80,11 @@ router.get("/search", async (req, res, next) => {
   try { 
     const { q, page = 1 } = req.query; 
     if (!q || !q.trim()) return res.json({ success: true, data: { results: [], total_results: 0 } }); 
-    const data = await fetchTmdbApi("/search/multi", { query: q.trim(), page }); 
+    const queryTerm = q.trim();
+    const cacheKey = `tmdb:search:${encodeURIComponent(queryTerm.toLowerCase())}:${page}`;
+    const data = await getOrSetCache(cacheKey, 3600, () =>
+      fetchTmdbApi("/search/multi", { query: queryTerm, page })
+    );
     res.json({ success: true, data }); 
   } catch (err) { 
     next(err); 

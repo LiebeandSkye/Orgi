@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Search, Star, X } from "lucide-react";
 import { searchTmdb, getTrending } from "../services/tmdb";
 import { BorderBeam } from "../components/ui/border-beam";
+import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 
 export function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -203,15 +204,7 @@ export function HomePage() {
 
             {/* Results Grid or Skeleton Loader */}
             {isSearching ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                {[1, 2, 3, 4, 5, 6].map((idx) => (
-                  <div key={idx} className="flex flex-col gap-2">
-                    <div className="aspect-[2/3] w-full rounded-[12px] bg-[#0E0E0E] animate-pulse border border-[#1C1C1C]" />
-                    <div className="h-4 w-3/4 rounded bg-[#161616] animate-pulse" />
-                    <div className="h-3 w-1/2 rounded bg-[#161616] animate-pulse" />
-                  </div>
-                ))}
-              </div>
+              <CardSkeletonGrid count={6} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4" />
             ) : filteredResults.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {filteredResults.map((item) => (
@@ -280,15 +273,7 @@ export function HomePage() {
 
             {/* 6-Column Grid of Live Cards or Skeletons */}
             {isLoadingTrending ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((idx) => (
-                  <div key={idx} className="flex flex-col gap-2">
-                    <div className="aspect-[2/3] w-full rounded-[12px] bg-[#0E0E0E] animate-pulse border border-[#1C1C1C]" />
-                    <div className="h-4 w-3/4 rounded bg-[#161616] animate-pulse" />
-                    <div className="h-3 w-1/2 rounded bg-[#161616] animate-pulse" />
-                  </div>
-                ))}
-              </div>
+              <CardSkeletonGrid count={12} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4" />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {trendingItems.map((item) => {
