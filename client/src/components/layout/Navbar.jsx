@@ -5,11 +5,11 @@ import { useAuth } from "../../context/AuthContext";
 import { authApi } from "../../feature/auth/services/authApi"; 
 
 const BOOK_ITEMS = [ 
-    { to: "/books/novels", label: "Novels", icon: BookOpen, match: ["/books/novels"] }, 
+    { to: "/books/novels", label: "Books / Novels", icon: BookOpen, match: ["/books/novels"] }, 
     { to: "/books/manga", label: "Manga", icon: Layers, match: ["/books/manga"] }, 
     { to: "/books/manhwa", label: "Manhwa", icon: Smartphone, match: ["/books/manhwa", "/books"] }, 
-    { to: "/books/light-novels", label: "Light Novels", icon: Bookmark, match: ["/books/light-novels"] }, 
-]
+    { to: "/books/manhua", label: "Manhua", icon: Bookmark, match: ["/books/manhua"] }, 
+];
 
 const PROFILE_ITEMS = [ 
     { to: "/profile", label: "Profile", icon: User }, 

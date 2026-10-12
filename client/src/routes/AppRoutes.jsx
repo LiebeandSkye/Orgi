@@ -40,11 +40,8 @@ export function AppRoutes() {
 
                 {/* Books & Subcategories */} 
                 <Route path="/books" element={<ManhwaPage />} /> 
-                <Route path="/books/manhwa" element={<ManhwaPage />} /> 
-                <Route path="/books/novels" element={<ManhwaPage />} /> 
-                <Route path="/books/manga" element={<ManhwaPage />} /> 
-                <Route path="/books/light-novels" element={<ManhwaPage />} /> 
-                <Route path="/books/:category" element={<ManhwaPage />} /> 
+                <Route path="/books/:category" element={<ManhwaPage />} />
+                <Route path="/books/:category/:id" element={<InterstellarPage initialTab="Cast" />} />
 
                 <Route path="/login" element={<LoginPage />} /> 
                 <Route path="/auth/callback" element={<AuthCallbackPage />} /> 

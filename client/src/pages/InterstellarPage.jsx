@@ -5,10 +5,11 @@ import { getMovieDetails } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
+import { fetchMediaDetails } from "../services/mediaApi";
 
 export function InterstellarPage({ initialTab = "Cast", initialCropHero = false }) {
   const location = useLocation();
-  const { id } = useParams();
+  const { category, id } = useParams();
   const isReviewsUrl = location.pathname.includes("/reviews");
 
   const [movieData, setMovieData] = useState(null);
@@ -21,12 +22,15 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
     async function loadTmdbMovie() {
       setIsLoading(true);
       try {
-        const data = await getMovieDetails(id || 157336);
+        const data = category
+          ? await fetchMediaDetails(category, id)
+          : await getMovieDetails(id || 157336);
+
         if (mounted && data) {
           setMovieData(data);
         }
       } catch (err) {
-        console.error("Failed to load TMDB movie:", err);
+        console.error("Failed to load media details:", err);
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -36,7 +40,7 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [category, id]);
 
   const activeTab = selectedTabOverride !== null 
     ? selectedTabOverride 
@@ -107,7 +111,8 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
         <div className="absolute inset-0 z-0">
           <img
             src={movieData.backdrop}
-            alt="Interstellar Cinematic Backdrop"
+            alt={movieData.title}
+            referrerPolicy="no-referrer"
             className="w-full h-full object-cover object-center opacity-40 scale-105"
           />
           {/* Radial mint aura (5%) */}
@@ -128,7 +133,8 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
             <div className="relative aspect-[2/3] w-full rounded-[12px] border border-[#1C1C1C] overflow-hidden bg-[#0B0B0B] shadow-2xl group">
               <img
                 src={movieData.poster}
-                alt="Interstellar Poster"
+                alt={movieData.title}
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -242,6 +248,7 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
           <div className="flex items-center gap-8 h-12">
             {["Cast", "Reviews", "Details"].map((tab) => {
               const isActive = activeTab === tab;
+              const tabLabel = tab === "Cast" && category ? "Author" : tab;
               return (
                 <button
                   key={tab}
@@ -251,7 +258,7 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
                     isActive ? "text-[#F5F5F5]" : "text-[#7A7A7A] hover:text-[#F5F5F5]"
                   }`}
                 >
-                  <span>{tab}</span>
+                  <span>{tabLabel}</span>
                   {isActive && (
                     <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#61F1AC]" />
                   )}
@@ -278,52 +285,91 @@ export function InterstellarPage({ initialTab = "Cast", initialCropHero = false 
       {/* TAB CONTENT (Only the active tab's content is shown, never all at once) */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
         {/* ======================================================== */}
-        {/* 1. CAST TAB CONTENT                                      */}
+        {/* 1. CAST / AUTHOR TAB CONTENT                             */}
         {/* ======================================================== */}
         {activeTab === "Cast" && (
           <div className="animate-in fade-in duration-300">
-            {/* Header row with "Cast" and small "See all" link at right */}
+            {/* Header row */}
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">Cast</h2>
-              <button
-                type="button"
-                className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors cursor-pointer"
-              >
-                See all 24 →
-              </button>
+              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
+                {category ? "Author" : "Cast"}
+              </h2>
+              {!category && (
+                <button
+                  type="button"
+                  className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors cursor-pointer"
+                >
+                  See all 24 →
+                </button>
+              )}
             </div>
 
-            {/* Horizontal scrollable row of 8 circular 88px cast portraits with subtle fade on right edge */}
-            <div className="relative">
-              <div className="flex items-start gap-8 overflow-x-auto no-scrollbar pb-4 pr-16">
+            {category ? (
+              /* Vertical Portrait Author Cards for Book, Manga, Manhwa, and Manhua */
+              <div className="flex flex-wrap items-stretch gap-5">
                 {(movieData.cast || []).map((member) => (
                   <div
                     key={member.id}
-                    className="flex flex-col items-center text-center shrink-0 w-[100px] group cursor-pointer"
+                    className="w-[165px] flex flex-col bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/50 rounded-[12px] overflow-hidden shadow-lg transition-all group"
                   >
-                    {/* 88px circular portrait */}
-                    <div className="w-[88px] h-[88px] rounded-full overflow-hidden border border-[#1C1C1C] mb-3 group-hover:border-[#61F1AC]/50 transition-all bg-[#0B0B0B]">
+                    {/* Top Rectangular Portrait Image */}
+                    <div className="w-full h-[195px] bg-[#141414] overflow-hidden border-b border-[#1C1C1C]">
                       <img
                         src={member.avatar}
                         alt={member.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-                    {/* Name in white */}
-                    <span className="text-xs font-medium text-[#F5F5F5] line-clamp-1 group-hover:text-white transition-colors">
-                      {member.name}
-                    </span>
-                    {/* Character name in muted grey below */}
-                    <span className="text-[11px] text-[#7A7A7A] line-clamp-1 mt-0.5">
-                      {member.character}
-                    </span>
+
+                    {/* Bottom Info Box */}
+                    <div className="p-3.5 flex flex-col flex-1">
+                      <span className="font-semibold text-sm text-[#F5F5F5] leading-snug group-hover:text-white">
+                        {member.name}
+                      </span>
+                      <span className="text-xs text-[#B5B5B5] mt-1">
+                        {member.character}
+                      </span>
+                      <span className="text-xs text-[#7A7A7A] mt-1">
+                        {movieData.runtime || movieData.type}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
+            ) : (
+              /* Horizontal scrollable row of 8 circular 88px cast portraits with subtle fade on right edge */
+              <div className="relative">
+                <div className="flex items-start gap-8 overflow-x-auto no-scrollbar pb-4 pr-16">
+                  {(movieData.cast || []).map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex flex-col items-center text-center shrink-0 w-[100px] group cursor-pointer"
+                    >
+                      {/* 88px circular portrait */}
+                      <div className="w-[88px] h-[88px] rounded-full overflow-hidden border border-[#1C1C1C] mb-3 group-hover:border-[#61F1AC]/50 transition-all bg-[#0B0B0B]">
+                        <img
+                          src={member.avatar}
+                          alt={member.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                      {/* Name in white */}
+                      <span className="text-xs font-medium text-[#F5F5F5] line-clamp-1 group-hover:text-white transition-colors">
+                        {member.name}
+                      </span>
+                      {/* Character name in muted grey below */}
+                      <span className="text-[11px] text-[#7A7A7A] line-clamp-1 mt-0.5">
+                        {member.character}
+                      </span>
+                    </div>
+                  ))}
+                </div>
 
-              {/* Subtle fade on the right edge */}
-              <div className="absolute top-0 right-0 bottom-0 w-24 bg-gradient-to-l from-[#000000] via-[#000000]/60 to-transparent pointer-events-none" />
-            </div>
+                {/* Subtle fade on the right edge */}
+                <div className="absolute top-0 right-0 bottom-0 w-24 bg-gradient-to-l from-[#000000] via-[#000000]/60 to-transparent pointer-events-none" />
+              </div>
+            )}
           </div>
         )}
 
