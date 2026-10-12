@@ -5,6 +5,7 @@ const MANGADEX_BASE = "https://api.mangadex.org";
 const MANGADEX_COVERS = "https://uploads.mangadex.org/covers";
 const OPEN_LIBRARY_BASE = "https://openlibrary.org";
 const OPEN_LIBRARY_COVERS = "https://covers.openlibrary.org/b/id";
+const API_BASE_URL = "/api/media";
 
 const ITEMS_PER_PAGE = 18;
 
@@ -33,6 +34,20 @@ function getEnglishTitle(attrs = {}) {
 }
 
 export async function fetchMangaDexByCategory(category = "manhwa", page = 1, query = "") {
+    try {
+        const proxyParams = new URLSearchParams({ category, page, q: query });
+        const proxyRes = await fetch(`${API_BASE_URL}/manga?${proxyParams.toString()}`);
+        if (proxyRes.ok) {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success && Array.isArray(proxyJson.data)) {
+                const results = proxyJson.data;
+                results.totalPages = proxyJson.totalPages || 1;
+                return results;
+            }
+        }
+    } catch {
+        // Fall back to direct MangaDex API call below
+    }
     const langMap = { manga: "ja", manhwa: "ko", manhua: "zh" };
     const lang = langMap[category] || "ko";
     const offset = (page - 1) * ITEMS_PER_PAGE;
@@ -115,6 +130,20 @@ export async function fetchMangaDexByCategory(category = "manhwa", page = 1, que
 }
 
 export async function fetchBooks(page = 1, query = "") {
+    try {
+        const proxyParams = new URLSearchParams({ page, q: query });
+        const proxyRes = await fetch(`${API_BASE_URL}/books?${proxyParams.toString()}`);
+        if (proxyRes.ok) {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success && Array.isArray(proxyJson.data)) {
+                const results = proxyJson.data;
+                results.totalPages = proxyJson.totalPages || 1;
+                return results;
+            }
+        }
+    } catch {
+        // Fall back to direct Open Library call below
+    }
     const offset = (page - 1) * ITEMS_PER_PAGE;
     const url = query.trim()
         ? `${OPEN_LIBRARY_BASE}/search.json?q=${encodeURIComponent(query.trim())}&limit=${ITEMS_PER_PAGE}&page=${page}`
@@ -156,6 +185,24 @@ export async function fetchBooks(page = 1, query = "") {
 }
 
 export async function fetchMediaDetails(category, id) {
+    try {
+        const proxyRes = await fetch(`${API_BASE_URL}/detail/${encodeURIComponent(category)}/${encodeURIComponent(id)}`);
+        if (proxyRes.ok) {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success && proxyJson.data) {
+                const data = proxyJson.data;
+                if (Array.isArray(data.cast)) {
+                    data.cast = data.cast.map((c) => ({
+                        ...c,
+                        avatar: c.avatar || getFallbackAuthorAvatar(c.name, ""),
+                    }));
+                }
+                return data;
+            }
+        }
+    } catch {
+        // Fall back to direct fetching below
+    }
     if (category === "novels" || category === "books" || category === "light-novels") {
         const res = await fetch(`${OPEN_LIBRARY_BASE}/works/${id}.json`);
         const data = await res.json();

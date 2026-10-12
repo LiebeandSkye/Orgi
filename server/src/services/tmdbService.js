@@ -1,3 +1,5 @@
+import { getOrSetCache } from "./cacheService.js";
+
 const TMDB_BASE_URL="https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
@@ -8,14 +10,19 @@ async function fetchFromTMDB(endpoint, params = {}) {
     }
 
     const queryParams = new URLSearchParams({api_key: apiKey,...params,});
-    const url = `${TMDB_BASE_URL}${endpoint}?${queryParams.toString()}`;
-    const response = await fetch(url);
+    const queryForCache = new URLSearchParams(params).toString();
+    const cacheKey = `tmdb:service:${endpoint}:${queryForCache}`;
 
-    if (!response.ok){
-        throw new Error(`TMDB API Error: ${response.status}${response.statusText}`);
-    }
-    return response.json();
-    }
+    return getOrSetCache(cacheKey, 3 * 3600, async () => {
+        const url = `${TMDB_BASE_URL}${endpoint}?${queryParams.toString()}`;
+        const response = await fetch(url);
+
+        if (!response.ok){
+            throw new Error(`TMDB API Error: ${response.status}${response.statusText}`);
+        }
+        return response.json();
+    });
+}
     function formatTMDBItem(item, type = "movie"){
         return {
             id: `tmdb_${item.id}`,
