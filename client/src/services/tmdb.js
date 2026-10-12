@@ -58,6 +58,25 @@ async function fetchFromApi(endpoint, directFallbackEndpoint, params = {}) {
 }
 
 /**
+ * Format raw TMDB movie/TV item into standard UI shape
+ */
+function formatMediaItem(item) {
+  const isTv = item.media_type === "tv" || (!item.title && !!item.name);
+  return {
+    id: String(item.id),
+    tmdbId: item.id,
+    title: item.title || item.name || "Untitled",
+    year: item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4) || "",
+    rating: item.vote_average ? item.vote_average.toFixed(1) : "—",
+    poster: getTmdbImageUrl(item.poster_path, "w780"),
+    backdrop: getTmdbImageUrl(item.backdrop_path, "original"),
+    type: isTv ? "SERIES" : "MOVIE",
+    route: isTv ? `/series/${item.id}` : `/movie/${item.id}`,
+    overview: item.overview || ""
+  };
+}
+
+/**
  * Fetch Trending items (Movies and TV Series)
  */
 export async function getTrending(type = "all", window = "week") {
@@ -68,18 +87,85 @@ export async function getTrending(type = "all", window = "week") {
 
   const results = (data.results || [])
     .filter((item) => item.poster_path)
-    .map((item) => ({
-      id: String(item.id),
-      tmdbId: item.id,
-      title: item.title || item.name || "Untitled",
-      year: item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4) || "",
-      rating: item.vote_average ? item.vote_average.toFixed(1) : "—",
-      poster: getTmdbImageUrl(item.poster_path, "w780"),
-      backdrop: getTmdbImageUrl(item.backdrop_path, "original"),
-      type: item.media_type === "tv" ? "SERIES" : "MOVIE",
-      route: item.media_type === "tv" ? `/series/${item.id}` : `/movie/${item.id}`,
-      overview: item.overview || ""
-    }));
+    .map(formatMediaItem);
+
+  return {
+    results,
+    total_results: data.total_results || results.length
+  };
+}
+
+/**
+ * Fetch Top 10 Trending items
+ */
+export async function getTop10Trending() {
+  const { results } = await getTrending("all", "day");
+  return {
+    results: results.slice(0, 10),
+    total_results: Math.min(10, results.length)
+  };
+}
+
+/**
+ * Fetch Trending This Month
+ */
+export async function getTrendingMonth() {
+  const now = new Date();
+  const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const nowStr = now.toISOString().split("T")[0];
+  const pastStr = past30.toISOString().split("T")[0];
+
+  const data = await fetchFromApi(
+    "/trending-month",
+    "/discover/movie",
+    {
+      sort_by: "popularity.desc",
+      "primary_release_date.gte": pastStr,
+      "primary_release_date.lte": nowStr
+    }
+  );
+
+  const results = (data.results || [])
+    .filter((item) => item.poster_path)
+    .map(formatMediaItem);
+
+  return {
+    results,
+    total_results: data.total_results || results.length
+  };
+}
+
+/**
+ * Fetch Fan Favorites (Top Rated)
+ */
+export async function getFanFavorites() {
+  const data = await fetchFromApi(
+    "/top-rated",
+    "/movie/top_rated"
+  );
+
+  const results = (data.results || [])
+    .filter((item) => item.poster_path)
+    .map(formatMediaItem);
+
+  return {
+    results,
+    total_results: data.total_results || results.length
+  };
+}
+
+/**
+ * Fetch Latest Movies and Series
+ */
+export async function getLatestMedia() {
+  const data = await fetchFromApi(
+    "/latest",
+    "/movie/now_playing"
+  );
+
+  const results = (data.results || [])
+    .filter((item) => item.poster_path)
+    .map(formatMediaItem);
 
   return {
     results,

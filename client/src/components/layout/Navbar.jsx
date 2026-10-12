@@ -270,12 +270,12 @@ export function Navbar({ forceBooksOpen = false }) {
             <button 
                 type="button" 
                 onClick={() => setProfileOpen((prev) => !prev)} 
-                className="w-9 h-9 rounded-full overflow-hidden cursor-pointer bg-[#141414] ring-1 ring-[#1C1C1C] hover:ring-[#61F1AC]" 
+                className="w-9 h-9 rounded-full overflow-hidden cursor-pointer bg-[#141414] ring-1 ring-[#1C1C1C] " 
                 title="User Profile" 
             >
                 {/* scale-125 crops away the baked-in light edge/background of the source image */} 
                 <img 
-                    src="https://imgs.search.brave.com/NmPZjePZioE_lCWEwu7wkqrQwsFRs9j0toSsN3hn8gY/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9zdGF0/aWMudmVjdGVlenku/Y29tL3N5c3RlbS9y/ZXNvdXJjZXMvdGh1/bWJuYWlscy8wNTMv/NTQ3LzEyMC9zbWFs/bC9nZW5lcmljLXVz/ZXItcHJvZmlsZS1h/dmF0YXItZm9yLW9u/bGluZS1wbGF0Zm9y/bXMtYW5kLXNvY2lh/bC1tZWRpYS12ZWN0/b3IuanBn" 
+                    src="https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg" 
                     alt="Avatar" 
                     className="w-full h-full object-cover scale-125" 
                 />
