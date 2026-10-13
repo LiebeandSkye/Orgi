@@ -12,6 +12,7 @@ const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY  ;
 export function getTmdbImageUrl(path, size = "w500") {
   if (!path) return "";
   if (path.startsWith("http")) return path;
+  if (path.startsWith("/http")) return path.slice(1);
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
 }
   

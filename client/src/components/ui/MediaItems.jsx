@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Play, ChevronLeft, ChevronRight, X } from "lucide-react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { Play, ChevronLeft, ChevronRight } from "lucide-react";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
@@ -129,7 +129,6 @@ function ScrollRow({ children, label }) {
 /*  YouTube Modal                                                       */
 /* ------------------------------------------------------------------ */
 function VideoModal({ videoKey, videoName, onClose }) {
-  // Close on Escape key
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === "Escape") onClose();
@@ -138,7 +137,6 @@ function VideoModal({ videoKey, videoName, onClose }) {
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  // Prevent body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -148,27 +146,17 @@ function VideoModal({ videoKey, videoName, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 cursor-pointer"
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/85 backdrop-blur-sm animate-backdrop-fade" />
 
       {/* Modal */}
       <div
-        className="relative z-10 w-[90vw] max-w-[960px] rounded-2xl border-2 border-white/20 overflow-hidden shadow-2xl"
+        className="relative z-10 w-[92vw] max-w-[960px] rounded-2xl border-2 border-white/20 bg-black overflow-hidden shadow-2xl animate-modal-pop cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-black/80 transition-colors cursor-pointer"
-          aria-label="Close video"
-        >
-          <X size={16} />
-        </button>
-
         {/* 16:9 iframe */}
         <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
           <iframe
@@ -186,16 +174,108 @@ function VideoModal({ videoKey, videoName, onClose }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Image Modal (Backdrops & Posters)                                   */
+/* ------------------------------------------------------------------ */
+function ImageModal({ image, format, onClose }) {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  const isBackdrop = format === "backdrop";
+  // Use w1280 for backdrops and w780 for posters for fast download speeds while staying crystal-clear HD
+  const imageSrc = getTMDBImage(image?.file_path, isBackdrop ? "w1280" : "w780");
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 cursor-pointer"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/85 backdrop-blur-sm animate-backdrop-fade" />
+
+      {/* Modal Container */}
+      <div
+        className={`relative z-10 overflow-hidden rounded-2xl border-2 border-white/20 bg-[#0B0B0B] shadow-2xl flex items-center justify-center animate-modal-pop cursor-default ${
+          isBackdrop
+            ? "w-[92vw] max-w-[1100px] aspect-video"
+            : "h-[85vh] max-h-[85vh] max-w-[90vw] aspect-[2/3]"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Loading shimmer until image is fetched from CDN */}
+        {!loaded && (
+          <div className="absolute inset-0 skeleton-shimmer" />
+        )}
+
+        {/* Full Image */}
+        <img
+          src={imageSrc}
+          alt={isBackdrop ? "Backdrop preview" : "Poster preview"}
+          onLoad={() => setLoaded(true)}
+          className={`w-full h-full object-cover select-none transition-opacity duration-300 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main MediaItems Component                                           */
 /* ------------------------------------------------------------------ */
 export default function MediaItems({ movieData }) {
   const [activeVideo, setActiveVideo] = useState(null);
+  const [activeImage, setActiveImage] = useState(null);
 
-  const videos = (movieData?.videos?.results || []).filter(
-    (video) => video.site === "YouTube"
-  );
-  const backdrops = movieData?.images?.backdrops || [];
-  const posters = movieData?.images?.posters || [];
+  // 1. Prioritize Official Trailers first, then Trailers, Teasers, etc. Cap at 120 items.
+  const videos = useMemo(() => {
+    const rawVideos = (movieData?.videos?.results || []).filter(
+      (video) => video.site === "YouTube"
+    );
+
+    return [...rawVideos]
+      .sort((a, b) => {
+        const getPriority = (v) => {
+          const name = (v.name || "").toLowerCase();
+          const type = (v.type || "").toLowerCase();
+
+          // Priority 1: Official Trailer
+          if (type === "trailer" && name.includes("official")) return 1;
+          // Priority 2: Any other Trailer
+          if (type === "trailer") return 2;
+          // Priority 3: Teaser
+          if (type === "teaser") return 3;
+          // Priority 4: Behind the scenes / Clip / Featurette
+          return 4;
+        };
+
+        return getPriority(a) - getPriority(b);
+      })
+      .slice(0, 120);
+  }, [movieData?.videos?.results]);
+
+  // 2. Cap Backdrops and Posters to max 120 items
+  const backdrops = useMemo(() => {
+    return (movieData?.images?.backdrops || []).slice(0, 120);
+  }, [movieData?.images?.backdrops]);
+
+  const posters = useMemo(() => {
+    return (movieData?.images?.posters || []).slice(0, 120);
+  }, [movieData?.images?.posters]);
 
   const SectionTitle = ({ children, count }) => (
     <div className="mb-4 flex items-center gap-3">
@@ -273,11 +353,13 @@ export default function MediaItems({ movieData }) {
           {backdrops.length > 0 ? (
             <ScrollRow label="Backdrops">
               {backdrops.map((image, index) => (
-                <div
+                <button
                   key={image.file_path || index}
-                  className="group w-[260px] shrink-0 sm:w-[340px] lg:w-[400px]"
+                  type="button"
+                  onClick={() => setActiveImage({ ...image, format: "backdrop" })}
+                  className="group w-[260px] shrink-0 sm:w-[340px] lg:w-[400px] text-left cursor-pointer"
                 >
-                  <div className="aspect-video overflow-hidden rounded-xl border border-[#202020] bg-[#0B0B0B] transition-all duration-300 group-hover:border-[#61F1AC]/40 group-hover:shadow-[0_0_20px_rgba(97,241,172,0.08)]">
+                  <div className="aspect-video overflow-hidden rounded-xl border border-[#202020] bg-[#0B0B0B] transition-all duration-300 group-hover:border-[#61F1AC]/50 group-hover:scale-[1.02] group-hover:shadow-[0_0_20px_rgba(97,241,172,0.1)]">
                     <img
                       src={getTMDBImage(image.file_path, "w780")}
                       alt={`Backdrop ${index + 1}`}
@@ -285,7 +367,7 @@ export default function MediaItems({ movieData }) {
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     />
                   </div>
-                </div>
+                </button>
               ))}
             </ScrollRow>
           ) : (
@@ -300,11 +382,13 @@ export default function MediaItems({ movieData }) {
           {posters.length > 0 ? (
             <ScrollRow label="Posters">
               {posters.map((image, index) => (
-                <div
+                <button
                   key={image.file_path || index}
-                  className="group w-[125px] shrink-0 sm:w-[155px] lg:w-[175px]"
+                  type="button"
+                  onClick={() => setActiveImage({ ...image, format: "poster" })}
+                  className="group w-[125px] shrink-0 sm:w-[155px] lg:w-[175px] text-left cursor-pointer"
                 >
-                  <div className="aspect-[2/3] overflow-hidden rounded-xl border border-[#202020] bg-[#0B0B0B] transition-all duration-300 group-hover:border-[#61F1AC]/40 group-hover:shadow-[0_0_20px_rgba(97,241,172,0.08)]">
+                  <div className="aspect-[2/3] overflow-hidden rounded-xl border border-[#202020] bg-[#0B0B0B] transition-all duration-300 group-hover:border-[#61F1AC]/50 group-hover:scale-[1.02] group-hover:shadow-[0_0_20px_rgba(97,241,172,0.1)]">
                     <img
                       src={getTMDBImage(image.file_path, "w500")}
                       alt={`Poster ${index + 1}`}
@@ -312,7 +396,7 @@ export default function MediaItems({ movieData }) {
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     />
                   </div>
-                </div>
+                </button>
               ))}
             </ScrollRow>
           ) : (
@@ -328,6 +412,15 @@ export default function MediaItems({ movieData }) {
           videoKey={activeVideo.key}
           videoName={activeVideo.name}
           onClose={() => setActiveVideo(null)}
+        />
+      )}
+
+      {/* Image Preview Modal (Backdrops / Posters) */}
+      {activeImage && (
+        <ImageModal
+          image={activeImage}
+          format={activeImage.format}
+          onClose={() => setActiveImage(null)}
         />
       )}
     </section>

@@ -132,7 +132,7 @@ export function CastCarousel({
   const hasItems = !isLoading && items && items.length > 0;
 
   return (
-    <section className="mt-12 first:mt-4">
+    <section className="mt-12 first:mt-0">
       {/* Category Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -197,6 +197,10 @@ export function CastCarousel({
                       src={item.avatar || "/placeholder-avatar.png"}
                       alt={item.name || "Cast member"}
                       loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "/placeholder-avatar.png";
+                      }}
                       className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-300"
                     />
 

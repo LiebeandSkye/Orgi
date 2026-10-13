@@ -8,7 +8,6 @@ import {
   Reply,
   MoreHorizontal,
   ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { getMovieDetails } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
@@ -18,6 +17,31 @@ import { INTERSTELLAR_DATA } from "../data/mockData";
 import MediaItems from "../components/ui/MediaItems";
 import { fetchMediaDetails } from "../services/mediaApi";
 import { CastCarousel } from "../components/ui/CastCarousel";
+
+const NAVBAR_AVATAR =
+  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
+
+function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
+  const [errorSrc, setErrorSrc] = useState(null);
+  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src;
+  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR;
+
+  return (
+    <div
+      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`}
+    >
+      <img
+        key={src}
+        src={effectiveSrc}
+        alt={alt || "Avatar"}
+        onError={() => setErrorSrc(src)}
+        className={`w-full h-full object-cover ${
+          isNavbarAvatar ? "scale-125" : ""
+        }`}
+      />
+    </div>
+  );
+}
 
 export function MovieDetailsPage({
   initialTab = "Cast",
@@ -73,6 +97,34 @@ export function MovieDetailsPage({
         : initialCropHero;
 
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
+  const synopsisRef = useRef(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  const displaySynopsis =
+    (movieData?.synopsis || "") +
+    (movieData?.synopsis &&
+    movieData.synopsis.length < 260 &&
+    !movieData.synopsis.includes("dust storms")
+      ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
+      : "");
+
+  useEffect(() => {
+    if (synopsisRef.current) {
+      setContentHeight(synopsisRef.current.scrollHeight);
+    }
+  }, [displaySynopsis]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (synopsisRef.current) {
+        setContentHeight(synopsisRef.current.scrollHeight);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isLongSynopsis = contentHeight === 0 || contentHeight > 82;
   const [newThought, setNewThought] = useState("");
   const [selectedStars, setSelectedStars] = useState(0);
   const [repliesExpanded, setRepliesExpanded] = useState(false);
@@ -269,37 +321,41 @@ export function MovieDetailsPage({
 
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
-                className={`relative overflow-hidden transition-[max-height] duration-700 ease-in-out ${
-                  synopsisExpanded ? "max-h-[1000px]" : "max-h-[5.5rem]"
-                }`}
+                style={{
+                  maxHeight: synopsisExpanded
+                    ? `${(contentHeight || 300) + 4}px`
+                    : "5rem",
+                }}
+                className="relative overflow-hidden transition-[max-height] duration-500 ease-in-out"
               >
-                <p
-                  className={`transition-[filter] duration-700 ease-in-out ${
-                    synopsisExpanded ? "" : "line-clamp-3"
-                  }`}
-                >
-                  {movieData.synopsis}
-                  {!synopsisExpanded &&
-                    " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."}
-                </p>
+                <div ref={synopsisRef}>
+                  <p className="font-light text-[#B5B5B5] leading-relaxed">
+                    {displaySynopsis}
+                  </p>
+                </div>
 
-                {!synopsisExpanded && (
-                  <div className="pointer-events-none absolute bottom-0 left-0 h-6 w-full backdrop-brightness-50 bg-gradient-to-t from-[#000000] to-transparent" />
-                )}
+                <div
+                  className={`pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-[#000000] via-[#000000]/70 to-transparent transition-opacity duration-300 ${
+                    synopsisExpanded ? "opacity-0" : "opacity-100"
+                  }`}
+                />
               </div>
 
-              <button
-                type="button"
-                onClick={() => setSynopsisExpanded(!synopsisExpanded)}
-                className="mt-1 text-sm font-medium text-[#61F1AC]  cursor-pointer inline-flex items-center gap-2 transition-colors"
-              >
-                {synopsisExpanded ? "Show less" : "Read more"}
-                {synopsisExpanded ? (
-                  <ChevronUp size={18} />
-                ) : (
-                  <ChevronDown size={18} />
-                )}
-              </button>
+              {isLongSynopsis && (
+                <button
+                  type="button"
+                  onClick={() => setSynopsisExpanded((prev) => !prev)}
+                  className="mt-2 text-sm font-medium text-[#61F1AC] hover:text-[#61F1AC]/80 cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <span>{synopsisExpanded ? "Show less" : "Read more"}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-500 ease-in-out ${
+                      synopsisExpanded ? "rotate-180" : "rotate-0"
+                    }`}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -357,12 +413,14 @@ export function MovieDetailsPage({
         {/* ======================================================== */}
         {activeTab === "Cast" && (
           <div className="animate-in fade-in duration-300">
-            {/* Header row */}
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
-                {category ? "Author" : "Cast"}
-              </h2>
-            </div>
+            {/* Header row: only displayed for books/author where CastCarousel is not used */}
+            {category && (
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
+                  Author
+                </h2>
+              </div>
+            )}
 
             {category ? (
               /* Vertical Portrait Author Cards for Book, Manga, Manhwa, and Manhua */
@@ -416,10 +474,10 @@ export function MovieDetailsPage({
             {/* COMPOSER CARD: #0B0B0B, 1px border, 16px radius */}
             <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm">
               <div className="flex items-start gap-3.5 mb-4">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
+                <ReviewAvatar
+                  src={NAVBAR_AVATAR}
                   alt="User Avatar"
-                  className="w-9 h-9 rounded-full object-cover border border-[#1C1C1C] shrink-0"
+                  size="w-9 h-9"
                 />
                 <textarea
                   value={newThought}
@@ -514,10 +572,10 @@ export function MovieDetailsPage({
                     {/* Header: 36px round avatar, bold username in white, relative time in muted, small mint star with score */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <img
+                        <ReviewAvatar
                           src={rev.avatar}
                           alt={rev.author}
-                          className="w-9 h-9 rounded-full object-cover border border-[#1C1C1C]"
+                          size="w-9 h-9"
                         />
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm text-[#F5F5F5]">
@@ -596,10 +654,10 @@ export function MovieDetailsPage({
                         {rev.replies.map((reply) => (
                           <div key={reply.id} className="text-xs">
                             <div className="flex items-center gap-2 mb-1">
-                              <img
+                              <ReviewAvatar
                                 src={reply.avatar}
                                 alt={reply.author}
-                                className="w-5 h-5 rounded-full object-cover"
+                                size="w-5 h-5"
                               />
                               <span className="font-medium text-[#F5F5F5]">
                                 {reply.author}
