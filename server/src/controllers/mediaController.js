@@ -21,6 +21,37 @@ function getEnglishTitle(attrs = {}) {
   );
 }
 
+const MANGADEX_GENRE_TAGS = {
+  Action: "391b0423-d847-456f-aff0-8b0cfc03066b",
+  Adventure: "87cc87cd-a395-47af-b27a-93258283bbc6",
+  Comedy: "4d32cc48-9f00-4cca-9b5a-a839f0764984",
+  Crime: "5ca48985-9a9d-4bd8-be29-80dc0303db72",
+  Drama: "b9af3a63-f058-46de-a9a0-e0c13906197a",
+  Fantasy: "cdc58593-87dd-415e-bbc0-2ec27bf404cc",
+  Historical: "33771934-028e-4cb3-8744-691e866a923e",
+  Horror: "cdad7e68-1419-41dd-bdce-27753074a640",
+  Isekai: "ace04997-f6bd-436e-b261-779182193d3d",
+  Magic: "a1f53773-c69a-4ce5-8cab-fffcd90b1565",
+  "Martial Arts": "799c202e-7daa-44eb-9cf7-8a3c0441531e",
+  Mecha: "50880a9d-5440-4732-9afb-8f457127e836",
+  Medical: "c8cbe35b-1b2b-4a3f-9c37-db84c4514856",
+  Mystery: "ee968100-4191-4968-93d3-f82d72be7e46",
+  Psychological: "3b60b75c-a2d7-4860-ab56-05f391bb889c",
+  Reincarnation: "0bc90acb-ccc1-44ca-a34a-b9f3a73259d0",
+  Romance: "423e2eae-a7a2-4a8b-ac03-a8351462d71d",
+  "School Life": "caaa44eb-cd40-4177-b930-79d3ef2afe87",
+  "Sci-Fi": "256c8bd9-4904-4360-bf4f-508a76d67183",
+  "Slice of Life": "e5301a23-ebd9-49dd-a0cb-2add944c7fe9",
+  Sports: "69964a64-2f90-4d33-beeb-f3ed2875eb4c",
+  Superhero: "7064a261-a137-4d3a-8848-2d385de3a99c",
+  Supernatural: "eabc5b4c-6aff-42f3-b657-3e90cbd00b75",
+  Survival: "5fff9cde-849c-4d78-aab0-0d52b2ee1d25",
+  Thriller: "07251805-a27e-4d59-b488-f0bfbec15168",
+  "Time Travel": "292e862b-2d17-4062-90a2-0356caa4ae27",
+  Tragedy: "f8f62932-27da-4fe4-8ee1-6779a8c5edba",
+  Wuxia: "acc803a4-c95a-4c22-86fc-eb6b582d82a2",
+};
+
 export const mediaController = {
   async ping(req, res) {
     res.json({ status: "ok" });
@@ -28,10 +59,13 @@ export const mediaController = {
 
   async getManga(req, res, next) {
     try {
-      const { category = "manhwa", page = 1, q = "" } = req.query;
+      const { category = "manhwa", page = 1, q = "", genre = "All", status = "All", sort = "Top rated" } = req.query;
       const pageNum = Math.max(1, parseInt(page, 10) || 1);
       const queryStr = (q || "").trim();
-      const cacheKey = `mangadex:list:${category.toLowerCase()}:${pageNum}:${encodeURIComponent(queryStr.toLowerCase())}`;
+      const genreStr = (genre || "All").trim();
+      const statusStr = (status || "All").trim();
+      const sortStr = (sort || "Top rated").trim();
+      const cacheKey = `mangadex:list:${category.toLowerCase()}:${pageNum}:${genreStr}:${statusStr}:${sortStr}:${encodeURIComponent(queryStr.toLowerCase())}`;
 
       const data = await getOrSetCache(cacheKey, 2 * 3600, async () => {
         const langMap = { manga: "ja", manhwa: "ko", manhua: "zh" };
@@ -44,9 +78,32 @@ export const mediaController = {
         params.append("originalLanguage[]", lang);
         params.append("includes[]", "cover_art");
         params.append("includes[]", "author");
+
+        const genreList = genreStr && genreStr !== "All"
+          ? genreStr.split(",").map((g) => g.trim()).filter(Boolean)
+          : [];
+
+        genreList.forEach((g) => {
+          if (MANGADEX_GENRE_TAGS[g]) {
+            params.append("includedTags[]", MANGADEX_GENRE_TAGS[g]);
+          }
+        });
+
+        if (statusStr !== "All") {
+          params.append("status[]", statusStr.toLowerCase());
+        }
+
         if (queryStr) {
           params.append("title", queryStr);
           params.append("order[relevance]", "desc");
+        } else if (sortStr === "Top rated") {
+          params.append("order[rating]", "desc");
+        } else if (sortStr === "Most popular") {
+          params.append("order[followedCount]", "desc");
+        } else if (sortStr === "Latest update") {
+          params.append("order[latestUploadedChapter]", "desc");
+        } else if (sortStr === "Alphabetical") {
+          params.append("order[title]", "asc");
         } else {
           params.append("order[followedCount]", "desc");
         }
@@ -85,6 +142,9 @@ export const mediaController = {
           const rating = rawScore ? rawScore.toFixed(1) : "8.5";
           const volText = attrs.lastVolume ? `Vol. ${attrs.lastVolume}` : null;
           const chText = attrs.lastChapter ? `Ch. ${attrs.lastChapter}` : null;
+          const genreList = (attrs.tags || [])
+            .map((t) => t.attributes?.name?.en)
+            .filter(Boolean);
 
           return {
             id: item.id,
@@ -99,13 +159,20 @@ export const mediaController = {
             status: attrs.status
               ? attrs.status.charAt(0).toUpperCase() + attrs.status.slice(1)
               : "Ongoing",
+            genres: genreList,
+            genre: genreList.join(", "),
+            follows: statsMap[item.id]?.follows || 0,
+            updatedAt: attrs.updatedAt || attrs.createdAt || "",
           };
         });
 
+        const MAX_MANGADEX_PAGES = Math.floor(10000 / ITEMS_PER_PAGE); // 555
         const totalCount = typeof json.total === "number" ? json.total : items.length;
-        let totalPages = Math.min(18, Math.ceil(totalCount / ITEMS_PER_PAGE));
+        let totalPages = Math.min(MAX_MANGADEX_PAGES, Math.ceil(totalCount / ITEMS_PER_PAGE));
         if (items.length < ITEMS_PER_PAGE) {
           totalPages = items.length > 0 ? pageNum : Math.max(1, pageNum - 1);
+        } else if (pageNum >= totalPages && items.length === ITEMS_PER_PAGE && pageNum < MAX_MANGADEX_PAGES) {
+          totalPages = pageNum + 1;
         }
 
         return { items, totalPages: Math.max(1, totalPages) };
@@ -152,6 +219,8 @@ export const mediaController = {
             rating: "8.6",
             chapters: item.first_publish_year ? `${item.first_publish_year}` : "Novel",
             status: "Completed",
+            genres: Array.isArray(item.subject) ? item.subject : Array.isArray(item.subjects) ? item.subjects : ["Fiction"],
+            genre: Array.isArray(item.subject) ? item.subject.slice(0, 5).join(", ") : "Fiction",
           };
         });
 
@@ -161,9 +230,11 @@ export const mediaController = {
             : typeof json.work_count === "number"
             ? json.work_count
             : items.length;
-        let totalPages = Math.min(18, Math.ceil(totalCount / ITEMS_PER_PAGE));
+        let totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
         if (items.length < ITEMS_PER_PAGE) {
           totalPages = items.length > 0 ? pageNum : Math.max(1, pageNum - 1);
+        } else if (pageNum >= totalPages && items.length === ITEMS_PER_PAGE) {
+          totalPages = pageNum + 1;
         }
 
         return { items, totalPages: Math.max(1, totalPages) };
@@ -218,13 +289,55 @@ export const mediaController = {
             }
           }
 
+          const rawCovers = Array.isArray(bookData.covers)
+            ? bookData.covers.filter((cid) => cid && cid > 0)
+            : [];
+
+          let volumeCovers = rawCovers.map((cid, idx) => ({
+            id: `cover-${cid}`,
+            volume: rawCovers.length > 1 ? `${idx + 1}` : "1",
+            title: rawCovers.length > 1 ? `Edition / Volume ${idx + 1}` : bookData.title || "Edition 1",
+            cover: `${OPEN_LIBRARY_COVERS}/${cid}-L.jpg`,
+            subtitle: bookData.first_publish_date || "Print / Digital",
+          }));
+
+          try {
+            const editionsRes = await fetch(`${OPEN_LIBRARY_BASE}/works/${id}/editions.json?limit=24`, {
+              headers: { "User-Agent": "Orgi/1.0 (contact@orgi.app)" },
+            });
+            if (editionsRes.ok) {
+              const editionsJson = await editionsRes.json();
+              const entries = editionsJson.entries || [];
+              const editionItems = [];
+              const seenCovers = new Set();
+              entries.forEach((ed) => {
+                const cid = ed.covers?.[0];
+                if (cid && cid > 0 && !seenCovers.has(cid)) {
+                  seenCovers.add(cid);
+                  editionItems.push({
+                    id: ed.key || `ed-${cid}`,
+                    volume: `${editionItems.length + 1}`,
+                    title: ed.title || bookData.title || `Edition ${editionItems.length + 1}`,
+                    cover: `${OPEN_LIBRARY_COVERS}/${cid}-L.jpg`,
+                    subtitle: ed.publish_date || (ed.number_of_pages ? `${ed.number_of_pages} pages` : "Edition"),
+                  });
+                }
+              });
+              if (editionItems.length > volumeCovers.length) {
+                volumeCovers = editionItems;
+              }
+            }
+          } catch {
+            // keep rawCovers fallback
+          }
+
           return {
             id,
             type: "BOOK / NOVEL",
             title: bookData.title || "Untitled",
             year: bookData.first_publish_date || "Published",
             genres: (bookData.subjects || []).slice(0, 3).join(", ") || "Fiction",
-            runtime: "Print / Digital",
+            runtime: volumeCovers.length > 1 ? `${volumeCovers.length} Editions / Vols` : "Print / Digital",
             certificate: "All Ages",
             poster: coverUrl,
             backdrop: coverUrl,
@@ -239,13 +352,14 @@ export const mediaController = {
             cast: [
               { id: "author", name: authorName, character: "Author", avatar: authorAvatar }
             ],
+            volumes: volumeCovers,
             reviews: [],
             details: {
               director: authorName,
               writers: authorName,
               music: "—",
               cinematography: "—",
-              boxOffice: "—",
+              boxOffice: volumeCovers.length > 0 ? `${volumeCovers.length} Covers / Editions` : "—",
               aspectRatio: "Book",
               studio: "Open Library",
             },
@@ -253,10 +367,11 @@ export const mediaController = {
         }
 
         // Manga / Manhwa / Manhua
-        const [mangaRes, statRes, aggRes] = await Promise.all([
+        const [mangaRes, statRes, aggRes, coversRes] = await Promise.all([
           fetch(`${MANGADEX_BASE}/manga/${id}?includes[]=cover_art&includes[]=author&includes[]=artist`),
           fetch(`${MANGADEX_BASE}/statistics/manga/${id}`).catch(() => null),
           fetch(`${MANGADEX_BASE}/manga/${id}/aggregate`).catch(() => null),
+          fetch(`${MANGADEX_BASE}/cover?manga[]=${id}&limit=100&order[volume]=asc`).catch(() => null),
         ]);
 
         if (!mangaRes.ok) throw new Error(`MangaDex detail error: ${mangaRes.status}`);
@@ -282,6 +397,7 @@ export const mediaController = {
 
         let volumeCount = attrs.lastVolume || null;
         let chapterCount = attrs.lastChapter || null;
+        let volumeChapterCounts = {};
         if (aggRes && aggRes.ok) {
           try {
             const aggData = await aggRes.json();
@@ -291,8 +407,12 @@ export const mediaController = {
               volumeCount = volKeys.length;
             }
             let totalChapters = 0;
-            Object.values(volumesObj).forEach((v) => {
-              totalChapters += Object.keys(v.chapters || {}).length;
+            Object.entries(volumesObj).forEach(([vKey, v]) => {
+              const cCount = Object.keys(v.chapters || {}).length;
+              totalChapters += cCount;
+              if (vKey !== "none") {
+                volumeChapterCounts[vKey] = cCount;
+              }
             });
             if (totalChapters > 0 && !chapterCount) {
               chapterCount = totalChapters;
@@ -310,6 +430,62 @@ export const mediaController = {
         const coverUrl = fileName
           ? `${MANGADEX_COVERS}/${itemData.id}/${fileName}.512.jpg`
           : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover";
+
+        let volumeCovers = [];
+        if (coversRes && coversRes.ok) {
+          try {
+            const coversJson = await coversRes.json();
+            const rawCoverList = coversJson.data || [];
+            const byVol = new Map();
+            rawCoverList.forEach((cItem) => {
+              const cAttrs = cItem.attributes || {};
+              const cFile = cAttrs.fileName;
+              if (!cFile) return;
+              const volNum = cAttrs.volume || "Main";
+              const key = volNum === "Main" ? cItem.id : `vol-${volNum}`;
+              const existing = byVol.get(key);
+              // Prefer original language or English cover when multiple locales exist for the same volume
+              if (!existing || cAttrs.locale === attrs.originalLanguage || cAttrs.locale === "en") {
+                const chCountForVol = volumeChapterCounts[volNum];
+                byVol.set(key, {
+                  id: cItem.id,
+                  volume: volNum,
+                  title: volNum !== "Main" ? `Volume ${volNum}` : title,
+                  cover: `${MANGADEX_COVERS}/${itemData.id}/${cFile}.512.jpg`,
+                  subtitle: chCountForVol
+                    ? `${chCountForVol} ${chCountForVol === 1 ? "Chapter" : "Chapters"}`
+                    : cAttrs.description || (volNum !== "Main" ? `Vol. ${volNum}` : "Key Visual"),
+                });
+              }
+            });
+            volumeCovers = Array.from(byVol.values()).sort((a, b) => {
+              const na = parseFloat(a.volume);
+              const nb = parseFloat(b.volume);
+              if (!isNaN(na) && !isNaN(nb)) return na - nb;
+              if (!isNaN(na)) return -1;
+              if (!isNaN(nb)) return 1;
+              return 0;
+            });
+          } catch {
+            // fallback
+          }
+        }
+
+        if (volumeCovers.length === 0 && fileName) {
+          volumeCovers = [
+            {
+              id: coverRel?.id || "cover-main",
+              volume: "1",
+              title: "Volume 1",
+              cover: coverUrl,
+              subtitle: chapterCount ? `${chapterCount} Chapters` : "Official Cover",
+            },
+          ];
+        }
+
+        if (!volumeCount && volumeCovers.length > 0) {
+          volumeCount = volumeCovers.length;
+        }
 
         const genres = (attrs.tags || [])
           .filter((t) => t.attributes?.group === "genre")
@@ -357,6 +533,7 @@ export const mediaController = {
             Object.values(attrs.description || {})[0] ||
             "No synopsis available.",
           cast: creatorCards,
+          volumes: volumeCovers,
           reviews: [],
           details: {
             director: authorName,

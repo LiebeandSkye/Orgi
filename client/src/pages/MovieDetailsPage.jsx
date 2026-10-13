@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, Link } from "react-router-dom";
 import {
   Star,
   Plus,
@@ -57,8 +57,6 @@ export function MovieDetailsPage({
     };
   }, [category, id]);
 
-  const { movieId } = useParams();
-
   const [mediaData, setMediaData] = useState({
     images: {
       backdrops: [],
@@ -70,13 +68,14 @@ export function MovieDetailsPage({
   });
 
   useEffect(() => {
-    if (!movieId) return;
+    if (category) return;
+    const targetMovieId = id || 157336;
 
     let cancelled = false;
 
     async function fetchMedia() {
       try {
-        const data = await getMovieMedia(movieId);
+        const data = await getMovieMedia(targetMovieId);
 
         if (!cancelled) {
           setMediaData(data);
@@ -91,7 +90,7 @@ export function MovieDetailsPage({
     return () => {
       cancelled = true;
     };
-  }, [movieId]);
+  }, [category, id]);
 
   const activeTab =
     selectedTabOverride !== null
@@ -202,9 +201,19 @@ export function MovieDetailsPage({
 
           {/* RIGHT: Meta, Title, Scores, Buttons, Synopsis */}
           <div className="flex-1 flex flex-col pt-2 min-w-0">
-            {/* Small muted uppercase label "MOVIE" */}
+            {/* Small muted uppercase label "MOVIE" or breadcrumb link */}
             <div className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
-              {movieData.type}
+              {category ? (
+                <Link
+                  to={`/books/${category}`}
+                  className="hover:text-[#61F1AC] transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  title={`Back to ${category}`}
+                >
+                  <span>← {movieData.type}</span>
+                </Link>
+              ) : (
+                movieData.type
+              )}
             </div>
 
             {/* Large light-weight white title "Interstellar" */}
@@ -690,7 +699,13 @@ export function MovieDetailsPage({
         {/* ======================================================== */}
         {activeTab === "Media" && (
           <div className="animate-in fade-in duration-300">
-            <MediaItems movieData={movieData} />
+            <MediaItems
+              movieData={{
+                ...movieData,
+                images: mediaData.images?.backdrops?.length || mediaData.images?.posters?.length ? mediaData.images : movieData.images,
+                videos: mediaData.videos?.results?.length ? mediaData.videos : movieData.videos,
+              }}
+            />
           </div>
         )}
 
