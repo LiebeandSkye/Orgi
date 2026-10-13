@@ -11,7 +11,6 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { getMovieDetails } from "../services/tmdb";
-import { getMovieMedia } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
@@ -58,41 +57,6 @@ export function MovieDetailsPage({
     };
   }, [category, id]);
 
-  const { movieId } = useParams();
-
-  const [mediaData, setMediaData] = useState({
-    images: {
-      backdrops: [],
-      posters: [],
-    },
-    videos: {
-      results: [],
-    },
-  });
-
-  useEffect(() => {
-    if (!movieId) return;
-
-    let cancelled = false;
-
-    async function fetchMedia() {
-      try {
-        const data = await getMovieMedia(movieId);
-
-        if (!cancelled) {
-          setMediaData(data);
-        }
-      } catch (error) {
-        console.error("Failed to load movie media:", error);
-      }
-    }
-
-    fetchMedia();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [movieId]);
 
   const activeTab =
     selectedTabOverride !== null
