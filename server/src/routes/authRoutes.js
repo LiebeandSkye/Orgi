@@ -23,11 +23,35 @@ router.post('/signup', signupRateLimiter, async(req, res, next) => {
                     public_id: helperGenerateRandomId(), 
                     user_name: user_name || 'Unnamed Orgi_' + helperGenerateRandomId(4), 
                     email: normalizedEmail, 
-                })
+                });
             if (insertError) throw insertError; 
         }
         
         res.status(201).json({ success: true, data }); 
+    }
+    catch (err) { next(err) }
+})
+
+router.post('/anonymous', async(req, res, next) => { 
+    try { 
+        const authClient = createAuthClient(); 
+        const { data, error } = await authClient.auth.signInAnonymously(); 
+        if (error) throw error; 
+        
+        const userId = data.user?.id; 
+        if (userId) { 
+            const { error: upsertError } = await supabaseAdmin
+                .from('users')
+                .upsert({ 
+                    id: userId, 
+                    public_id: helperGenerateRandomId(), 
+                    user_name: "Unnamed Orgi_" + helperGenerateRandomId(4), 
+                    anonymous: true, 
+                }); 
+            if (upsertError) throw upsertError; 
+        } 
+        
+        res.json({ success: true, data }); 
     }
     catch (err) { next(err) }
 })
@@ -56,7 +80,7 @@ router.post('/login', async(req, res, next) => {
                         public_id: helperGenerateRandomId(), 
                         user_name: data.user?.user_metadata?.user_name || 'Unnamed Orgi_' + helperGenerateRandomId(4), 
                         email: data.user?.email || normalizedEmail, 
-                    })
+                    });
             }
         }
         
