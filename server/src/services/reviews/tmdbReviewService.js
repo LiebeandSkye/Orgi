@@ -42,11 +42,12 @@ async function pMap(items, mapper, concurrency = 8) {
 /**
  * Make a GET request to TMDB API
  */
-async function tmdbFetch(endpoint, params = {}) {
-  const apiKey = process.env.TMDB_API_KEY;
-  if (!apiKey) {
-    throw new Error("TMDB_API_KEY is missing from environment");
-  }
+async function tmdbFetch(endpoint, params = {}) { 
+  const rawKey = process.env.TMDB_API_KEY; 
+  if (!rawKey) { 
+    throw new Error("TMDB_API_KEY is missing from environment"); 
+  } 
+  const apiKey = rawKey.trim().toLowerCase(); 
 
   const queryParams = new URLSearchParams({
     api_key: apiKey,

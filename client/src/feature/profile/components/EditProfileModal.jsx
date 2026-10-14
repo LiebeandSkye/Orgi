@@ -12,68 +12,68 @@ export function EditProfileModal({ profile, onClose, onSave }) {
             user_name: userName, 
             profile_url: profileUrl, 
             banner_url: bannerUrl, 
-            current_status: status 
+            current_status: status, 
         }); 
-    } 
+    }; 
 
     return ( 
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-            <div className="w-full max-w-md bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-6 text-[#F5F5F5]">
-                <h2 className="text-lg font-bold mb-4">Edit Profile</h2>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                    <label className="text-xs text-[#B5B5B5]">
-                        Name
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
+            <div className="w-full max-w-md bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-6 text-[#F5F5F5]"> 
+                <h2 className="text-lg font-bold mb-4">Edit Profile</h2> 
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3"> 
+                    <label className="text-xs text-[#B5B5B5]"> 
+                        Name 
                         <input 
                             type="text" 
                             value={userName} 
                             onChange={(e) => setUserName(e.target.value)} 
                             className="w-full mt-1 px-3 py-2 text-sm bg-[#141414] border border-[#1C1C1C] rounded text-[#F5F5F5] outline-none" 
-                        />
-                    </label>
-                    <label className="text-xs text-[#B5B5B5]">
-                        Avatar URL
+                        /> 
+                    </label> 
+                    <label className="text-xs text-[#B5B5B5]"> 
+                        Avatar URL 
                         <input 
                             type="text" 
                             value={profileUrl} 
                             onChange={(e) => setProfileUrl(e.target.value)} 
                             className="w-full mt-1 px-3 py-2 text-sm bg-[#141414] border border-[#1C1C1C] rounded text-[#F5F5F5] outline-none" 
-                        />
-                    </label>
-                    <label className="text-xs text-[#B5B5B5]">
-                        Banner URL
+                        /> 
+                    </label> 
+                    <label className="text-xs text-[#B5B5B5]"> 
+                        Banner URL 
                         <input 
                             type="text" 
                             value={bannerUrl} 
                             onChange={(e) => setBannerUrl(e.target.value)} 
                             className="w-full mt-1 px-3 py-2 text-sm bg-[#141414] border border-[#1C1C1C] rounded text-[#F5F5F5] outline-none" 
-                        />
-                    </label>
-                    <label className="text-xs text-[#B5B5B5]">
-                        Status
+                        /> 
+                    </label> 
+                    <label className="text-xs text-[#B5B5B5]"> 
+                        Status 
                         <input 
                             type="text" 
                             value={status} 
                             onChange={(e) => setStatus(e.target.value)} 
                             className="w-full mt-1 px-3 py-2 text-sm bg-[#141414] border border-[#1C1C1C] rounded text-[#F5F5F5] outline-none" 
-                        />
-                    </label>
-                    <div className="flex justify-end gap-2 mt-4">
+                        /> 
+                    </label> 
+                    <div className="flex justify-end gap-2 mt-4"> 
                         <button 
                             type="button" 
                             onClick={onClose} 
-                            className="px-4 py-2 text-xs border border-[#1C1C1C] rounded text-[#B5B5B5] bg-[#141414] cursor-pointer"
-                        >
-                            Cancel
-                        </button>
+                            className="px-4 py-2 text-xs border border-[#1C1C1C] rounded text-[#B5B5B5] bg-[#141414] cursor-pointer" 
+                        > 
+                            Cancel 
+                        </button> 
                         <button 
                             type="submit" 
-                            className="px-4 py-2 text-xs font-semibold text-black bg-[#61F1AC] rounded cursor-pointer"
-                        >
-                            Save
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                            className="px-4 py-2 text-xs font-semibold text-black bg-[#61F1AC] rounded cursor-pointer" 
+                        > 
+                            Save 
+                        </button> 
+                    </div> 
+                </form> 
+            </div> 
+        </div> 
     ); 
 } 
