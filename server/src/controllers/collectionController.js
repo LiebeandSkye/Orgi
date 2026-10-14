@@ -56,6 +56,7 @@ export const collectionController = {
   async checkStatus(req, res, next) { 
     try { 
       const { provider, externalId } = req.params; 
+      const normProvider = provider === "open_library" ? "openlibrary" : provider; 
       const userId = req.user?.id; 
  
       if (!userId) { 
@@ -68,7 +69,7 @@ export const collectionController = {
       const { data: item } = await supabase 
         .from("items") 
         .select("id") 
-        .eq("provider", provider) 
+        .in("provider", [normProvider, provider]) 
         .eq("external_id", String(externalId)) 
         .maybeSingle(); 
  

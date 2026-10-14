@@ -4,11 +4,12 @@ export const reviewController = {
   async getReviews(req, res, next) { 
     try { 
       const { provider, externalId } = req.params; 
+      const normProvider = provider === "open_library" ? "openlibrary" : provider; 
  
       const { data: item } = await supabase 
         .from("items") 
         .select("id") 
-        .eq("provider", provider) 
+        .in("provider", [normProvider, provider]) 
         .eq("external_id", String(externalId)) 
         .maybeSingle(); 
  

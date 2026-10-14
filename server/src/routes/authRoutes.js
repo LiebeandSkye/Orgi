@@ -129,6 +129,8 @@ router.post('/oauth-session', async(req, res, next) => {
             const { data: { user }, error } = await supabaseAdmin.auth.getUser(access_token); 
             if (error) throw error; 
             authUser = user; 
+            activeToken = access_token; 
+            activeRefreshToken = refresh_token; 
         } else { 
             throw new Error('Authentication token or code required'); 
         }

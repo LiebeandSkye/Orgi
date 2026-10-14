@@ -56,17 +56,6 @@ router.delete("/:id", requireAuth, reviewController.deleteReview);
 
 router.get("/:provider/:externalId", async (req, res, next) => { 
   try { 
-    const { provider, externalId } = req.params; 
-    const isExternalDetailProvider = (provider === "mangadex" || provider === "openlibrary" || provider === "open_library"); 
-    if (isExternalDetailProvider && !req.query.communityOnly) { 
-      try { 
-        const normProvider = provider === "open_library" ? "openlibrary" : provider; 
-        const detail = await getReviewDetail(normProvider, externalId); 
-        if (detail && !detail.reviews) { 
-          return res.json({ success: true, data: detail }); 
-        } 
-      } catch {} 
-    } 
     return reviewController.getReviews(req, res, next); 
   } catch (err) { 
     return reviewController.getReviews(req, res, next); 

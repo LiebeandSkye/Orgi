@@ -181,7 +181,7 @@ export function MovieDetailsPage({
   useEffect(() => { 
     if (!movieData) return; 
     const currentProvider = category 
-      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "open_library") 
+      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
       : "tmdb"; 
     const currentExternalId = String(category ? id : (id || 157336)); 
  
@@ -198,10 +198,11 @@ export function MovieDetailsPage({
             setInCollection(!!colRes.value.data?.inCollection); 
           } 
           if (revRes.status === "fulfilled" && revRes.value?.success) { 
-            setCommunityData(revRes.value.data || { 
-              communityAverage: null, 
-              communityVotes: 0, 
-              reviews: [], 
+            const revData = revRes.value.data || {}; 
+            setCommunityData({ 
+              communityAverage: typeof revData.communityAverage === "number" ? revData.communityAverage : null, 
+              communityVotes: typeof revData.communityVotes === "number" ? revData.communityVotes : 0, 
+              reviews: Array.isArray(revData.reviews) ? revData.reviews : [], 
             }); 
           } 
         } 
@@ -225,7 +226,7 @@ export function MovieDetailsPage({
     } 
  
     const currentProvider = category 
-      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "open_library") 
+      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
       : "tmdb"; 
     const currentExternalId = String(category ? id : (id || 157336)); 
     const currentType = category ? category.toUpperCase() : "MOVIE"; 
@@ -260,7 +261,7 @@ export function MovieDetailsPage({
     } 
  
     const currentProvider = category 
-      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "open_library") 
+      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
       : "tmdb"; 
     const currentExternalId = String(category ? id : (id || 157336)); 
     const currentType = category ? category.toUpperCase() : "MOVIE"; 
@@ -281,10 +282,11 @@ export function MovieDetailsPage({
         setNewThought(""); 
         const newRev = res.data; 
         setCommunityData((prev) => { 
-          const existingIdx = prev.reviews.findIndex( 
+          const currentReviews = Array.isArray(prev?.reviews) ? prev.reviews : []; 
+          const existingIdx = currentReviews.findIndex( 
             (r) => r.id === newRev.id || (r.userId && r.userId === newRev.userId) 
           ); 
-          let updatedReviews = [...prev.reviews]; 
+          let updatedReviews = [...currentReviews]; 
           if (existingIdx >= 0) { 
             updatedReviews[existingIdx] = newRev; 
           } else { 
@@ -320,8 +322,8 @@ export function MovieDetailsPage({
       ? parseFloat(movieData.tmdbVotes) * 1000 
       : parseInt(movieData?.tmdbVotes, 10) || 100; 
  
-  const communityScore = communityData.communityAverage; 
-  const communityVotesCount = communityData.communityVotes || 0; 
+  const communityScore = communityData?.communityAverage ?? null; 
+  const communityVotesCount = communityData?.communityVotes || 0; 
  
   let blendedScore = providerScore; 
   let totalVotesLabel = movieData?.tmdbVotes; 
@@ -343,7 +345,10 @@ export function MovieDetailsPage({
     ...r, 
     source: "provider", 
   })); 
-  const allReviews = [...communityData.reviews, ...rawProviderReviews]; 
+  const allReviews = [ 
+    ...(Array.isArray(communityData?.reviews) ? communityData.reviews : []), 
+    ...rawProviderReviews, 
+  ]; 
   const filteredReviews = allReviews.filter((r) => { 
     if (reviewFilter === "community") return r.source === "community"; 
     if (reviewFilter === "provider") return r.source === "provider"; 

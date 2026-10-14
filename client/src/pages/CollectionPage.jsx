@@ -37,7 +37,17 @@ export function CollectionPage() {
   const [isUpdating, setIsUpdating] = useState({}); 
 
   const loadCollections = useCallback(async () => { 
-    if (!session) return; 
+    const saved = typeof localStorage !== "undefined" ? localStorage.getItem("orgi_session") : null; 
+    let token = null; 
+    try { 
+      const parsed = saved ? JSON.parse(saved) : null; 
+      token = parsed?.access_token || parsed?.session?.access_token; 
+    } catch {} 
+ 
+    if (!session || !token) { 
+      setIsLoading(false); 
+      return; 
+    } 
     setIsLoading(true); 
     setErrorMessage(null); 
     try { 
@@ -124,13 +134,19 @@ export function CollectionPage() {
       return `/movie/${item.externalId}`; 
     } 
     if (item.type === "SERIES") { 
-      return `/movie/${item.externalId}`; 
+      return `/series/${item.externalId}`; 
     } 
     const cat = item.type ? item.type.toLowerCase() : "manhwa"; 
     return `/books/${cat}/${item.externalId}`; 
   }; 
 
-  if (!session) { 
+  const hasValidToken = Boolean( 
+    session?.access_token || 
+    session?.session?.access_token || 
+    (typeof localStorage !== "undefined" && localStorage.getItem("orgi_session")?.includes("access_token")) 
+  ); 
+
+  if (!session || !hasValidToken) { 
     return ( 
       <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center"> 
         <div className="w-16 h-16 rounded-2xl bg-[#0E0E0E] border border-[#1C1C1C] flex items-center justify-center text-[#61F1AC] mb-6 shadow-xl"> 
