@@ -124,7 +124,7 @@ export function BooksDashboard() {
 
   const isSearchActive = searchQuery.trim().length > 0;
 
-  // Build a diverse spotlight pool containing top titles across ALL literature types
+
   const spotlightPool = useMemo(() => {
     const pool = [];
     if (feeds.trendingManhwa[0]) pool.push({ ...feeds.trendingManhwa[0], badge: "Trending Manhwa" });
@@ -155,7 +155,7 @@ export function BooksDashboard() {
 
   const currentHero = spotlightPool[heroIndex % spotlightPool.length] || spotlightPool[0];
 
-  // Auto-advance spotlight banner every 8 seconds
+
   useEffect(() => {
     if (spotlightPool.length <= 1) return;
     const interval = setInterval(() => {
@@ -171,7 +171,6 @@ export function BooksDashboard() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col justify-between pt-10 pb-24 select-none">
       <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-[120px]">
-        {/* CENTER HERO SEARCH BAR */}
         <section className="flex flex-col items-center justify-center pt-2 pb-8 text-center">
           <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
             BOOKS · NOVELS · MANGA · MANHWA · MANHUA
@@ -297,13 +296,8 @@ export function BooksDashboard() {
             )}
           </section>
         ) : (
-          /* ======================================================== */
-          /* DASHBOARD CAROUSEL VIEW                                  */
-          /* ======================================================== */
           <div className="space-y-12 animate-in fade-in duration-300">
-            {/* 1. MULTI-CATEGORY SPOTLIGHT HERO BANNER */}
             <section className="relative w-full rounded-[16px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500">
-              {/* Cinematic backdrop artwork with vignette */}
               <div className="absolute inset-0 z-0">
                 <img
                   key={currentHero.id}
@@ -317,22 +311,18 @@ export function BooksDashboard() {
                 <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[300px] bg-[#61F1AC] opacity-[0.04] blur-[120px] pointer-events-none rounded-full" />
               </div>
 
-              {/* Banner content */}
               <div className="relative z-10 p-6 sm:p-10 lg:p-12 pb-14 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
                 <div className="max-w-2xl flex flex-col">
-                  {/* Category label */}
                   <div className="mb-3">
                     <span className="text-[11px] font-semibold text-[#7A7A7A] uppercase tracking-[0.2em]">
                       {currentHero.type}
                     </span>
                   </div>
 
-                  {/* Title */}
                   <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-[#F5F5F5] mb-3">
                     {currentHero.title}
                   </h2>
 
-                  {/* Stats Pill */}
                   <div className="flex items-center gap-3 text-xs text-[#7A7A7A] mb-4">
                     <div className="flex items-center gap-1 font-semibold text-[#61F1AC]">
                       <Star size={13} className="fill-[#61F1AC]" />
@@ -344,12 +334,10 @@ export function BooksDashboard() {
                     <span className="text-[#B5B5B5]">Editor's Recommendation</span>
                   </div>
 
-                  {/* Synopsis */}
                   <p className="text-sm text-[#B5B5B5] leading-relaxed line-clamp-3 mb-6 font-light max-w-xl">
                     {currentHero.overview || currentHero.synopsis || "Explore one of the highest-rated titles across the community reading list."}
                   </p>
 
-                  {/* Action buttons */}
                   <div className="flex items-center gap-3.5">
                     <button
                       type="button"
@@ -372,8 +360,6 @@ export function BooksDashboard() {
                     </Link>
                   </div>
                 </div>
-
-                {/* Hero portrait cover card with zoom on hover */}
                 <Link
                   to={currentHero.route}
                   className="hidden md:block shrink-0 w-[190px] aspect-[2/3] rounded-[12px] overflow-hidden border border-[#1C1C1C] hover:border-[#61F1AC]/60 shadow-2xl transition-all group bg-[#0B0B0B]"
@@ -386,8 +372,6 @@ export function BooksDashboard() {
                   />
                 </Link>
               </div>
-
-              {/* Slider controls anchored at the bottom of the banner */}
               {spotlightPool.length > 1 && (
                 <div className="absolute bottom-4 left-6 sm:left-10 lg:left-12 z-20 flex items-center gap-2.5">
                   <button
@@ -426,8 +410,6 @@ export function BooksDashboard() {
                 </div>
               )}
             </section>
-
-            {/* 2. MINIMAL CATEGORY FILTER TABS ROW */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 pt-2 border-b border-[#1C1C1C]">
               {CATEGORY_TABS.map((tab) => {
                 const isActive = activeTab === tab.key;
@@ -447,48 +429,35 @@ export function BooksDashboard() {
                 );
               })}
             </div>
-
-            {/* 3. ONE SECTION PER SINGLE FULL-WIDTH LINE (Carousels) */}
             <div className="space-y-6 pb-12">
-              {/* Row 1: Trending this week — Manhwa */}
               <MediaCarousel
                 title="Trending this week — Manhwa"
                 items={feeds.trendingManhwa}
                 isLoading={isLoadingFeeds}
-                subtitle="Korean Webcomics & Webtoons"
               />
-
-              {/* Row 2: Trending this week — Manga */}
               <MediaCarousel
                 title="Trending this week — Manga"
                 items={feeds.trendingManga}
                 isLoading={isLoadingFeeds}
-                subtitle="Japanese Graphic Novels & Tankōbon"
               />
 
-              {/* Row 3: Trending this month — Novels & Books */}
               <MediaCarousel
                 title="Trending this month — Novels & Books"
                 items={feeds.trendingBooks}
                 isLoading={isLoadingFeeds}
-                subtitle="Literary Fiction & Modern Classics"
               />
 
-              {/* Row 4: Trending this month — Manhua */}
               <MediaCarousel
                 title="Trending this month — Manhua"
                 items={feeds.trendingManhua}
                 isLoading={isLoadingFeeds}
-                subtitle="Chinese Serialized Comics & Cultivation"
               />
 
-              {/* Row 5: Fan Favorites (with bold silver rank numerals 1-10) */}
               <MediaCarousel
                 title="Fan Favorites — All Time"
                 items={feeds.fanFavorites}
                 isLoading={isLoadingFeeds}
                 showRank={true}
-                subtitle="Highest Bayesian Community Ratings"
               />
             </div>
           </div>

@@ -193,9 +193,8 @@ export const mediaController = {
 
       const data = await getOrSetCache(cacheKey, 6 * 3600, async () => {
         const offset = (pageNum - 1) * ITEMS_PER_PAGE;
-        const url = queryStr
-          ? `${OPEN_LIBRARY_BASE}/search.json?q=${encodeURIComponent(queryStr)}&limit=${ITEMS_PER_PAGE}&page=${pageNum}`
-          : `${OPEN_LIBRARY_BASE}/subjects/fiction.json?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+        const searchQ = queryStr ? encodeURIComponent(queryStr) : "subject%3Afiction";
+        const url = `${OPEN_LIBRARY_BASE}/search.json?q=${searchQ}&limit=${ITEMS_PER_PAGE}&page=${pageNum}&fields=key,title,author_name,cover_i,ratings_average,ratings_count,first_publish_year,subject`;
 
         const upstreamRes = await fetch(url, {
           headers: { "User-Agent": "Orgi/1.0 (contact@orgi.app)" },
@@ -204,11 +203,14 @@ export const mediaController = {
           throw new Error(`Open Library error: ${upstreamRes.status}`);
         }
         const json = await upstreamRes.json();
-        const rawItems = json.docs || json.works || [];
+        const rawItems = json.docs || [];
 
         const items = rawItems.map((item) => {
-          const coverId = item.cover_id || item.cover_i;
-          const authorName = item.author_name?.[0] || item.authors?.[0]?.name || "Unknown Author";
+          const coverId = item.cover_i;
+          const authorName = item.author_name?.[0] || "Unknown Author";
+          // Convert Open Library 5-star scale to 10-point scale
+          const rawScore = typeof item.ratings_average === "number" ? item.ratings_average * 2 : null;
+          const rating = rawScore ? rawScore.toFixed(1) : "8.4";
           return {
             id: (item.key || "").replace("/works/", ""),
             title: item.title || "Untitled",
@@ -216,20 +218,17 @@ export const mediaController = {
             cover: coverId
               ? `${OPEN_LIBRARY_COVERS}/${coverId}-L.jpg`
               : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover",
-            rating: "8.6",
+            rating,
+            score: rating,
+            voteCount: item.ratings_count || 0,
             chapters: item.first_publish_year ? `${item.first_publish_year}` : "Novel",
             status: "Completed",
-            genres: Array.isArray(item.subject) ? item.subject : Array.isArray(item.subjects) ? item.subjects : ["Fiction"],
+            genres: Array.isArray(item.subject) ? item.subject : ["Fiction"],
             genre: Array.isArray(item.subject) ? item.subject.slice(0, 5).join(", ") : "Fiction",
           };
         });
 
-        const totalCount =
-          typeof json.numFound === "number"
-            ? json.numFound
-            : typeof json.work_count === "number"
-            ? json.work_count
-            : items.length;
+        const totalCount = typeof json.numFound === "number" ? json.numFound : items.length;
         let totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
         if (items.length < ITEMS_PER_PAGE) {
           totalPages = items.length > 0 ? pageNum : Math.max(1, pageNum - 1);
@@ -254,11 +253,30 @@ export const mediaController = {
       const data = await getOrSetCache(cacheKey, 24 * 3600, async () => {
         const catLower = (category || "").toLowerCase();
         if (catLower === "novels" || catLower === "books" || catLower === "light-novels") {
-          const upstreamRes = await fetch(`${OPEN_LIBRARY_BASE}/works/${id}.json`, {
-            headers: { "User-Agent": "Orgi/1.0 (contact@orgi.app)" },
-          });
+          const [upstreamRes, ratingsRes] = await Promise.all([
+            fetch(`${OPEN_LIBRARY_BASE}/works/${id}.json`, {
+              headers: { "User-Agent": "Orgi/1.0 (contact@orgi.app)" },
+            }),
+            fetch(`${OPEN_LIBRARY_BASE}/works/${id}/ratings.json`, {
+              headers: { "User-Agent": "Orgi/1.0 (contact@orgi.app)" },
+            }).catch(() => null),
+          ]);
           if (!upstreamRes.ok) throw new Error(`Open Library detail error: ${upstreamRes.status}`);
           const bookData = await upstreamRes.json();
+
+          let bookRating = 8.5;
+          let bookVotes = "1.2k ratings";
+          if (ratingsRes && ratingsRes.ok) {
+            try {
+              const ratingsJson = await ratingsRes.json();
+              if (ratingsJson?.summary?.average) {
+                bookRating = Number((ratingsJson.summary.average * 2).toFixed(1));
+              }
+              if (ratingsJson?.summary?.count) {
+                bookVotes = `${ratingsJson.summary.count.toLocaleString()} ratings`;
+              }
+            } catch {}
+          }
           const coverId = bookData.covers?.[0];
           const coverUrl = coverId
             ? `${OPEN_LIBRARY_COVERS}/${coverId}-L.jpg`
@@ -341,10 +359,10 @@ export const mediaController = {
             certificate: "All Ages",
             poster: coverUrl,
             backdrop: coverUrl,
-            tmdbRating: 8.6,
-            tmdbVotes: "1.2k ratings",
-            communityRating: 8.8,
-            communityVotes: "340 ratings",
+            tmdbRating: bookRating,
+            tmdbVotes: bookVotes,
+            communityRating: bookRating,
+            communityVotes: bookVotes,
             synopsis:
               typeof bookData.description === "string"
                 ? bookData.description

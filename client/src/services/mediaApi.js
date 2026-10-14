@@ -284,18 +284,18 @@ export async function fetchBooks(page = 1, query = "") {
         // Fall back to direct Open Library call below
     }
     const offset = (page - 1) * ITEMS_PER_PAGE;
-    const url = query.trim()
-        ? `${OPEN_LIBRARY_BASE}/search.json?q=${encodeURIComponent(query.trim())}&limit=${ITEMS_PER_PAGE}&page=${page}`
-        : `${OPEN_LIBRARY_BASE}/subjects/fiction.json?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+    const searchQ = query.trim() ? encodeURIComponent(query.trim()) : "subject%3Afiction";
+    const url = `${OPEN_LIBRARY_BASE}/search.json?q=${searchQ}&limit=${ITEMS_PER_PAGE}&page=${page}&fields=key,title,author_name,cover_i,ratings_average,ratings_count,first_publish_year,subject`;
 
     const res = await fetch(url);
     const json = await res.json();
-    const rawItems = json.docs || json.works || [];
+    const rawItems = json.docs || [];
 
     const results = rawItems.map((item) => {
-        const coverId = item.cover_id || item.cover_i;
-        const authorName =
-            item.author_name?.[0] || item.authors?.[0]?.name || "Unknown Author";
+        const coverId = item.cover_i;
+        const authorName = item.author_name?.[0] || "Unknown Author";
+        const rawScore = typeof item.ratings_average === "number" ? item.ratings_average * 2 : null;
+        const rating = rawScore ? rawScore.toFixed(1) : "8.4";
         return {
             id: (item.key || "").replace("/works/", ""),
             title: item.title || "Untitled",
@@ -303,10 +303,12 @@ export async function fetchBooks(page = 1, query = "") {
             cover: coverId
                 ? `${OPEN_LIBRARY_COVERS}/${coverId}-L.jpg`
                 : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover",
-            rating: "8.6",
+            rating,
+            score: rating,
+            voteCount: item.ratings_count || 0,
             chapters: item.first_publish_year ? `${item.first_publish_year}` : "Novel",
             status: "Completed",
-            genres: Array.isArray(item.subject) ? item.subject : Array.isArray(item.subjects) ? item.subjects : ["Fiction"],
+            genres: Array.isArray(item.subject) ? item.subject : ["Fiction"],
             genre: Array.isArray(item.subject) ? item.subject.slice(0, 5).join(", ") : "Fiction",
         };
     });
@@ -394,8 +396,24 @@ export async function fetchMediaDetails(category, id) {
         // Fall back to direct fetching below
     }
     if (category === "novels" || category === "books" || category === "light-novels") {
-        const res = await fetch(`${OPEN_LIBRARY_BASE}/works/${id}.json`);
+        const [res, ratingsRes] = await Promise.all([
+            fetch(`${OPEN_LIBRARY_BASE}/works/${id}.json`),
+            fetch(`${OPEN_LIBRARY_BASE}/works/${id}/ratings.json`).catch(() => null),
+        ]);
         const data = await res.json();
+        let bookRating = 8.5;
+        let bookVotes = "1.2k ratings";
+        if (ratingsRes && ratingsRes.ok) {
+            try {
+                const ratingsJson = await ratingsRes.json();
+                if (ratingsJson?.summary?.average) {
+                    bookRating = Number((ratingsJson.summary.average * 2).toFixed(1));
+                }
+                if (ratingsJson?.summary?.count) {
+                    bookVotes = `${ratingsJson.summary.count.toLocaleString()} ratings`;
+                }
+            } catch {}
+        }
         const coverId = data.covers?.[0];
         const coverUrl = coverId
             ? `${OPEN_LIBRARY_COVERS}/${coverId}-L.jpg`
@@ -477,10 +495,10 @@ export async function fetchMediaDetails(category, id) {
             certificate: "All Ages",
             poster: coverUrl,
             backdrop: coverUrl,
-            tmdbRating: 8.6,
-            tmdbVotes: "1.2k ratings",
-            communityRating: 8.8,
-            communityVotes: "340 ratings",
+            tmdbRating: bookRating,
+            tmdbVotes: bookVotes,
+            communityRating: bookRating,
+            communityVotes: bookVotes,
             synopsis:
                 typeof data.description === "string"
                     ? data.description
