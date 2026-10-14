@@ -12,7 +12,6 @@ export const collectionController = {
           id, 
           status, 
           created_at, 
-          updated_at, 
           items ( 
             id, 
             external_id, 
@@ -23,7 +22,7 @@ export const collectionController = {
           ) 
         `) 
         .eq("user_id", userId) 
-        .order("updated_at", { ascending: false }); 
+        .order("created_at", { ascending: false }); 
  
       if (status && ["plan", "progress", "completed"].includes(status)) { 
         query = query.eq("status", status); 
@@ -32,18 +31,21 @@ export const collectionController = {
       const { data, error } = await query; 
       if (error) throw error; 
  
-      const formatted = (data || []).map((entry) => ({ 
-        id: entry.id, 
-        status: entry.status, 
-        createdAt: entry.created_at, 
-        updatedAt: entry.updated_at, 
-        itemId: entry.items?.id, 
-        externalId: entry.items?.external_id, 
-        provider: entry.items?.provider, 
-        type: entry.items?.type, 
-        title: entry.items?.title, 
-        coverUrl: entry.items?.cover_url, 
-      })); 
+      const formatted = (data || []).map((entry) => { 
+        const item = Array.isArray(entry.items) ? entry.items[0] : (entry.items || {}); 
+        return { 
+          id: entry.id, 
+          status: entry.status, 
+          createdAt: entry.created_at, 
+          updatedAt: entry.updated_at || entry.created_at, 
+          itemId: item.id, 
+          externalId: item.external_id, 
+          provider: item.provider, 
+          type: item.type, 
+          title: item.title, 
+          coverUrl: item.cover_url, 
+        }; 
+      }); 
  
       res.json({ success: true, data: formatted }); 
     } catch (err) { 
@@ -54,14 +56,7 @@ export const collectionController = {
   async checkStatus(req, res, next) { 
     try { 
       const { provider, externalId } = req.params; 
-      const authHeader = req.headers.authorization; 
-      let userId = null; 
- 
-      if (authHeader?.startsWith("Bearer ")) { 
-        const token = authHeader.split(" ")[1]; 
-        const { data: userData } = await supabase.auth.getUser(token); 
-        userId = userData?.user?.id || null; 
-      } 
+      const userId = req.user?.id; 
  
       if (!userId) { 
         return res.json({ 
@@ -103,6 +98,7 @@ export const collectionController = {
       next(err); 
     } 
   }, 
+
  
   async toggleItem(req, res, next) { 
     try { 
@@ -196,7 +192,7 @@ export const collectionController = {
  
       const { data, error } = await supabase 
         .from("user_collections") 
-        .update({ status, updated_at: new Date().toISOString() }) 
+        .update({ status }) 
         .eq("user_id", userId) 
         .eq("item_id", itemId) 
         .select() 
@@ -205,6 +201,7 @@ export const collectionController = {
       if (error) throw error; 
  
       res.json({ success: true, data }); 
+
     } catch (err) { 
       next(err); 
     } 

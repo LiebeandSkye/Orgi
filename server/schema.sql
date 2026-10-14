@@ -35,7 +35,10 @@ CREATE TABLE IF NOT EXISTS user_collections (
     CONSTRAINT uq_user_collections_item UNIQUE (user_id, item_id) 
 ); 
  
+ALTER TABLE user_collections ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(); 
+ 
 CREATE TABLE IF NOT EXISTS reviews ( 
+
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(), 
     item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE, 
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, 

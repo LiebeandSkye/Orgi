@@ -158,6 +158,48 @@ router.post('/oauth-session', async(req, res, next) => {
     catch (err) { next(err) }
 })
 
+router.post('/refresh', async(req, res, next) => { 
+    try { 
+        const { refresh_token } = req.body; 
+        if (!refresh_token) { 
+            return res.status(400).json({ 
+                error: { message: "Refresh token is required", code: "REFRESH_TOKEN_REQUIRED" } 
+            }); 
+        } 
+        
+        const authClient = createAuthClient(); 
+        const { data, error } = await authClient.auth.refreshSession({ refresh_token }); 
+        if (error) { 
+            return res.status(401).json({ 
+                error: { message: error.message || "Invalid or expired refresh token", code: "INVALID_REFRESH_TOKEN" } 
+            }); 
+        } 
+        
+        let profile = null; 
+        if (data?.user?.id) { 
+            const { data: userProfile } = await supabaseAdmin 
+                .from('users') 
+                .select('*') 
+                .eq('id', data.user.id) 
+                .maybeSingle(); 
+            profile = userProfile || data.user; 
+        } 
+        
+        res.status(200).json({ 
+            success: true, 
+            data: { 
+                session: { 
+                    access_token: data.session.access_token, 
+                    refresh_token: data.session.refresh_token, 
+                    user: profile, 
+                }, 
+                user: profile, 
+            } 
+        }); 
+    } 
+    catch (err) { next(err) } 
+}); 
+
 router.delete('/account', requireAuth, async(req, res, next) => { 
     try { 
         const userId = req.user.id; 
@@ -177,3 +219,4 @@ router.delete('/account', requireAuth, async(req, res, next) => {
 })
 
 export default router; 
+
