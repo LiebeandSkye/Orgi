@@ -331,8 +331,11 @@ export async function getMovieDetails(movieId = 157336) {
 /**
  * Get TV Series Details with Credits, Seasons, and Episodes
  */
-export async function getSeriesDetails(seriesId = 1396) {
-  const resolvedId = seriesId === "breaking-bad" ? 1396 : seriesId;
+export async function getSeriesDetails(seriesId) {
+  if (!seriesId) {
+    throw new Error("seriesId is required");
+  }
+  const resolvedId = seriesId;
   const data = await fetchFromApi(
     `/tv/${resolvedId}`,
     `/tv/${resolvedId}`,
@@ -434,8 +437,9 @@ export async function getSeriesDetails(seriesId = 1396) {
 /**
  * Get Episodes for a Specific Season of a Series
  */
-export async function getSeasonEpisodes(seriesId = 1396, seasonNumber = 1) {
-  const resolvedId = seriesId === "breaking-bad" ? 1396 : seriesId;
+export async function getSeasonEpisodes(seriesId, seasonNumber = 1) {
+  if (!seriesId) return [];
+  const resolvedId = seriesId;
   const data = await fetchFromApi(
     `/tv/${resolvedId}/season/${seasonNumber}`,
     `/tv/${resolvedId}/season/${seasonNumber}`

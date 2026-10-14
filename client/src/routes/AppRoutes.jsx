@@ -1,9 +1,10 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "../components/layout/Layout";
 import { HomePage } from "../pages/HomePage";
 import { MovieDetailsPage } from "../pages/MovieDetailsPage";
 import { SeriesDetailsPage } from "../pages/SeriesDetailsPage";
+import { ReviewsPage } from "../pages/ReviewsPage";
 import { SearchPage } from "../pages/SearchPage";
 import { ManhwaPage } from "../pages/ManhwaPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -31,9 +32,15 @@ export function AppRoutes() {
                 <Route path="/movie/:id" element={<MovieDetailsPage initialTab="Cast" />} />
 
                 {/* Series Detail Pages */}
-                <Route path="/series" element={<SeriesDetailsPage />} />
-                <Route path="/series/breaking-bad" element={<SeriesDetailsPage />} />
+                <Route path="/series" element={<Navigate to="/" replace />} />
+                <Route path="/series/breaking-bad" element={<Navigate to="/series/1396" replace />} />
                 <Route path="/series/:id" element={<SeriesDetailsPage />} />
+
+                {/* Feed / Community Reviews */}
+                <Route path="/feed" element={<ReviewsPage />} />
+                <Route path="/reviews" element={<ReviewsPage />} />
+                <Route path="/reviews/:source/:titleId" element={<ReviewsPage />} />
+                <Route path="/reviews/:source/:titleId/:reviewId" element={<ReviewsPage />} />
 
                 {/* Search */}
                 <Route path="/search" element={<SearchPage />} />

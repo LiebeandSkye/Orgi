@@ -13,7 +13,6 @@ import { getMovieDetails, getMovieMedia } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
-import { INTERSTELLAR_DATA } from "../data/mockData";
 import MediaItems from "../components/ui/MediaItems";
 import { fetchMediaDetails } from "../services/mediaApi";
 import { CastCarousel } from "../components/ui/CastCarousel";
