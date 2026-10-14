@@ -14,6 +14,10 @@ let tmdbCandidatesExpiry = 0;
 let tmdbReviewCardsCache = null;
 let tmdbReviewCardsExpiry = 0;
 
+let tmdbFeaturedReviewCache = null;
+let tmdbFeaturedReviewExpiry = 0;
+let tmdbFeaturedReviewPromise = null;
+
 /**
  * Concurrency runner for parallel fetches
  */
@@ -448,74 +452,96 @@ export async function getTmdbReviewDetail(titleId, reviewId) {
  * Get Featured Review (#1 trending movie of the week with an acceptable review)
  */
 export async function getTmdbFeaturedReview() {
-  const trendingData = await tmdbFetch("/trending/movie/week");
-  const trendingMovies = trendingData.results || [];
-
-  for (const movie of trendingMovies) {
-    try {
-      const reviewsData = await tmdbFetch(`/movie/${movie.id}/reviews`);
-      const reviewsList = reviewsData.results || [];
-      if (reviewsList.length === 0) continue;
-
-      const best = selectBestReview(reviewsList);
-      if (!best) continue;
-
-      // Get movie details for tagline
-      let movieDetail;
-      try {
-        movieDetail = await tmdbFetch(`/movie/${movie.id}`);
-      } catch {
-        movieDetail = movie;
-      }
-
-      const genres = await getTmdbGenres();
-      const genreNames = (movie.genre_ids || [])
-        .map((id) => genres[id])
-        .filter(Boolean)
-        .slice(0, 3);
-
-      const rawRating = best.author_details?.rating;
-      const normalizedRating =
-        rawRating !== null && rawRating !== undefined && !Number.isNaN(Number(rawRating))
-          ? Math.round(Number(rawRating) * 10) / 10
-          : 8.5;
-
-      const year = movie.release_date?.substring(0, 4) || "";
-
-      const card = {
-        id: `tmdb:${movie.id}:${best.id}`,
-        source: "tmdb",
-        category: "movie",
-        titleId: String(movie.id),
-        title: movie.title || "Untitled",
-        year: year ? parseInt(year, 10) : undefined,
-        mediaLabel: "Movie",
-        tagline: movieDetail.tagline || genreNames.join(" · "),
-        posterUrl: movie.poster_path ? `${TMDB_IMAGE_BASE}/w342${movie.poster_path}` : undefined,
-        backdropUrl: movie.backdrop_path ? `${TMDB_IMAGE_BASE}/w1280${movie.backdrop_path}` : undefined,
-        genres: genreNames,
-        rating: normalizedRating,
-        ratingKind: "review",
-        excerpt: createExcerpt(best.content, 260),
-        rawContent: best.content,
-        excerptKind: "review",
-        author: {
-          name: best.author_details?.username || best.author || "Anonymous",
-          avatarUrl: resolveAvatarUrl(best.author_details?.avatar_path),
-        },
-        createdAt: best.created_at || new Date().toISOString(),
-        containsSpoilers: /spoiler/i.test(best.content),
-        detailHref: `/reviews/tmdb/${movie.id}/${best.id}`,
-      };
-
-      return {
-        item: card,
-        heroBackdropUrl: movie.backdrop_path ? `${TMDB_IMAGE_BASE}/original${movie.backdrop_path}` : undefined,
-      };
-    } catch {
-      continue;
-    }
+  const now = Date.now();
+  if (tmdbFeaturedReviewCache && now < tmdbFeaturedReviewExpiry) {
+    return tmdbFeaturedReviewCache;
   }
 
-  return null;
+  if (tmdbFeaturedReviewPromise) {
+    return tmdbFeaturedReviewPromise;
+  }
+
+  tmdbFeaturedReviewPromise = (async () => {
+    try {
+      const trendingData = await tmdbFetch("/trending/movie/week");
+      const trendingMovies = trendingData.results || [];
+
+      for (const movie of trendingMovies) {
+        try {
+          const reviewsData = await tmdbFetch(`/movie/${movie.id}/reviews`);
+          const reviewsList = reviewsData.results || [];
+          if (reviewsList.length === 0) continue;
+
+          const best = selectBestReview(reviewsList);
+          if (!best) continue;
+
+          // Get movie details for tagline
+          let movieDetail;
+          try {
+            movieDetail = await tmdbFetch(`/movie/${movie.id}`);
+          } catch {
+            movieDetail = movie;
+          }
+
+          const genres = await getTmdbGenres();
+          const genreNames = (movie.genre_ids || [])
+            .map((id) => genres[id])
+            .filter(Boolean)
+            .slice(0, 3);
+
+          const rawRating = best.author_details?.rating;
+          const normalizedRating =
+            rawRating !== null && rawRating !== undefined && !Number.isNaN(Number(rawRating))
+              ? Math.round(Number(rawRating) * 10) / 10
+              : 8.5;
+
+          const year = movie.release_date?.substring(0, 4) || "";
+
+          const card = {
+            id: `tmdb:${movie.id}:${best.id}`,
+            source: "tmdb",
+            category: "movie",
+            titleId: String(movie.id),
+            title: movie.title || "Untitled",
+            year: year ? parseInt(year, 10) : undefined,
+            mediaLabel: "Movie",
+            tagline: movieDetail.tagline || genreNames.join(" · "),
+            posterUrl: movie.poster_path ? `${TMDB_IMAGE_BASE}/w342${movie.poster_path}` : undefined,
+            backdropUrl: movie.backdrop_path ? `${TMDB_IMAGE_BASE}/w1280${movie.backdrop_path}` : undefined,
+            genres: genreNames,
+            rating: normalizedRating,
+            ratingKind: "review",
+            excerpt: createExcerpt(best.content, 260),
+            rawContent: best.content,
+            excerptKind: "review",
+            author: {
+              name: best.author_details?.username || best.author || "Anonymous",
+              avatarUrl: resolveAvatarUrl(best.author_details?.avatar_path),
+            },
+            createdAt: best.created_at || new Date().toISOString(),
+            containsSpoilers: /spoiler/i.test(best.content),
+            detailHref: `/reviews/tmdb/${movie.id}/${best.id}`,
+          };
+
+          const result = {
+            item: card,
+            heroBackdropUrl: movie.backdrop_path ? `${TMDB_IMAGE_BASE}/w1280${movie.backdrop_path}` : undefined,
+          };
+
+          tmdbFeaturedReviewCache = result;
+          tmdbFeaturedReviewExpiry = Date.now() + 30 * 60 * 1000; // 30 minutes
+          return result;
+        } catch {
+          continue;
+        }
+      }
+
+      return null;
+    } finally {
+      tmdbFeaturedReviewPromise = null;
+    }
+  })();
+
+  return tmdbFeaturedReviewPromise;
 }
+

@@ -8,85 +8,108 @@ export function Pagination({
   pageSize = 25,
   onPageChange,
 }) {
-  if (totalPages <= 1 && totalItems <= pageSize) {
+  if (totalPages <= 1) {
     return null;
   }
 
-  const startItem = totalItems > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-  const endItem = Math.min(currentPage * pageSize, totalItems);
+  const windowSize = 2;
+  let start = Math.max(1, currentPage - windowSize);
+  let end = Math.min(totalPages, currentPage + windowSize);
 
-  // Generate page numbers array
+  if (currentPage <= 3) {
+    end = Math.min(totalPages, 5);
+  }
+  if (currentPage >= totalPages - 2) {
+    start = Math.max(1, totalPages - 4);
+  }
+
   const pages = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pages.push(i);
+  for (let p = start; p <= end; p++) {
+    pages.push(p);
   }
 
   return (
     <nav
       aria-label="Review pagination"
-      className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 pb-4 mt-6 border-t border-[#1C1C1C] select-none"
+      className="mt-12 mb-6 flex items-center justify-center gap-2 text-xs font-tabular select-none"
     >
-      {/* Items Range Summary */}
-      <span className="text-[12px] text-[#7A7A7A] font-tabular">
-        Showing <span className="text-[#B5B5B5] font-medium">{startItem}–{endItem}</span> of{" "}
-        <span className="text-[#B5B5B5] font-medium">{totalItems}</span> reviews
-      </span>
+      {/* Previous 1 page button */}
+      <button
+        type="button"
+        disabled={currentPage <= 1}
+        onClick={() => onPageChange(currentPage - 1)}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+        title="Previous page"
+        aria-label="Previous page"
+      >
+        <ChevronLeft size={14} />
+      </button>
 
-      {/* Page Buttons Container */}
-      <div className="flex items-center gap-1.5">
-        {/* Previous Button */}
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1}
-          aria-label="Previous page"
-          className={`h-[38px] px-3 rounded-lg text-[13px] font-medium flex items-center gap-1 transition-all ${
-            currentPage <= 1
-              ? "opacity-30 cursor-not-allowed text-[#7A7A7A] border border-transparent"
-              : "bg-[#0B0B0B] border border-[#1C1C1C] text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414] hover:border-[#333333] cursor-pointer"
-          }`}
-        >
-          <ChevronLeft size={16} />
-          <span className="hidden sm:inline">Previous</span>
-        </button>
+      {start > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => onPageChange(1)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B] transition-colors cursor-pointer"
+            aria-label="Page 1"
+          >
+            1
+          </button>
+          {start > 2 && <span className="text-[#3A3A3A] px-1 select-none">…</span>}
+        </>
+      )}
 
-        {/* Numbered Page Buttons */}
-        {pages.map((p) => {
-          const isActive = p === currentPage;
-          return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => onPageChange(p)}
-              aria-current={isActive ? "page" : undefined}
-              aria-label={`Go to page ${p}`}
-              className={`w-[38px] h-[38px] rounded-lg text-[13px] font-medium flex items-center justify-center transition-all font-tabular ${
-                isActive
-                  ? "bg-[#61F1AC] text-[#000000] font-bold shadow-[0_0_12px_rgba(97,241,172,0.25)] cursor-default"
-                  : "bg-[#0B0B0B] border border-[#1C1C1C] text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414] hover:border-[#333333] cursor-pointer"
-              }`}
-            >
-              {p}
-            </button>
-          );
-        })}
+      {pages.map((page) => {
+        const isCurrent = currentPage === page;
+        return (
+          <button
+            key={page}
+            type="button"
+            onClick={() => onPageChange(page)}
+            aria-current={isCurrent ? "page" : undefined}
+            aria-label={`Page ${page}`}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+              isCurrent
+                ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50 font-semibold"
+                : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B]"
+            }`}
+          >
+            {page}
+          </button>
+        );
+      })}
 
-        {/* Next Button */}
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-          aria-label="Next page"
-          className={`h-[38px] px-3 rounded-lg text-[13px] font-medium flex items-center gap-1 transition-all ${
-            currentPage >= totalPages
-              ? "opacity-30 cursor-not-allowed text-[#7A7A7A] border border-transparent"
-              : "bg-[#0B0B0B] border border-[#1C1C1C] text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414] hover:border-[#333333] cursor-pointer"
-          }`}
-        >
-          <span className="hidden sm:inline">Next</span>
-          <ChevronRight size={16} />
-        </button>
-      </div>
+      {end < totalPages && (
+        <>
+          {end < totalPages - 1 && (
+            <span className="text-[#3A3A3A] px-1 select-none">…</span>
+          )}
+          <button
+            type="button"
+            onClick={() => onPageChange(totalPages)}
+            aria-label={`Page ${totalPages}`}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+              currentPage === totalPages
+                ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50 font-semibold"
+                : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B]"
+            }`}
+          >
+            {totalPages}
+          </button>
+        </>
+      )}
+
+      {/* Next 1 page button */}
+      <button
+        type="button"
+        disabled={currentPage >= totalPages}
+        onClick={() => onPageChange(currentPage + 1)}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#0B0B0B] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+        title="Next page"
+        aria-label="Next page"
+      >
+        <ChevronRight size={14} />
+      </button>
     </nav>
   );
 }

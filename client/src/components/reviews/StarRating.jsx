@@ -6,8 +6,8 @@ export function StarRating({ score, size = 13, showScore = true, className = "" 
   const formatted = typeof score === "number" ? score.toFixed(1) : score;
 
   return (
-    <div className={`inline-flex items-center gap-1.5 font-medium text-[#19d68a] ${className}`}>
-      <Star size={size} className="fill-[#19d68a] text-[#19d68a] shrink-0" />
+    <div className={`inline-flex items-center gap-1.5 font-medium text-[#61F1AC] ${className}`}>
+      <Star size={size} className="fill-[#61F1AC] text-[#61F1AC] shrink-0" />
       {showScore && <span className="font-tabular text-[13px] leading-none">{formatted}</span>}
     </div>
   );

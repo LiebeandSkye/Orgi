@@ -1,26 +1,19 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   MessageSquareText,
   Clapperboard,
   Tv,
   Cat,
   BookOpen,
+  ChevronDown,
 } from "lucide-react";
 import { CATEGORIES } from "../../hooks/useReviewFilters";
 
-// Icons matched to the design: message icon for "All Reviews",
-// clapperboard for movies, TV for series, cat for anime,
-// and the open-book icon for every reading category.
 const ICON_MAP = {
   all: MessageSquareText,
   movie: Clapperboard,
   series: Tv,
   anime: Cat,
-  manga: BookOpen,
-  manhwa: BookOpen,
-  book: BookOpen,
-  novel: BookOpen,
-  "light-novel": BookOpen,
 };
 
 // Labels as shown in the design (falls back to the label from CATEGORIES)
@@ -36,50 +29,141 @@ const LABEL_MAP = {
   "light-novel": "Light Novels",
 };
 
+// Categories grouped under the "Reading" dropdown
+const READING_IDS = ["manga", "manhwa", "book", "novel", "light-novel"];
+
+const ACTIVE_ROW = "bg-[#61F1AC]/[0.12] text-[#61F1AC]";
+const IDLE_ROW =
+  "text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414]";
+
+function ActiveBar() {
+  return (
+    <span
+      className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#61F1AC]"
+      aria-hidden="true"
+    />
+  );
+}
+
 export function BrowseNav({ currentCategory, onSelectCategory }) {
+  const current = currentCategory || "all";
+  const readingActive = READING_IDS.includes(current);
+  const [readingOpen, setReadingOpen] = useState(readingActive);
+
+  // Auto-open the branch when one of its children becomes active
+  useEffect(() => {
+    if (readingActive) setReadingOpen(true);
+  }, [readingActive]);
+
+  const topLevel = CATEGORIES.filter((c) => !READING_IDS.includes(c.id));
+  const readingItems = CATEGORIES.filter((c) => READING_IDS.includes(c.id));
+
+  const renderTopLevel = (cat) => {
+    const isActive = current === cat.id;
+    const Icon = ICON_MAP[cat.id] || MessageSquareText;
+    return (
+      <button
+        key={cat.id}
+        type="button"
+        onClick={() => onSelectCategory(cat.id)}
+        aria-current={isActive ? "page" : undefined}
+        className={`relative flex items-center gap-3 h-[40px] px-3 rounded-lg text-[14px] font-medium transition-colors text-left cursor-pointer overflow-hidden ${
+          isActive ? ACTIVE_ROW : IDLE_ROW
+        }`}
+      >
+        {isActive && <ActiveBar />}
+        <Icon
+          size={18}
+          strokeWidth={1.6}
+          className={`shrink-0 ${isActive ? "text-[#61F1AC]" : "text-[#7A7A7A]"}`}
+        />
+        <span className="truncate flex-1">
+          {LABEL_MAP[cat.id] || cat.label}
+        </span>
+      </button>
+    );
+  };
+
+  // Insert the Reading group right after the last top-level item
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#5d6763] mb-2.5 px-1">
+      <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#7A7A7A] mb-2.5 px-1">
         BROWSE
       </span>
 
       <nav
         aria-label="Browse categories"
-        className="w-full bg-[#0b100e] border border-white/[0.08] rounded-xl p-2 flex flex-col gap-0.5"
+        className="w-full bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-2 flex flex-col gap-0.5"
       >
-        {CATEGORIES.map((cat) => {
-          const isActive = (currentCategory || "all") === cat.id;
-          const Icon = ICON_MAP[cat.id] || MessageSquareText;
-          const label = LABEL_MAP[cat.id] || cat.label;
+        {topLevel.map(renderTopLevel)}
 
-          return (
+        {readingItems.length > 0 && (
+          <div className="flex flex-col">
+            {/* Dropdown header */}
             <button
-              key={cat.id}
               type="button"
-              onClick={() => onSelectCategory(cat.id)}
-              aria-current={isActive ? "page" : undefined}
-              className={`relative flex items-center gap-3 h-[40px] px-3 rounded-lg text-[14px] font-medium transition-colors text-left cursor-pointer overflow-hidden ${
-                isActive
-                  ? "bg-[#141a17] text-[#e8ecea]"
-                  : "text-[#8b9692] hover:text-[#e8ecea] hover:bg-[#101614]"
+              onClick={() => setReadingOpen((o) => !o)}
+              aria-expanded={readingOpen}
+              aria-controls="browse-reading-group"
+              className={`flex items-center gap-3 h-[40px] px-3 rounded-lg text-[14px] font-medium transition-colors text-left cursor-pointer ${
+                readingActive && !readingOpen
+                  ? ACTIVE_ROW
+                  : readingActive
+                    ? "text-[#F5F5F5] hover:bg-[#141414]"
+                    : IDLE_ROW
               }`}
             >
-              {/* Left accent bar for the active row */}
-              {isActive && (
-                <span
-                  className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#19d68a]"
-                  aria-hidden="true"
-                />
-              )}
-              <Icon
+              <BookOpen
                 size={18}
                 strokeWidth={1.6}
-                className={`shrink-0 ${isActive ? "text-[#19d68a]" : "text-[#8b9692]"}`}
+                className={`shrink-0 ${readingActive ? "text-[#61F1AC]" : "text-[#7A7A7A]"}`}
               />
-              <span className="truncate flex-1">{label}</span>
+              <span className="truncate flex-1">Reading</span>
+              <ChevronDown
+                size={16}
+                strokeWidth={1.8}
+                className={`shrink-0 text-[#7A7A7A] transition-transform duration-200 ${
+                  readingOpen ? "rotate-180" : ""
+                }`}
+              />
             </button>
-          );
-        })}
+
+            {/* Branch with children */}
+            <div
+              id="browse-reading-group"
+              className={`grid transition-all duration-200 ease-out ${
+                readingOpen
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="ml-[21px] mt-0.5 mb-0.5 pl-2 border-l border-[#1C1C1C] flex flex-col gap-0.5">
+                  {readingItems.map((cat) => {
+                    const isActive = current === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        tabIndex={readingOpen ? 0 : -1}
+                        onClick={() => onSelectCategory(cat.id)}
+                        aria-current={isActive ? "page" : undefined}
+                        className={`relative flex items-center h-[36px] pl-4 pr-3 rounded-lg text-[13.5px] font-medium transition-colors text-left cursor-pointer overflow-hidden ${
+                          isActive ? ACTIVE_ROW : IDLE_ROW
+                        }`}
+                      >
+                        {isActive && <ActiveBar />}
+                        <span className="truncate flex-1">
+                          {LABEL_MAP[cat.id] || cat.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
     </div>
   );

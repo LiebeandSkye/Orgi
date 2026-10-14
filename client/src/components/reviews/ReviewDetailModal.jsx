@@ -94,7 +94,7 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[720px] max-h-[90vh] bg-[#0b100e] border border-white/[0.1] rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-modal-pop"
+        className="relative w-full max-w-[720px] max-h-[90vh] bg-[#0B0B0B] border border-[#1C1C1C] rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-modal-pop"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Backdrop Banner if available */}
@@ -105,7 +105,7 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
               alt=""
               className="w-full h-full object-cover object-center opacity-40"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0b100e] via-[#0b100e]/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0B] via-[#0B0B0B]/60 to-transparent" />
           </div>
         )}
 
@@ -114,7 +114,7 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
           type="button"
           onClick={onClose}
           aria-label="Close review"
-          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/60 border border-white/10 text-[#8b9692] hover:text-[#e8ecea] flex items-center justify-center cursor-pointer transition-colors"
+          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/60 border border-[#1C1C1C] text-[#7A7A7A] hover:text-[#F5F5F5] flex items-center justify-center cursor-pointer transition-colors"
         >
           <X size={18} />
         </button>
@@ -127,11 +127,11 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
   [&::-webkit-scrollbar-track]:bg-transparent
   [&::-webkit-scrollbar-thumb]:bg-white/10
   [&::-webkit-scrollbar-thumb]:rounded-full
-  hover:[&::-webkit-scrollbar-thumb]:bg-[#19d68a]/40
-  active:[&::-webkit-scrollbar-thumb]:bg-[#19d68a]">
+  hover:[&::-webkit-scrollbar-thumb]:bg-[#61F1AC]/40
+  active:[&::-webkit-scrollbar-thumb]:bg-[#61F1AC]">
           {/* Title & Reviewer Header */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-[12px] font-medium text-[#8b9692] uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-[12px] font-medium text-[#7A7A7A] uppercase tracking-wider">
               <span>{data.mediaLabel}</span>
               {data.year && (
                 <>
@@ -141,30 +141,30 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
               )}
             </div>
 
-            <h2 id="review-detail-title" className="text-2xl sm:text-3xl font-medium text-[#e8ecea] leading-tight">
+            <h2 id="review-detail-title" className="text-2xl sm:text-3xl font-medium text-[#F5F5F5] leading-tight">
               {data.title}
             </h2>
 
             {data.tagline && (
-              <p className="text-[14px] text-[#8b9692] italic">
+              <p className="text-[14px] text-[#B5B5B5] italic">
                 "{data.tagline}"
               </p>
             )}
 
             {/* Author & Score Row */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/[0.07] mt-1">
+            <div className="flex items-center justify-between pt-2 border-t border-[#1C1C1C] mt-1">
               <div className="flex items-center gap-2.5">
                 {!isSynopsis && (
                   <Avatar src={data.author?.avatarUrl} name={data.author?.name} size="w-7 h-7" />
                 )}
                 <div>
-                  <div className="text-[14px] font-medium text-[#e8ecea]">
+                  <div className="text-[14px] font-medium text-[#F5F5F5]">
                     {isSynopsis
                       ? `${data.source === "mangadex" ? "MangaDex" : "Open Library"} Community Overview`
                       : data.author?.name || "Anonymous Reviewer"}
                   </div>
                   {data.createdAt && (
-                    <div className="text-[11px] text-[#8b9692] flex items-center gap-1">
+                    <div className="text-[11px] text-[#7A7A7A] flex items-center gap-1">
                       <Calendar size={11} />
                       <span>{new Date(data.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}</span>
                     </div>
@@ -173,8 +173,8 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
               </div>
 
               {data.rating !== undefined && data.rating !== null && (
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#19d68a]/10 border border-[#19d68a]/30 text-[#19d68a]">
-                  <Star size={14} className="fill-[#19d68a] text-[#19d68a]" />
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#61F1AC]/10 border border-[#61F1AC]/30 text-[#61F1AC]">
+                  <Star size={14} className="fill-[#61F1AC] text-[#61F1AC]" />
                   <span className="text-[14px] font-semibold font-tabular">
                     {typeof data.rating === "number" ? data.rating.toFixed(1) : data.rating}
                   </span>
@@ -184,7 +184,7 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
           </div>
 
           {/* Full Review Text / Synopsis */}
-          <div className="pt-2 border-t border-white/[0.07]">
+          <div className="pt-2 border-t border-[#1C1C1C]">
             {isLoading ? (
               <div className="space-y-2 py-4 animate-pulse">
                 <div className="w-full h-4 rounded bg-white/[0.05]" />
@@ -192,18 +192,18 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
                 <div className="w-4/5 h-4 rounded bg-white/[0.05]" />
               </div>
             ) : (
-              <div className="text-[14.5px] leading-[1.7] text-[#e8ecea] whitespace-pre-line space-y-4 font-normal">
+              <div className="text-[14.5px] leading-[1.7] text-[#F5F5F5] whitespace-pre-line space-y-4 font-normal">
                 {data.content || data.rawContent || data.excerpt}
               </div>
             )}
           </div>
 
           {/* Action Links */}
-          <div className="pt-4 border-t border-white/[0.07] flex flex-wrap items-center justify-between gap-3">
+          <div className="pt-4 border-t border-[#1C1C1C] flex flex-wrap items-center justify-between gap-3">
             <Link
               to={mediaRoute}
               onClick={onClose}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#19d68a] hover:bg-[#19d68a]/90 text-[#060908] font-semibold text-[13px] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#61F1AC] hover:bg-[#61F1AC]/90 text-[#000000] font-semibold text-[13px] transition-colors cursor-pointer"
             >
               <Film size={14} />
               <span>Go to {data.mediaLabel} page</span>
@@ -214,7 +214,7 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
                 href={data.externalUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="inline-flex items-center gap-1.5 text-[13px] text-[#8b9692] hover:text-[#e8ecea] transition-colors"
+                className="inline-flex items-center gap-1.5 text-[13px] text-[#B5B5B5] hover:text-[#F5F5F5] transition-colors"
               >
                 <span>View original source</span>
                 <ExternalLink size={13} />

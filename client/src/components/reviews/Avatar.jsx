@@ -35,7 +35,7 @@ export function Avatar({ src, name, size = "w-6 h-6", textSize = "text-[10px]" }
     const colorClass = getDeterministicColor(name);
     return (
       <div
-        className={`${size} rounded-full flex items-center justify-center font-medium shrink-0 select-none ring-1 ring-white/10 ${colorClass}`}
+        className={`${size} rounded-full flex items-center justify-center font-medium shrink-0 select-none ring-1 ring-[#1C1C1C] ${colorClass}`}
         title={name}
       >
         <span className={textSize}>{initials}</span>
@@ -44,7 +44,7 @@ export function Avatar({ src, name, size = "w-6 h-6", textSize = "text-[10px]" }
   }
 
   return (
-    <div className={`${size} rounded-full overflow-hidden shrink-0 ring-1 ring-white/10 bg-[#0b100e]`}>
+    <div className={`${size} rounded-full overflow-hidden shrink-0 ring-1 ring-[#1C1C1C] bg-[#0B0B0B]`}>
       <img
         src={src}
         alt={name || "Avatar"}

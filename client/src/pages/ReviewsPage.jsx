@@ -58,8 +58,13 @@ export function ReviewsPage() {
   const [selectedReview, setSelectedReview] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
-  // Hero backdrop image fetched from featured endpoint
-  const [heroBackdrop, setHeroBackdrop] = useState(null);
+  // Featured review & hero backdrop image
+  const [featuredData, setFeaturedData] = useState({
+    item: null,
+    backdropUrl: null,
+    isLoading: true,
+    error: null,
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -67,10 +72,29 @@ export function ReviewsPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (mounted && data?.success) {
-          setHeroBackdrop(data.heroBackdropUrl || data.item?.backdropUrl);
+          setFeaturedData({
+            item: data.item || null,
+            backdropUrl: data.heroBackdropUrl || data.item?.backdropUrl || null,
+            isLoading: false,
+            error: null,
+          });
+        } else if (mounted) {
+          setFeaturedData((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: "Featured review unavailable",
+          }));
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (mounted) {
+          setFeaturedData((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: err.message,
+          }));
+        }
+      });
 
     return () => {
       mounted = false;
@@ -149,7 +173,7 @@ export function ReviewsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060908] text-[#e8ecea] selection:bg-[#19d68a]/30 selection:text-[#19d68a]">
+    <div className="min-h-screen bg-[#000000] text-[#F5F5F5] selection:bg-[#61F1AC]/25 selection:text-[#61F1AC]">
       {/* Screen reader live announcements */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {!isLoading && `Page ${currentPage} of ${totalPages}, ${total} reviews for ${category}`}
@@ -157,7 +181,7 @@ export function ReviewsPage() {
 
       {/* Hero Banner */}
       <ReviewsHero
-        backdropUrl={heroBackdrop}
+        backdropUrl={featuredData.backdropUrl}
         initialQuery={q}
         onSearchChange={setSearch}
       />
@@ -171,7 +195,7 @@ export function ReviewsPage() {
       />
 
       {/* Three-Column Desktop / Tablet Responsive Grid */}
-      <main className="max-w-[1280px] mx-auto px-4 md:px-6 py-8">
+      <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] py-8">
         <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[220px_minmax(0,1fr)_320px] gap-8 items-start">
           {/* Left Sidebar (Sticky): Browse + Filters */}
           <aside
@@ -201,16 +225,16 @@ export function ReviewsPage() {
             className="w-full min-w-0"
           >
             {/* Feed Section Header */}
-            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-white/[0.07]">
+            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#1C1C1C]">
               <div className="flex items-center gap-3">
                 <h2
                   id="feed-heading"
-                  className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#5d6763]"
+                  className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#7A7A7A]"
                 >
                   {sectionHeader}
                 </h2>
                 {totalPages > 1 && (
-                  <span className="text-[11px] text-[#8b9692] font-tabular">
+                  <span className="text-[11px] text-[#B5B5B5] font-tabular">
                     (Page {currentPage} of {totalPages})
                   </span>
                 )}
@@ -220,7 +244,7 @@ export function ReviewsPage() {
                 <button
                   type="button"
                   onClick={handleViewAll}
-                  className="inline-flex items-center gap-1 text-[13px] text-[#8b9692] hover:text-[#19d68a] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 text-[13px] text-[#B5B5B5] hover:text-[#61F1AC] transition-colors cursor-pointer"
                 >
                   <span>View all</span>
                   <ArrowRight size={13} />
@@ -230,18 +254,18 @@ export function ReviewsPage() {
 
             {/* Error State */}
             {error && !isLoading && items.length === 0 && (
-              <div className="bg-[#0b100e] border border-rose-500/20 rounded-xl p-8 text-center my-6">
+              <div className="bg-[#0B0B0B] border border-rose-500/20 rounded-xl p-8 text-center my-6">
                 <AlertCircle size={28} className="text-rose-400 mx-auto mb-3" />
-                <h3 className="text-[16px] font-medium text-[#e8ecea] mb-1">
+                <h3 className="text-[16px] font-medium text-[#F5F5F5] mb-1">
                   Unable to load reviews
                 </h3>
-                <p className="text-[13px] text-[#8b9692] max-w-sm mx-auto mb-4">
+                <p className="text-[13px] text-[#B5B5B5] max-w-sm mx-auto mb-4">
                   {error}
                 </p>
                 <button
                   type="button"
                   onClick={retry}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#19d68a] text-[#060908] font-semibold text-[13px] hover:bg-[#19d68a]/90 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#61F1AC] text-[#000000] font-semibold text-[13px] hover:bg-[#61F1AC]/90 transition-colors cursor-pointer"
                 >
                   <RefreshCw size={13} />
                   <span>Try again</span>
@@ -251,18 +275,18 @@ export function ReviewsPage() {
 
             {/* Empty State */}
             {!isLoading && !error && items.length === 0 && (
-              <div className="bg-[#0b100e] border border-white/[0.07] rounded-xl p-12 text-center my-6">
-                <Sparkles size={28} className="text-[#8b9692] mx-auto mb-3" />
-                <h3 className="text-[16px] font-medium text-[#e8ecea] mb-1">
+              <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-12 text-center my-6">
+                <Sparkles size={28} className="text-[#7A7A7A] mx-auto mb-3" />
+                <h3 className="text-[16px] font-medium text-[#F5F5F5] mb-1">
                   No reviews match these filters
                 </h3>
-                <p className="text-[13px] text-[#8b9692] max-w-xs mx-auto mb-5">
+                <p className="text-[13px] text-[#B5B5B5] max-w-xs mx-auto mb-5">
                   Try clearing your search query or loosening minimum rating filters.
                 </p>
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#19d68a] text-[#19d68a] text-[13px] font-medium hover:bg-[#19d68a]/[0.12] transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#61F1AC] text-[#61F1AC] text-[13px] font-medium hover:bg-[#61F1AC]/[0.12] transition-colors cursor-pointer"
                 >
                   <span>Reset filters</span>
                 </button>
@@ -313,6 +337,9 @@ export function ReviewsPage() {
             />
 
             <FeaturedReview
+              featured={featuredData.item}
+              isLoading={featuredData.isLoading}
+              error={featuredData.error}
               onOpenDetail={handleOpenDetail}
             />
           </aside>
@@ -349,8 +376,8 @@ export function ReviewsPage() {
 
       {/* Floating Bookmark Toast */}
       {toastMessage && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#101614] border border-[#19d68a]/50 text-[#e8ecea] text-[13px] font-medium shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#19d68a]" />
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#0B0B0B] border border-[#61F1AC]/50 text-[#F5F5F5] text-[13px] font-medium shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC]" />
           <span>{toastMessage}</span>
         </div>
       )}

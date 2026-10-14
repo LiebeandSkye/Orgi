@@ -7,6 +7,14 @@ export function ReviewsHero({ backdropUrl, initialQuery = "", onSearchChange }) 
   const [backdropLoaded, setBackdropLoaded] = useState(false);
   const [backdropError, setBackdropError] = useState(false);
   const inputRef = useRef(null);
+  const imgRef = useRef(null);
+
+  // If the image is already cached in browser memory, mark loaded immediately
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
+      setBackdropLoaded(true);
+    }
+  }, [backdropUrl]);
 
   // Sync external prop if it changes
   useEffect(() => {
@@ -58,13 +66,14 @@ export function ReviewsHero({ backdropUrl, initialQuery = "", onSearchChange }) 
       {backdropUrl && !backdropError && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <img
+            ref={imgRef}
             src={backdropUrl}
             alt=""
             loading="eager"
             decoding="async"
             onLoad={() => setBackdropLoaded(true)}
             onError={() => setBackdropError(true)}
-            className={`absolute right-0 top-0 h-full w-full md:w-3/4 object-cover object-center transition-opacity duration-700 ${
+            className={`absolute right-0 top-0 h-full w-full md:w-3/4 object-cover object-center transition-opacity duration-500 ${
               backdropLoaded ? "opacity-45 md:opacity-55" : "opacity-0"
             }`}
           />

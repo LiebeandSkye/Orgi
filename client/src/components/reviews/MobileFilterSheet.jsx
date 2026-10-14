@@ -102,19 +102,19 @@ export function MobileFilterSheet({
       onClick={onClose}
     >
       <div
-        className="w-full max-h-[85vh] bg-[#0b100e] border-t border-white/[0.1] rounded-t-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200"
+        className="w-full max-h-[85vh] bg-[#0B0B0B] border-t border-[#1C1C1C] rounded-t-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header & Drag Handle */}
-        <div className="flex flex-col items-center pt-3 pb-2 px-5 border-b border-white/[0.07] shrink-0">
+        <div className="flex flex-col items-center pt-3 pb-2 px-5 border-b border-[#1C1C1C] shrink-0">
           <div className="w-10 h-1 rounded-full bg-white/20 mb-3" />
           <div className="w-full flex items-center justify-between">
-            <h3 className="text-[16px] font-medium text-[#e8ecea]">Filters</h3>
+            <h3 className="text-[16px] font-medium text-[#F5F5F5]">Filters</h3>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close filters"
-              className="p-1 rounded-full text-[#8b9692] hover:text-[#e8ecea] hover:bg-white/[0.06] transition-colors"
+              className="p-1 rounded-full text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#141414] transition-colors"
             >
               <X size={18} />
             </button>
@@ -125,7 +125,7 @@ export function MobileFilterSheet({
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
           {/* Sort By Section */}
           <div>
-            <h4 className="text-[12px] uppercase tracking-[0.18em] font-medium text-[#5d6763] mb-3">
+            <h4 className="text-[12px] uppercase tracking-[0.18em] font-medium text-[#7A7A7A] mb-3">
               SORT BY
             </h4>
             <div className="space-y-1">
@@ -138,12 +138,12 @@ export function MobileFilterSheet({
                     onClick={() => setStagedSort(opt.id)}
                     className={`w-full flex items-center justify-between h-[44px] px-3.5 rounded-xl text-[14px] transition-colors ${
                       isSelected
-                        ? "bg-[#19d68a]/[0.12] text-[#19d68a] font-medium"
-                        : "text-[#8b9692] hover:bg-white/[0.04]"
+                        ? "bg-[#61F1AC]/[0.12] text-[#61F1AC] font-medium"
+                        : "text-[#B5B5B5] hover:bg-[#141414]"
                     }`}
                   >
                     <span>{opt.label}</span>
-                    {isSelected && <Check size={16} className="text-[#19d68a]" />}
+                    {isSelected && <Check size={16} className="text-[#61F1AC]" />}
                   </button>
                 );
               })}
@@ -153,7 +153,7 @@ export function MobileFilterSheet({
           {/* Rating Section (Segmented Chips) */}
           {hasRating && (
             <div>
-              <h4 className="text-[12px] uppercase tracking-[0.18em] font-medium text-[#5d6763] mb-3">
+              <h4 className="text-[12px] uppercase tracking-[0.18em] font-medium text-[#7A7A7A] mb-3">
                 MINIMUM RATING
               </h4>
               <div className="grid grid-cols-5 gap-2">
@@ -166,8 +166,8 @@ export function MobileFilterSheet({
                       onClick={() => setStagedRating(opt.id)}
                       className={`h-[40px] rounded-xl text-[13px] font-medium flex items-center justify-center transition-all ${
                         isSelected
-                          ? "bg-[#19d68a] text-[#060908] shadow-[0_0_12px_rgba(25,214,138,0.25)]"
-                          : "bg-white/[0.04] border border-white/[0.08] text-[#8b9692]"
+                          ? "bg-[#61F1AC] text-[#000000] shadow-[0_0_12px_rgba(97,241,172,0.25)]"
+                          : "bg-[#0B0B0B] border border-[#1C1C1C] text-[#B5B5B5]"
                       }`}
                     >
                       {opt.label}
@@ -181,7 +181,7 @@ export function MobileFilterSheet({
           {/* Content Type Section */}
           {typeOptions.length > 1 && (
             <div>
-              <h4 className="text-[12px] uppercase tracking-[0.18em] font-medium text-[#5d6763] mb-3">
+              <h4 className="text-[12px] uppercase tracking-[0.18em] font-medium text-[#7A7A7A] mb-3">
                 CONTENT TYPE
               </h4>
               <div className="space-y-1">
@@ -194,12 +194,12 @@ export function MobileFilterSheet({
                       onClick={() => setStagedType(opt.id)}
                       className={`w-full flex items-center justify-between h-[44px] px-3.5 rounded-xl text-[14px] transition-colors ${
                         isSelected
-                          ? "bg-[#19d68a]/[0.12] text-[#19d68a] font-medium"
-                          : "text-[#8b9692] hover:bg-white/[0.04]"
+                          ? "bg-[#61F1AC]/[0.12] text-[#61F1AC] font-medium"
+                          : "text-[#B5B5B5] hover:bg-[#141414]"
                       }`}
                     >
                       <span>{opt.label}</span>
-                      {isSelected && <Check size={16} className="text-[#19d68a]" />}
+                      {isSelected && <Check size={16} className="text-[#61F1AC]" />}
                     </button>
                   );
                 })}
@@ -209,18 +209,18 @@ export function MobileFilterSheet({
         </div>
 
         {/* Sticky Footer */}
-        <div className="p-4 border-t border-white/[0.07] bg-[#0b100e] flex items-center justify-between gap-4 shrink-0">
+        <div className="p-4 border-t border-[#1C1C1C] bg-[#0B0B0B] flex items-center justify-between gap-4 shrink-0">
           <button
             type="button"
             onClick={handleReset}
-            className="text-[13px] font-medium text-[#8b9692] hover:text-[#e8ecea] px-3 py-2 transition-colors cursor-pointer"
+            className="text-[13px] font-medium text-[#B5B5B5] hover:text-[#F5F5F5] px-3 py-2 transition-colors cursor-pointer"
           >
             Reset
           </button>
           <button
             type="button"
             onClick={handleApply}
-            className="flex-1 h-[44px] rounded-full bg-[#19d68a] hover:bg-[#19d68a]/90 text-[#060908] font-semibold text-[14px] flex items-center justify-center transition-colors cursor-pointer shadow-lg"
+            className="flex-1 h-[44px] rounded-full bg-[#61F1AC] hover:bg-[#61F1AC]/90 text-[#000000] font-semibold text-[14px] flex items-center justify-center transition-colors cursor-pointer shadow-lg"
           >
             Show reviews
           </button>
