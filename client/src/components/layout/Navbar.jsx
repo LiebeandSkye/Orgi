@@ -203,55 +203,10 @@ export function Navbar({ forceBooksOpen = false }) {
             <span ref={(el) => (labelRefs.current.movies = el)}>Movies &amp; Series</span>
           </Link>
 
-          {/* Books tab with dropdown */}
-          <div className="relative h-full flex items-center" ref={dropdownRef}>
-            <button
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={isDropdownVisible}
-              onClick={() => setDropdownOpen((prev) => !prev)}
-              className={`${tabClass(isBooks)} gap-1.5 cursor-pointer`}
-            >
-              <span ref={(el) => (labelRefs.current.books = el)}>Books</span>
-              <ChevronDown
-                size={13}
-                className={`transition-transform duration-200 ${
-                  isDropdownVisible ? "rotate-180 text-[#61F1AC]" : "text-[#7A7A7A]"
-                }`}
-              />
-            </button>
-
-            {/* Dropdown Menu */}
-            {isDropdownVisible && (
-              <div
-                role="menu"
-                className="absolute top-[calc(100%-4px)] left-1/2 -translate-x-1/2 w-52 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-100"
-              >
-                {BOOK_ITEMS.map(({ to, label, icon: Icon, match }) => {
-                  const isActiveItem = match.includes(location.pathname);
-                  return (
-                    <Link
-                      key={to}
-                      to={to}
-                      role="menuitem"
-                      onClick={() => !forceBooksOpen && setDropdownOpen(false)}
-                      className={`flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg transition-colors ${
-                        isActiveItem
-                          ? "text-[#61F1AC] bg-[#141414] font-medium"
-                          : "text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414]"
-                      }`}
-                    >
-                      <Icon size={15} strokeWidth={1.75} className="shrink-0 text-[#F5F5F5]" />
-                      <span className="flex-1">{label}</span>
-                      {isActiveItem && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" />
-                      )}
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+          {/* Books tab: Direct link to /books dashboard */}
+          <Link to="/books" className={tabClass(isBooks)}>
+            <span ref={(el) => (labelRefs.current.books = el)}>Books</span>
+          </Link>
 
           <Link to="/feed" className={tabClass(isFeed)}>
             <span ref={(el) => (labelRefs.current.feed = el)}>Feed</span>
