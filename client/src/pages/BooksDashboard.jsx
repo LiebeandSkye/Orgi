@@ -318,15 +318,11 @@ export function BooksDashboard() {
               </div>
 
               {/* Banner content */}
-              <div className="relative z-10 p-6 sm:p-10 lg:p-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+              <div className="relative z-10 p-6 sm:p-10 lg:p-12 pb-14 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
                 <div className="max-w-2xl flex flex-col">
-                  {/* Spotlight label & format pill */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider text-[#61F1AC] bg-[#61F1AC]/10 border border-[#61F1AC]/30">
-                      <Sparkles size={12} />
-                      {currentHero.badge || "Featured Spotlight"}
-                    </span>
-                    <span className="text-xs text-[#7A7A7A] uppercase tracking-wider">
+                  {/* Category label */}
+                  <div className="mb-3">
+                    <span className="text-[11px] font-semibold text-[#7A7A7A] uppercase tracking-[0.2em]">
                       {currentHero.type}
                     </span>
                   </div>
@@ -353,8 +349,8 @@ export function BooksDashboard() {
                     {currentHero.overview || currentHero.synopsis || "Explore one of the highest-rated titles across the community reading list."}
                   </p>
 
-                  {/* Action buttons + Slide Controls */}
-                  <div className="flex flex-wrap items-center gap-4">
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-3.5">
                     <button
                       type="button"
                       onClick={() => toggleReadingList(currentHero.id)}
@@ -374,45 +370,6 @@ export function BooksDashboard() {
                     >
                       Read Details →
                     </Link>
-
-                    {/* Spotlight carousel dots & arrows */}
-                    {spotlightPool.length > 1 && (
-                      <div className="flex items-center gap-2 ml-auto sm:ml-4">
-                        <button
-                          type="button"
-                          aria-label="Previous recommendation"
-                          onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
-                          className="w-8 h-8 rounded-full border border-[#1C1C1C] bg-[#101010] flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
-                        >
-                          <ChevronLeft size={14} />
-                        </button>
-
-                        <div className="flex items-center gap-1.5 px-2">
-                          {spotlightPool.map((_, dotIdx) => (
-                            <button
-                              key={dotIdx}
-                              type="button"
-                              aria-label={`Jump to recommendation ${dotIdx + 1}`}
-                              onClick={() => setHeroIndex(dotIdx)}
-                              className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                dotIdx === heroIndex % spotlightPool.length
-                                  ? "w-5 bg-[#61F1AC]"
-                                  : "w-1.5 bg-white/20 hover:bg-white/40"
-                              }`}
-                            />
-                          ))}
-                        </div>
-
-                        <button
-                          type="button"
-                          aria-label="Next recommendation"
-                          onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
-                          className="w-8 h-8 rounded-full border border-[#1C1C1C] bg-[#101010] flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
-                        >
-                          <ChevronRight size={14} />
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -429,6 +386,45 @@ export function BooksDashboard() {
                   />
                 </Link>
               </div>
+
+              {/* Slider controls anchored at the bottom of the banner */}
+              {spotlightPool.length > 1 && (
+                <div className="absolute bottom-4 left-6 sm:left-10 lg:left-12 z-20 flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    aria-label="Previous recommendation"
+                    onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
+                    className="w-7 h-7 rounded-full border border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                  >
+                    <ChevronLeft size={13} />
+                  </button>
+
+                  <div className="flex items-center gap-1.5 px-1">
+                    {spotlightPool.map((_, dotIdx) => (
+                      <button
+                        key={dotIdx}
+                        type="button"
+                        aria-label={`Jump to recommendation ${dotIdx + 1}`}
+                        onClick={() => setHeroIndex(dotIdx)}
+                        className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                          dotIdx === heroIndex % spotlightPool.length
+                            ? "w-5 bg-[#61F1AC]"
+                            : "w-1.5 bg-white/20 hover:bg-white/40"
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label="Next recommendation"
+                    onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
+                    className="w-7 h-7 rounded-full border border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                  >
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              )}
             </section>
 
             {/* 2. MINIMAL CATEGORY FILTER TABS ROW */}
