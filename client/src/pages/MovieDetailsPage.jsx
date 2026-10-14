@@ -147,18 +147,18 @@ export function MovieDetailsPage({
       ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
       : "");
 
-  useEffect(() => {
-    const checkOverflow = () => {
-      if (synopsisRef.current) {
-        const height = synopsisRef.current.scrollHeight;
-        setContentHeight(height);
-        // 5rem is 80px. If content is taller than 80px, it overflows and requires a See more button
-        setHasOverflow(height > 80);
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  useEffect(() => { 
+    const checkOverflow = () => { 
+      if (synopsisRef.current) { 
+        const height = synopsisRef.current.scrollHeight; 
+        setContentHeight(height); 
+        setHasOverflow(height > 80); 
+      } 
+    }; 
+    checkOverflow(); 
+    window.addEventListener("resize", checkOverflow); 
+    return () => window.removeEventListener("resize", checkOverflow); 
+  }, [displaySynopsis]);
 
   const isLongSynopsis = contentHeight === 0 || contentHeight > 82; 
   const [newThought, setNewThought] = useState(""); 
