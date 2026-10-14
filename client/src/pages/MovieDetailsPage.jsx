@@ -552,7 +552,22 @@ export function MovieDetailsPage({
                   size="sm"
                   disabled={newThought.trim().length === 0}
                   onClick={() => {
-                    alert("Thought posted!");
+                    if (newThought.trim().length === 0) return;
+                    const newRev = {
+                      id: `local-${Date.now()}`,
+                      author: "You",
+                      avatar: NAVBAR_AVATAR,
+                      time: "Just now",
+                      score: selectedStars > 0 ? selectedStars * 2 : 10,
+                      content: newThought.trim(),
+                      likes: 0,
+                      repliesCount: 0,
+                      createdAt: new Date().toISOString(),
+                    };
+                    setMovieData((prev) => ({
+                      ...prev,
+                      reviews: [newRev, ...(prev?.reviews || [])],
+                    }));
                     setNewThought("");
                     setSelectedStars(0);
                   }}
@@ -563,10 +578,12 @@ export function MovieDetailsPage({
               </div>
             </div>
 
-            {/* THIN ROW: left "342 reviews" in muted caps, right dropdown chip "Sort: Top ⌄" */}
+            {/* THIN ROW: left review count in muted caps, right dropdown chip "Sort: Top ⌄" */}
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#1C1C1C]">
               <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]">
-                {movieData.communityVotes}
+                {sortedReviews.length > 0
+                  ? `${sortedReviews.length} ${sortedReviews.length === 1 ? "review" : "reviews"}`
+                  : movieData.communityVotes || "0 reviews"}
               </span>
 
               <div className="relative">
@@ -605,7 +622,13 @@ export function MovieDetailsPage({
               </div>
             </div>
 
-            {/* REVIEW LIST: 4 comment items separated by 1px #1C1C1C lines, no card boxes */}
+            {/* REVIEW LIST: comment items separated by 1px #1C1C1C lines */}
+            {sortedReviews.length === 0 ? (
+              <div className="py-12 text-center text-[#7A7A7A] border border-[#1C1C1C] rounded-[16px] bg-[#0B0B0B]/40">
+                <p className="text-sm text-[#F5F5F5] font-medium">No reviews yet</p>
+                <p className="text-xs text-[#7A7A7A] mt-1">Be the first to share your thoughts using the box above!</p>
+              </div>
+            ) : (
             <div className="flex flex-col divide-y divide-[#1C1C1C]">
               {sortedReviews.slice(0, visibleReviews).map((rev) => {
                 const isLiked = likedReviews[rev.id];
@@ -722,6 +745,7 @@ export function MovieDetailsPage({
                 );
               })}
             </div>
+            )}
 
             {/* Mint "Load more" ghost button centered at end */}
             <div className="flex justify-center mt-10">
