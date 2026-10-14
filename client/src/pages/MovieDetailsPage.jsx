@@ -8,8 +8,9 @@ import {
   ThumbsUp,
   Reply,
   MoreHorizontal,
-  ChevronDown,
-} from "lucide-react";
+  ChevronDown, 
+  X, 
+} from "lucide-react"; 
 import { getMovieDetails, getMovieMedia } from "../services/tmdb"; 
 import { ScoreRing } from "../components/ui/ScoreRing"; 
 import { Button } from "../components/ui/Button"; 
@@ -17,6 +18,7 @@ import { ReviewSlider } from "../components/ui/ReviewSlider";
 import MediaItems from "../components/ui/MediaItems"; 
 import { fetchMediaDetails } from "../services/mediaApi"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
+import { useAuth } from "../context/AuthContext"; 
 import api from "../services/api"; 
 
 
@@ -49,11 +51,12 @@ export function MovieDetailsPage({
   initialTab = "Cast",
   initialCropHero = false,
 }) {
-  const location = useLocation();
-  const { category, id } = useParams();
-  const isReviewsUrl = location.pathname.includes("/reviews");
+  const location = useLocation(); 
+  const { category, id } = useParams(); 
+  const { user, userProfile } = useAuth(); 
+  const isReviewsUrl = location.pathname.includes("/reviews"); 
 
-  const [movieData, setMovieData] = useState(null);
+  const currentUserAvatar = userProfile?.profile_url || user?.user_metadata?.avatar_url || NAVBAR_AVATAR; 
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
@@ -170,6 +173,13 @@ export function MovieDetailsPage({
   const [visibleReviews, setVisibleReviews] = useState(4); 
   const [inCollection, setInCollection] = useState(false); 
   const [collectionLoading, setCollectionLoading] = useState(false); 
+  const [isEditingUserReview, setIsEditingUserReview] = useState(false); 
+  const [expandedReviews, setExpandedReviews] = useState({}); 
+  const [activeMenuReviewId, setActiveMenuReviewId] = useState(null); 
+  const [reportModalOpen, setReportModalOpen] = useState(false); 
+  const [reportingReviewId, setReportingReviewId] = useState(null); 
+  const [reportReason, setReportReason] = useState(""); 
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false); 
   const [communityData, setCommunityData] = useState({ 
     communityAverage: null, 
     communityVotes: 0, 
@@ -199,10 +209,16 @@ export function MovieDetailsPage({
           } 
           if (revRes.status === "fulfilled" && revRes.value?.success) { 
             const revData = revRes.value.data || {}; 
+            const reviewsList = Array.isArray(revData.reviews) ? revData.reviews : []; 
+            const initLikes = {}; 
+            reviewsList.forEach((r) => { 
+              if (r.isLiked) initLikes[r.id] = true; 
+            }); 
+            setLikedReviews((prev) => ({ ...initLikes, ...prev })); 
             setCommunityData({ 
               communityAverage: typeof revData.communityAverage === "number" ? revData.communityAverage : null, 
               communityVotes: typeof revData.communityVotes === "number" ? revData.communityVotes : 0, 
-              reviews: Array.isArray(revData.reviews) ? revData.reviews : [], 
+              reviews: reviewsList, 
             }); 
           } 
         } 
@@ -280,6 +296,7 @@ export function MovieDetailsPage({
  
       if (res?.success) { 
         setNewThought(""); 
+        setIsEditingUserReview(false); 
         const newRev = res.data; 
         setCommunityData((prev) => { 
           const currentReviews = Array.isArray(prev?.reviews) ? prev.reviews : []; 
@@ -292,14 +309,14 @@ export function MovieDetailsPage({
           } else { 
             updatedReviews = [newRev, ...updatedReviews]; 
           } 
- 
+
           const scores = updatedReviews 
             .map((r) => r.score) 
             .filter((s) => typeof s === "number" && s > 0); 
           const avg = scores.length > 0 
             ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)) 
             : null; 
- 
+
           return { 
             ...prev, 
             communityAverage: avg, 
@@ -313,6 +330,62 @@ export function MovieDetailsPage({
       alert(err.message || "Failed to post review."); 
     } finally { 
       setIsPostingReview(false); 
+    } 
+  }; 
+
+  const handleDeleteUserReview = async (reviewId) => { 
+    if (!confirm("Are you sure you want to delete your review?")) return; 
+    try { 
+      const res = await api.delete(`/reviews/${reviewId}`); 
+      if (res?.success) { 
+        setCommunityData((prev) => { 
+          const updated = (prev?.reviews || []).filter((r) => r.id !== reviewId); 
+          const scores = updated 
+            .map((r) => r.score) 
+            .filter((s) => typeof s === "number" && s > 0); 
+          const avg = scores.length > 0 
+            ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)) 
+            : null; 
+          return { 
+            ...prev, 
+            reviews: updated, 
+            communityAverage: avg, 
+            communityVotes: scores.length, 
+          }; 
+        }); 
+      } 
+    } catch (err) { 
+      alert(err.message || "Failed to delete review"); 
+    } 
+  }; 
+
+  const handleOpenReport = (reviewId) => { 
+    setActiveMenuReviewId(null); 
+    setReportingReviewId(reviewId); 
+    setReportReason(""); 
+    setReportModalOpen(true); 
+  }; 
+
+  const handleSubmitReport = async () => { 
+    if (!reportReason.trim()) { 
+      alert("Please enter a reason for reporting"); 
+      return; 
+    } 
+    setIsSubmittingReport(true); 
+    try { 
+      const res = await api.post("/reports", { 
+        target_type: "review", 
+        target_id: reportingReviewId, 
+        reason: reportReason.trim(), 
+      }); 
+      if (res?.success) { 
+        alert("Report submitted for moderation. Thank you!"); 
+        setReportModalOpen(false); 
+      } 
+    } catch (err) { 
+      alert(err.message || "Failed to submit report"); 
+    } finally { 
+      setIsSubmittingReport(false); 
     } 
   }; 
  
@@ -345,6 +418,7 @@ export function MovieDetailsPage({
     ...r, 
     source: "provider", 
   })); 
+  const userReview = communityData?.reviews?.find((r) => user?.id && r.userId === user.id); 
   const allReviews = [ 
     ...(Array.isArray(communityData?.reviews) ? communityData.reviews : []), 
     ...rawProviderReviews, 
@@ -384,12 +458,30 @@ export function MovieDetailsPage({
     }
   };
 
-  const toggleLike = (reviewId) => {
-    setLikedReviews((prev) => ({
-      ...prev,
-      [reviewId]: !prev[reviewId],
-    }));
-  };
+  const toggleLike = async (reviewId) => { 
+    const isCurrentlyLiked = Boolean(likedReviews[reviewId]); 
+    setLikedReviews((prev) => ({ 
+      ...prev, 
+      [reviewId]: !isCurrentlyLiked, 
+    })); 
+    setCommunityData((prev) => ({ 
+      ...prev, 
+      reviews: (prev.reviews || []).map((r) => 
+        r.id === reviewId 
+          ? { 
+              ...r, 
+              likes: Math.max(0, (r.likes || 0) + (isCurrentlyLiked ? -1 : 1)), 
+              isLiked: !isCurrentlyLiked, 
+            } 
+          : r 
+      ), 
+    })); 
+    try { 
+      await api.post(`/reviews/${reviewId}/like`); 
+    } catch (err) { 
+      console.warn("Failed to persist like:", err); 
+    } 
+  }; 
 
   if (isLoading || !movieData) {
     return (
@@ -703,44 +795,122 @@ export function MovieDetailsPage({
 
         {/* ======================================================== */}
         {/* 2. REVIEWS TAB CONTENT (720px centered single column)     */}
-        {/* ======================================================== */}
-        {activeTab === "Reviews" && (
-          <div className="max-w-[720px] mx-auto animate-in fade-in duration-300">
-            {/* COMPOSER CARD: #0B0B0B, 1px border, 16px radius */}
-            <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm">
-              <div className="flex items-start gap-3.5 mb-4">
-                <ReviewAvatar
-                  src={NAVBAR_AVATAR}
-                  alt="User Avatar"
-                  size="w-9 h-9"
-                />
-                <textarea
-                  value={newThought}
-                  onChange={(e) => setNewThought(e.target.value)}
-                  placeholder="Add a thought…"
-                  rows={3}
-                  className="w-full bg-transparent text-[#F5F5F5] placeholder-[#7A7A7A] text-sm resize-none focus:outline-none"
-                />
-              </div>
+        {/* =====================================================        {activeTab === "Reviews" && ( 
+          <div className="max-w-[720px] mx-auto animate-in fade-in duration-300"> 
+            {userReview && !isEditingUserReview ? ( 
+              <div className="bg-[#0B0B0B] border border-[#61F1AC]/40 rounded-[16px] p-5 mb-8 shadow-[0_0_20px_rgba(97,241,172,0.06)] animate-in fade-in"> 
+                <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#1C1C1C]"> 
+                  <div className="flex items-center gap-3"> 
+                    <ReviewAvatar 
+                      src={currentUserAvatar} 
+                      alt={userReview.author || user?.user_metadata?.user_name} 
+                      size="w-9 h-9" 
+                    /> 
+                    <div className="flex items-center gap-2 flex-wrap"> 
+                      <span className="font-semibold text-sm text-[#F5F5F5]"> 
+                        {userReview.author || "You"} 
+                      </span> 
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#61F1AC]/15 text-[#61F1AC] border border-[#61F1AC]/40"> 
+                        Your Review 
+                      </span> 
+                      {userReview.is_edited && ( 
+                        <span className="text-[11px] text-[#7A7A7A] italic"> 
+                          (edited) 
+                        </span> 
+                      )} 
+                      <span className="text-xs text-[#7A7A7A]">·</span> 
+                      <span className="text-xs text-[#7A7A7A] font-light"> 
+                        {userReview.time} 
+                      </span> 
+                    </div> 
+                  </div> 
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-[#1C1C1C]/60"> 
-                <ReviewSlider 
-                  value={selectedScore} 
-                  onChange={setSelectedScore} 
-                /> 
- 
-                <Button 
-                  variant="primary" 
-                  size="sm" 
-                  disabled={newThought.trim().length === 0 || isPostingReview} 
-                  onClick={handlePostReview} 
-                  className="px-4 py-1.5 rounded-lg text-xs self-end sm:self-center cursor-pointer" 
-                > 
-                  {isPostingReview ? "Posting..." : "Post"} 
-                </Button> 
+                  <div className="flex items-center gap-2"> 
+                    <div className="flex items-center gap-1 text-xs font-tabular text-[#61F1AC] font-semibold bg-[#141414] px-2.5 py-1 rounded-full border border-[#222222]"> 
+                      <Star size={12} className="fill-[#61F1AC]" /> 
+                      <span>{userReview.score} / 10</span> 
+                    </div> 
+                  </div> 
+                </div> 
+
+                <p className="text-sm leading-relaxed text-[#E0E0E0] mb-4 font-light whitespace-pre-wrap"> 
+                  {userReview.content} 
+                </p> 
+
+                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#1C1C1C]/60"> 
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => { 
+                      setNewThought(userReview.content || ""); 
+                      setSelectedScore(userReview.score || 8); 
+                      setIsEditingUserReview(true); 
+                    }} 
+                    className="px-3 py-1 rounded-lg text-xs cursor-pointer hover:border-[#61F1AC]/50" 
+                  > 
+                    <span>Edit Review</span> 
+                  </Button> 
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleDeleteUserReview(userReview.id)} 
+                    className="px-3 py-1 rounded-lg text-xs text-[#7A7A7A] hover:text-red-400 hover:bg-red-500/10 cursor-pointer" 
+                  > 
+                    <span>Delete</span> 
+                  </Button> 
+                </div> 
               </div> 
-            </div> 
- 
+            ) : ( 
+              <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm"> 
+                <div className="flex items-start gap-3.5 mb-4"> 
+                  <ReviewAvatar 
+                    src={currentUserAvatar} 
+                    alt="User Avatar" 
+                    size="w-9 h-9" 
+                  /> 
+                  <textarea 
+                    value={newThought} 
+                    onChange={(e) => setNewThought(e.target.value)} 
+                    placeholder={isEditingUserReview ? "Update your thought…" : "Add a thought…"} 
+                    rows={3} 
+                    className="w-full bg-transparent text-[#F5F5F5] placeholder-[#7A7A7A] text-sm resize-none focus:outline-none" 
+                  /> 
+                </div> 
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-[#1C1C1C]/60"> 
+                  <ReviewSlider 
+                    value={selectedScore} 
+                    onChange={setSelectedScore} 
+                  /> 
+
+                  <div className="flex items-center gap-2 self-end sm:self-center"> 
+                    {isEditingUserReview && ( 
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => { 
+                          setIsEditingUserReview(false); 
+                          setNewThought(""); 
+                        }} 
+                        className="px-3.5 py-1.5 rounded-lg text-xs cursor-pointer" 
+                      > 
+                        Cancel 
+                      </Button> 
+                    )} 
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      disabled={newThought.trim().length === 0 || isPostingReview} 
+                      onClick={handlePostReview} 
+                      className="px-4 py-1.5 rounded-lg text-xs cursor-pointer" 
+                    > 
+                      {isPostingReview ? "Saving..." : isEditingUserReview ? "Publish" : "Post"} 
+                    </Button> 
+                  </div> 
+                </div> 
+              </div> 
+            )} 
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-[#1C1C1C]"> 
               <div className="flex items-center gap-1.5 flex-wrap"> 
                 {[ 
@@ -765,12 +935,12 @@ export function MovieDetailsPage({
                   ); 
                 })} 
               </div> 
- 
+
               <div className="flex items-center justify-between sm:justify-end gap-3"> 
                 <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]"> 
                   {sortedReviews.length} {sortedReviews.length === 1 ? "review" : "reviews"} 
                 </span> 
- 
+
                 <div className="relative"> 
                   <button 
                     type="button" 
@@ -780,7 +950,7 @@ export function MovieDetailsPage({
                     <span>Sort: {sortBy}</span> 
                     <ChevronDown size={12} className="text-[#7A7A7A]" /> 
                   </button> 
- 
+
                   {sortDropdownOpen && ( 
                     <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-xl z-20"> 
                       {["Top", "Newest", "Highest Rated", "Lowest Rated"].map( 
@@ -807,12 +977,14 @@ export function MovieDetailsPage({
                 </div> 
               </div> 
             </div> 
- 
+
             <div className="flex flex-col divide-y divide-[#1C1C1C]"> 
               {sortedReviews.slice(0, visibleReviews).map((rev) => { 
                 const isLiked = likedReviews[rev.id]; 
-                const likeCount = rev.likes + (isLiked ? 1 : 0); 
- 
+                const likeCount = (rev.likes || 0) + (isLiked && !rev.isLiked ? 1 : !isLiked && rev.isLiked ? -1 : 0); 
+                const isExpanded = Boolean(expandedReviews[rev.id]); 
+                const isLongContent = (rev.content || "").length > 130; 
+
                 return ( 
                   <article key={rev.id} className="py-6 first:pt-0"> 
                     <div className="flex items-center justify-between mb-3"> 
@@ -822,7 +994,7 @@ export function MovieDetailsPage({
                           alt={rev.author} 
                           size="w-9 h-9" 
                         /> 
-                        <div className="flex items-center gap-2"> 
+                        <div className="flex items-center gap-2 flex-wrap"> 
                           <span className="font-semibold text-sm text-[#F5F5F5]"> 
                             {rev.author} 
                           </span> 
@@ -831,118 +1003,148 @@ export function MovieDetailsPage({
                               Orgi 
                             </span> 
                           )} 
+                          {rev.is_edited && ( 
+                            <span className="text-[11px] text-[#7A7A7A] italic"> 
+                              (edited) 
+                            </span> 
+                          )} 
                           <span className="text-xs text-[#7A7A7A]">·</span> 
                           <span className="text-xs text-[#7A7A7A] font-light"> 
                             {rev.time} 
                           </span> 
                         </div> 
-                      </div>
+                      </div> 
 
-                      <div className="flex items-center gap-1 text-xs font-tabular text-[#61F1AC] font-semibold">
-                        <Star size={12} className="fill-[#61F1AC]" />
-                        <span>{rev.score}</span>
-                      </div>
-                    </div>
+                      <div className="flex items-center gap-1 text-xs font-tabular text-[#61F1AC] font-semibold"> 
+                        <Star size={12} className="fill-[#61F1AC]" /> 
+                        <span>{rev.score}</span> 
+                      </div> 
+                    </div> 
 
-                    {/* Body text in #D0D0D0 */}
-                    <p className="text-sm leading-relaxed text-[#D0D0D0] mb-4 font-light">
-                      {rev.content}
-                    </p>
+                    <div className="mb-4"> 
+                      <p className={`text-sm leading-relaxed text-[#D0D0D0] font-light ${isExpanded ? "" : "line-clamp-2"}`}> 
+                        {rev.content} 
+                      </p> 
+                      {isLongContent && ( 
+                        <button 
+                          type="button" 
+                          onClick={() => setExpandedReviews((prev) => ({ ...prev, [rev.id]: !isExpanded }))} 
+                          className="text-[11px] text-[#61F1AC] hover:underline mt-1 cursor-pointer font-medium" 
+                        > 
+                          {isExpanded ? "Show less" : "Read more"} 
+                        </button> 
+                      )} 
+                    </div> 
 
-                    {/* Footer actions in muted grey with tiny line icons: thumbs-up with count, "Reply", "⋯" */}
-                    <div className="flex items-center justify-between text-xs text-[#7A7A7A]">
-                      <div className="flex items-center gap-5">
-                        <button
-                          type="button"
-                          onClick={() => toggleLike(rev.id)}
-                          className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
-                            isLiked ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]"
-                          }`}
-                        >
-                          <ThumbsUp
-                            size={13}
-                            className={isLiked ? "fill-[#61F1AC]" : ""}
-                          />
-                          <span className="font-tabular">{likeCount}</span>
-                        </button>
+                    {rev.source === "community" && ( 
+                      <div className="flex items-center justify-between text-xs text-[#7A7A7A]"> 
+                        <div className="flex items-center gap-5"> 
+                          <button 
+                            type="button" 
+                            onClick={() => toggleLike(rev.id)} 
+                            className={`flex items-center gap-1.5 transition-colors cursor-pointer ${ 
+                              isLiked ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
+                            }`} 
+                          > 
+                            <ThumbsUp 
+                              size={13} 
+                              className={isLiked ? "fill-[#61F1AC]" : ""} 
+                            /> 
+                            <span className="font-tabular">{likeCount}</span> 
+                          </button> 
 
-                        <button
-                          type="button"
-                          className="flex items-center gap-1 hover:text-[#F5F5F5] transition-colors cursor-pointer"
-                        >
-                          <Reply size={13} />
-                          <span>Reply</span>
-                        </button>
+                          <button 
+                            type="button" 
+                            className="flex items-center gap-1 hover:text-[#F5F5F5] transition-colors cursor-pointer" 
+                          > 
+                            <Reply size={13} /> 
+                            <span>Reply</span> 
+                          </button> 
 
-                        <button
-                          type="button"
-                          className="hover:text-[#F5F5F5] transition-colors cursor-pointer p-0.5"
-                        >
-                          <MoreHorizontal size={14} />
-                        </button>
-                      </div>
+                          <div className="relative"> 
+                            <button 
+                              type="button" 
+                              onClick={() => setActiveMenuReviewId(activeMenuReviewId === rev.id ? null : rev.id)} 
+                              className="hover:text-[#F5F5F5] transition-colors cursor-pointer p-0.5" 
+                            > 
+                              <MoreHorizontal size={14} /> 
+                            </button> 
 
-                      {/* Collapsed reply thread for item 1: "View 3 replies ⌄" in mint */}
-                      {rev.repliesCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setRepliesExpanded(!repliesExpanded)}
-                          className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <span>
-                            {repliesExpanded
-                              ? "Hide replies"
-                              : `View ${rev.repliesCount} replies ⌄`}
-                          </span>
-                        </button>
-                      )}
-                    </div>
+                            {activeMenuReviewId === rev.id && ( 
+                              <div className="absolute left-0 top-full mt-1 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20"> 
+                                <button 
+                                  type="button" 
+                                  onClick={() => handleOpenReport(rev.id)} 
+                                  className="w-full text-left px-3 py-1.5 text-xs text-[#B5B5B5] hover:text-red-400 hover:bg-[#141414] transition-colors cursor-pointer" 
+                                > 
+                                  Report Review 
+                                </button> 
+                              </div> 
+                            )} 
+                          </div> 
+                        </div> 
 
-                    {/* Expanded Replies Thread */}
-                    {rev.replies && repliesExpanded && (
-                      <div className="mt-4 pl-11 space-y-3.5 pt-3 border-t border-[#1C1C1C]/40">
-                        {rev.replies.map((reply) => (
-                          <div key={reply.id} className="text-xs">
-                            <div className="flex items-center gap-2 mb-1">
-                              <ReviewAvatar
-                                src={reply.avatar}
-                                alt={reply.author}
-                                size="w-5 h-5"
-                              />
-                              <span className="font-medium text-[#F5F5F5]">
-                                {reply.author}
-                              </span>
-                              <span className="text-[#7A7A7A]">·</span>
-                              <span className="text-[#7A7A7A]">
-                                {reply.time}
-                              </span>
-                            </div>
-                            <p className="text-[#B5B5B5] leading-relaxed pl-7">
-                              {reply.content}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
+                        {rev.repliesCount > 0 && ( 
+                          <button 
+                            type="button" 
+                            onClick={() => setRepliesExpanded(!repliesExpanded)} 
+                            className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1" 
+                          > 
+                            <span> 
+                              {repliesExpanded 
+                                ? "Hide replies" 
+                                : `View ${rev.repliesCount} replies ⌄`} 
+                            </span> 
+                          </button> 
+                        )} 
+                      </div> 
+                    )} 
 
-            {/* Mint "Load more" ghost button centered at end */}
-            <div className="flex justify-center mt-10">
-              {visibleReviews < sortedReviews.length && (
-                <Button
-                  variant="mintGhost"
-                  size="md"
-                  className="px-6 py-2 rounded-full text-xs font-medium"
-                  onClick={() => setVisibleReviews((prev) => prev + 4)}
-                >
-                  Load more reviews
-                </Button>
-              )}
-            </div>
-          </div>
+                    {rev.replies && repliesExpanded && rev.source === "community" && ( 
+                      <div className="mt-4 pl-11 space-y-3.5 pt-3 border-t border-[#1C1C1C]/40"> 
+                        {rev.replies.map((reply) => ( 
+                          <div key={reply.id} className="text-xs"> 
+                            <div className="flex items-center gap-2 mb-1"> 
+                              <ReviewAvatar 
+                                src={reply.avatar} 
+                                alt={reply.author} 
+                                size="w-5 h-5" 
+                              /> 
+                              <span className="font-medium text-[#F5F5F5]"> 
+                                {reply.author} 
+                              </span> 
+                              <span className="text-[#7A7A7A]">·</span> 
+                              <span className="text-[#7A7A7A]"> 
+                                {reply.time} 
+                              </span> 
+                            </div> 
+                            <p className="text-[#B5B5B5] leading-relaxed pl-7"> 
+                              {reply.content} 
+                            </p> 
+                          </div> 
+                        ))} 
+                      </div> 
+                    )} 
+                  </article> 
+                ); 
+              })} 
+            </div> 
+
+            <div className="flex justify-center mt-10"> 
+              {visibleReviews < sortedReviews.length && ( 
+                <Button 
+                  variant="mintGhost" 
+                  size="md" 
+                  className="px-6 py-2 rounded-full text-xs font-medium" 
+                  onClick={() => setVisibleReviews((prev) => prev + 4)} 
+                > 
+                  Load more reviews 
+                </Button> 
+              )} 
+            </div> 
+          </div> 
+        )} 
+/div>
         )}
 
         {/* ======================================================== */}
@@ -1013,8 +1215,55 @@ export function MovieDetailsPage({
               </div> 
             </div> 
           </div>
-        )}
-      </main>
-    </div>
-  );
-}
+        )} 
+      </main> 
+
+      {reportModalOpen && ( 
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
+          <div className="w-full max-w-sm bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-6 text-[#F5F5F5]"> 
+            <div className="flex items-center justify-between mb-3"> 
+              <h2 className="text-base font-bold text-[#F5F5F5]">Report Review</h2> 
+              <button 
+                type="button" 
+                onClick={() => setReportModalOpen(false)} 
+                className="text-[#7A7A7A] hover:text-white cursor-pointer" 
+              > 
+                <X size={16} /> 
+              </button> 
+            </div> 
+            <p className="text-xs text-[#B5B5B5] mb-4"> 
+              Help us keep the community safe. Why are you reporting this review? 
+            </p> 
+            <textarea 
+              value={reportReason} 
+              onChange={(e) => setReportReason(e.target.value)} 
+              placeholder="Provide reason (e.g. spam, spoiler, abusive)..." 
+              rows={3} 
+              className="w-full bg-[#141414] border border-[#222222] focus:border-[#61F1AC]/60 rounded-lg p-2.5 text-xs text-[#F5F5F5] placeholder-[#666666] outline-none mb-4 resize-none" 
+            /> 
+            <div className="flex justify-end gap-2"> 
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={isSubmittingReport} 
+                onClick={() => setReportModalOpen(false)} 
+                className="px-3 py-1.5 text-xs cursor-pointer" 
+              > 
+                <span>Cancel</span> 
+              </Button> 
+              <Button 
+                variant="primary" 
+                size="sm" 
+                disabled={isSubmittingReport || !reportReason.trim()} 
+                onClick={handleSubmitReport} 
+                className="px-3.5 py-1.5 text-xs font-semibold cursor-pointer" 
+              > 
+                <span>{isSubmittingReport ? "Submitting..." : "Submit Report"}</span> 
+              </Button> 
+            </div> 
+          </div> 
+        </div> 
+      )} 
+    </div> 
+  ); 
+} 
