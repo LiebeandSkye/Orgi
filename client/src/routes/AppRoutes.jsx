@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { Layout } from "../components/layout/Layout";
 import { HomePage } from "../pages/HomePage";
 import { MovieDetailsPage } from "../pages/MovieDetailsPage";
-import { BreakingBadPage } from "../pages/BreakingBadPage";
+import { SeriesDetailsPage } from "../pages/SeriesDetailsPage";
 import { SearchPage } from "../pages/SearchPage";
 import { ManhwaPage } from "../pages/ManhwaPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -31,9 +31,9 @@ export function AppRoutes() {
                 <Route path="/movie/:id" element={<MovieDetailsPage initialTab="Cast" />} />
 
                 {/* Series Detail Pages */}
-                <Route path="/series" element={<BreakingBadPage />} />
-                <Route path="/series/breaking-bad" element={<BreakingBadPage />} />
-                <Route path="/series/:id" element={<BreakingBadPage />} />
+                <Route path="/series" element={<SeriesDetailsPage />} />
+                <Route path="/series/breaking-bad" element={<SeriesDetailsPage />} />
+                <Route path="/series/:id" element={<SeriesDetailsPage />} />
 
                 {/* Search */}
                 <Route path="/search" element={<SearchPage />} />

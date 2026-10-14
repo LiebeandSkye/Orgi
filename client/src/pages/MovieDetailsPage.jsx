@@ -8,16 +8,40 @@ import {
   Reply,
   MoreHorizontal,
   ChevronDown,
-  ChevronUp,
 } from "lucide-react";
-import { getMovieDetails } from "../services/tmdb";
-import { getMovieMedia } from "../services/tmdb";
+import { getMovieDetails, getMovieMedia } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
 import { INTERSTELLAR_DATA } from "../data/mockData";
 import MediaItems from "../components/ui/MediaItems";
 import { fetchMediaDetails } from "../services/mediaApi";
+import { CastCarousel } from "../components/ui/CastCarousel";
+
+const NAVBAR_AVATAR =
+  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
+
+function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
+  const [errorSrc, setErrorSrc] = useState(null);
+  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src;
+  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR;
+
+  return (
+    <div
+      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`}
+    >
+      <img
+        key={src}
+        src={effectiveSrc}
+        alt={alt || "Avatar"}
+        onError={() => setErrorSrc(src)}
+        className={`w-full h-full object-cover ${
+          isNavbarAvatar ? "scale-125" : ""
+        }`}
+      />
+    </div>
+  );
+}
 
 export function MovieDetailsPage({
   initialTab = "Cast",
@@ -107,12 +131,54 @@ export function MovieDetailsPage({
         : initialCropHero;
 
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
+  const synopsisRef = useRef(null);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  const displaySynopsis =
+    (movieData?.synopsis || "") +
+    ((movieData?.id === 157336 || movieData?.title?.toLowerCase() === "interstellar") &&
+    movieData?.synopsis &&
+    movieData.synopsis.length < 260 &&
+    !movieData.synopsis.includes("dust storms")
+      ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
+      : "");
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (synopsisRef.current) {
+        const height = synopsisRef.current.scrollHeight;
+        setContentHeight(height);
+        // 5rem is 80px. If content is taller than 80px, it overflows and requires a See more button
+        setHasOverflow(height > 80);
+      }
+    };
+    checkOverflow();
+    window.addEventListener("resize", checkOverflow);
+    return () => window.removeEventListener("resize", checkOverflow);
+  }, [displaySynopsis]);
   const [newThought, setNewThought] = useState("");
   const [selectedStars, setSelectedStars] = useState(0);
   const [repliesExpanded, setRepliesExpanded] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [sortBy, setSortBy] = useState("Top");
   const [likedReviews, setLikedReviews] = useState({});
+  const [visibleReviews, setVisibleReviews] = useState(4);
+
+  const sortedReviews = [...(movieData?.reviews || [])].sort((a, b) => {
+    switch (sortBy) {
+      case "Top":
+        return (b.likes || 0) - (a.likes || 0);
+      case "Newest":
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      case "Highest Rated":
+        return (b.score || 0) - (a.score || 0);
+      case "Lowest Rated":
+        return (a.score || 0) - (b.score || 0);
+      default:
+        return 0;
+    }
+  });
 
   const contentRef = useRef(null);
 
@@ -297,37 +363,44 @@ export function MovieDetailsPage({
 
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
-                className={`relative overflow-hidden transition-[max-height] duration-700 ease-in-out ${
-                  synopsisExpanded ? "max-h-[1000px]" : "max-h-[5.5rem]"
-                }`}
+                style={{
+                  maxHeight: !hasOverflow || synopsisExpanded
+                    ? `${contentHeight > 0 ? contentHeight + 4 : 400}px`
+                    : "5rem",
+                }}
+                className="relative overflow-hidden transition-[max-height] duration-500 ease-in-out"
               >
-                <p
-                  className={`transition-[filter] duration-700 ease-in-out ${
-                    synopsisExpanded ? "" : "line-clamp-3"
-                  }`}
-                >
-                  {movieData.synopsis}
-                  {!synopsisExpanded &&
-                    " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."}
-                </p>
+                <div ref={synopsisRef}>
+                  <p className="font-light text-[#B5B5B5] leading-relaxed">
+                    {displaySynopsis}
+                  </p>
+                </div>
 
-                {!synopsisExpanded && (
-                  <div className="pointer-events-none absolute bottom-0 left-0 h-6 w-full backdrop-brightness-50 bg-gradient-to-t from-[#000000] to-transparent" />
+                {/* Dark blur at the end ONLY if it has a See more button and is not expanded */}
+                {hasOverflow && (
+                  <div
+                    className={`pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-[#000000] via-[#000000]/70 to-transparent transition-opacity duration-300 ${
+                      synopsisExpanded ? "opacity-0" : "opacity-100"
+                    }`}
+                  />
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => setSynopsisExpanded(!synopsisExpanded)}
-                className="mt-1 text-sm font-medium text-[#61F1AC]  cursor-pointer inline-flex items-center gap-2 transition-colors"
-              >
-                {synopsisExpanded ? "Show less" : "Read more"}
-                {synopsisExpanded ? (
-                  <ChevronUp size={18} />
-                ) : (
-                  <ChevronDown size={18} />
-                )}
-              </button>
+              {hasOverflow && (
+                <button
+                  type="button"
+                  onClick={() => setSynopsisExpanded((prev) => !prev)}
+                  className="mt-2 text-sm font-medium text-[#61F1AC] hover:text-[#61F1AC]/80 cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <span>{synopsisExpanded ? "Show less" : "See more"}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-500 ease-in-out ${
+                      synopsisExpanded ? "rotate-180" : "rotate-0"
+                    }`}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -385,18 +458,14 @@ export function MovieDetailsPage({
         {/* ======================================================== */}
         {activeTab === "Cast" && (
           <div className="animate-in fade-in duration-300">
-            {/* Header row */}
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
-                Cast
-              </h2>
-              <button
-                type="button"
-                className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors cursor-pointer"
-              >
-                See all 24 →
-              </button>
-            </div>
+            {/* Header row: only displayed for books/author where CastCarousel is not used */}
+            {category && (
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
+                  Author
+                </h2>
+              </div>
+            )}
 
             {category ? (
               /* Vertical Portrait Author Cards for Book, Manga, Manhwa, and Manhua */
@@ -433,36 +502,11 @@ export function MovieDetailsPage({
               </div>
             ) : (
               /* Horizontal scrollable row of 8 circular 88px cast portraits with subtle fade on right edge */
-              <div className="relative">
-                <div className="flex items-start gap-8 overflow-x-auto no-scrollbar pb-4 pr-16">
-                  {(movieData.cast || []).map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex flex-col items-center text-center shrink-0 w-[100px] group cursor-pointer"
-                    >
-                      {/* 88px circular portrait */}
-                      <div className="w-[88px] h-[88px] rounded-full overflow-hidden border border-[#1C1C1C] mb-3 group-hover:border-[#61F1AC]/50 transition-all bg-[#0B0B0B]">
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      {/* Name in white */}
-                      <span className="text-xs font-medium text-[#F5F5F5] line-clamp-1 group-hover:text-white transition-colors">
-                        {member.name}
-                      </span>
-                      {/* Character name in muted grey below */}
-                      <span className="text-[11px] text-[#7A7A7A] line-clamp-1 mt-0.5">
-                        {member.character}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Subtle fade on the right edge */}
-                <div className="absolute top-0 right-0 bottom-0 w-24 bg-gradient-to-l from-[#000000] via-[#000000]/60 to-transparent pointer-events-none" />
-              </div>
+              <CastCarousel
+                title="Cast"
+                items={movieData.cast || []}
+                variant="cast"
+              />
             )}
           </div>
         )}
@@ -475,10 +519,10 @@ export function MovieDetailsPage({
             {/* COMPOSER CARD: #0B0B0B, 1px border, 16px radius */}
             <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm">
               <div className="flex items-start gap-3.5 mb-4">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
+                <ReviewAvatar
+                  src={NAVBAR_AVATAR}
                   alt="User Avatar"
-                  className="w-9 h-9 rounded-full object-cover border border-[#1C1C1C] shrink-0"
+                  size="w-9 h-9"
                 />
                 <textarea
                   value={newThought}
@@ -564,7 +608,7 @@ export function MovieDetailsPage({
 
             {/* REVIEW LIST: 4 comment items separated by 1px #1C1C1C lines, no card boxes */}
             <div className="flex flex-col divide-y divide-[#1C1C1C]">
-              {(movieData.reviews || []).map((rev) => {
+              {sortedReviews.slice(0, visibleReviews).map((rev) => {
                 const isLiked = likedReviews[rev.id];
                 const likeCount = rev.likes + (isLiked ? 1 : 0);
 
@@ -573,10 +617,10 @@ export function MovieDetailsPage({
                     {/* Header: 36px round avatar, bold username in white, relative time in muted, small mint star with score */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <img
+                        <ReviewAvatar
                           src={rev.avatar}
                           alt={rev.author}
-                          className="w-9 h-9 rounded-full object-cover border border-[#1C1C1C]"
+                          size="w-9 h-9"
                         />
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm text-[#F5F5F5]">
@@ -655,10 +699,10 @@ export function MovieDetailsPage({
                         {rev.replies.map((reply) => (
                           <div key={reply.id} className="text-xs">
                             <div className="flex items-center gap-2 mb-1">
-                              <img
+                              <ReviewAvatar
                                 src={reply.avatar}
                                 alt={reply.author}
-                                className="w-5 h-5 rounded-full object-cover"
+                                size="w-5 h-5"
                               />
                               <span className="font-medium text-[#F5F5F5]">
                                 {reply.author}
@@ -682,14 +726,16 @@ export function MovieDetailsPage({
 
             {/* Mint "Load more" ghost button centered at end */}
             <div className="flex justify-center mt-10">
-              <Button
-                variant="mintGhost"
-                size="md"
-                className="px-6 py-2 rounded-full text-xs font-medium"
-                onClick={() => alert("Loaded additional reviews")}
-              >
-                Load more reviews
-              </Button>
+              {visibleReviews < sortedReviews.length && (
+                <Button
+                  variant="mintGhost"
+                  size="md"
+                  className="px-6 py-2 rounded-full text-xs font-medium"
+                  onClick={() => setVisibleReviews((prev) => prev + 4)}
+                >
+                  Load more reviews
+                </Button>
+              )}
             </div>
           </div>
         )}

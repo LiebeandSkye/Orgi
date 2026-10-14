@@ -21,7 +21,6 @@ router.get("/:id", async(req, res, next) => {
 
 router.put("/", requireAuth, async (req, res, next) => { 
     try { 
-        const userId = req.user.id; 
         const { user_name, profile_url, banner_url, current_status } = req.body; 
         const { data: existingUser } = await supabase
             .from("users")

@@ -9,7 +9,7 @@ export const supabaseAdmin = supabaseUrl && supabaseKey
         auth: { 
             autoRefreshToken: false, 
             persistSession: false, 
-        }, 
+        },
     })
     : null; 
 
