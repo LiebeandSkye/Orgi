@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, Link } from "react-router-dom";
 import {
   Star,
   Plus,
@@ -9,7 +9,7 @@ import {
   MoreHorizontal,
   ChevronDown,
 } from "lucide-react";
-import { getMovieDetails } from "../services/tmdb";
+import { getMovieDetails, getMovieMedia } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
@@ -81,6 +81,40 @@ export function MovieDetailsPage({
     };
   }, [category, id]);
 
+  const [mediaData, setMediaData] = useState({
+    images: {
+      backdrops: [],
+      posters: [],
+    },
+    videos: {
+      results: [],
+    },
+  });
+
+  useEffect(() => {
+    if (category) return;
+    const targetMovieId = id || 157336;
+
+    let cancelled = false;
+
+    async function fetchMedia() {
+      try {
+        const data = await getMovieMedia(targetMovieId);
+
+        if (!cancelled) {
+          setMediaData(data);
+        }
+      } catch (error) {
+        console.error("Failed to load movie media:", error);
+      }
+    }
+
+    fetchMedia();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [category, id]);
 
   const activeTab =
     selectedTabOverride !== null
@@ -99,32 +133,30 @@ export function MovieDetailsPage({
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
   const synopsisRef = useRef(null);
   const [contentHeight, setContentHeight] = useState(0);
+  const [hasOverflow, setHasOverflow] = useState(false);
 
   const displaySynopsis =
     (movieData?.synopsis || "") +
-    (movieData?.synopsis &&
+    ((movieData?.id === 157336 || movieData?.title?.toLowerCase() === "interstellar") &&
+    movieData?.synopsis &&
     movieData.synopsis.length < 260 &&
     !movieData.synopsis.includes("dust storms")
       ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
       : "");
 
   useEffect(() => {
-    if (synopsisRef.current) {
-      setContentHeight(synopsisRef.current.scrollHeight);
-    }
-  }, [displaySynopsis]);
-
-  useEffect(() => {
-    const handleResize = () => {
+    const checkOverflow = () => {
       if (synopsisRef.current) {
-        setContentHeight(synopsisRef.current.scrollHeight);
+        const height = synopsisRef.current.scrollHeight;
+        setContentHeight(height);
+        // 5rem is 80px. If content is taller than 80px, it overflows and requires a See more button
+        setHasOverflow(height > 80);
       }
     };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isLongSynopsis = contentHeight === 0 || contentHeight > 82;
+    checkOverflow();
+    window.addEventListener("resize", checkOverflow);
+    return () => window.removeEventListener("resize", checkOverflow);
+  }, [displaySynopsis]);
   const [newThought, setNewThought] = useState("");
   const [selectedStars, setSelectedStars] = useState(0);
   const [repliesExpanded, setRepliesExpanded] = useState(false);
@@ -235,9 +267,19 @@ export function MovieDetailsPage({
 
           {/* RIGHT: Meta, Title, Scores, Buttons, Synopsis */}
           <div className="flex-1 flex flex-col pt-2 min-w-0">
-            {/* Small muted uppercase label "MOVIE" */}
+            {/* Small muted uppercase label "MOVIE" or breadcrumb link */}
             <div className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
-              {movieData.type}
+              {category ? (
+                <Link
+                  to={`/books/${category}`}
+                  className="hover:text-[#61F1AC] transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  title={`Back to ${category}`}
+                >
+                  <span>← {movieData.type}</span>
+                </Link>
+              ) : (
+                movieData.type
+              )}
             </div>
 
             {/* Large light-weight white title "Interstellar" */}
@@ -322,8 +364,8 @@ export function MovieDetailsPage({
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
                 style={{
-                  maxHeight: synopsisExpanded
-                    ? `${(contentHeight || 300) + 4}px`
+                  maxHeight: !hasOverflow || synopsisExpanded
+                    ? `${contentHeight > 0 ? contentHeight + 4 : 400}px`
                     : "5rem",
                 }}
                 className="relative overflow-hidden transition-[max-height] duration-500 ease-in-out"
@@ -334,20 +376,23 @@ export function MovieDetailsPage({
                   </p>
                 </div>
 
-                <div
-                  className={`pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-[#000000] via-[#000000]/70 to-transparent transition-opacity duration-300 ${
-                    synopsisExpanded ? "opacity-0" : "opacity-100"
-                  }`}
-                />
+                {/* Dark blur at the end ONLY if it has a See more button and is not expanded */}
+                {hasOverflow && (
+                  <div
+                    className={`pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-[#000000] via-[#000000]/70 to-transparent transition-opacity duration-300 ${
+                      synopsisExpanded ? "opacity-0" : "opacity-100"
+                    }`}
+                  />
+                )}
               </div>
 
-              {isLongSynopsis && (
+              {hasOverflow && (
                 <button
                   type="button"
                   onClick={() => setSynopsisExpanded((prev) => !prev)}
                   className="mt-2 text-sm font-medium text-[#61F1AC] hover:text-[#61F1AC]/80 cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                 >
-                  <span>{synopsisExpanded ? "Show less" : "Read more"}</span>
+                  <span>{synopsisExpanded ? "Show less" : "See more"}</span>
                   <ChevronDown
                     size={16}
                     className={`transition-transform duration-500 ease-in-out ${
@@ -700,7 +745,13 @@ export function MovieDetailsPage({
         {/* ======================================================== */}
         {activeTab === "Media" && (
           <div className="animate-in fade-in duration-300">
-            <MediaItems movieData={movieData} />
+            <MediaItems
+              movieData={{
+                ...movieData,
+                images: mediaData.images?.backdrops?.length || mediaData.images?.posters?.length ? mediaData.images : movieData.images,
+                videos: mediaData.videos?.results?.length ? mediaData.videos : movieData.videos,
+              }}
+            />
           </div>
         )}
 

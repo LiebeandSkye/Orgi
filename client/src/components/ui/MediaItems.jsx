@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, BookOpen, X } from "lucide-react";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
@@ -195,7 +195,6 @@ function ImageModal({ image, format, onClose }) {
   }, []);
 
   const isBackdrop = format === "backdrop";
-  // Use w1280 for backdrops and w780 for posters for fast download speeds while staying crystal-clear HD
   const imageSrc = getTMDBImage(image?.file_path, isBackdrop ? "w1280" : "w780");
 
   return (
@@ -237,13 +236,22 @@ function ImageModal({ image, format, onClose }) {
 /* ------------------------------------------------------------------ */
 /*  Main MediaItems Component                                           */
 /* ------------------------------------------------------------------ */
-export default function MediaItems({ movieData }) {
+export default function MediaItems({ movieData, seriesData }) {
+  const mediaItem = movieData || seriesData || {};
   const [activeVideo, setActiveVideo] = useState(null);
   const [activeImage, setActiveImage] = useState(null);
+  const [selectedCover, setSelectedCover] = useState(null);
+
+  const volumes = mediaItem?.volumes || [];
+  const isBookOrManga =
+    Array.isArray(mediaItem?.volumes) ||
+    ["MANGA", "MANHWA", "MANHUA", "BOOK / NOVEL", "NOVELS", "BOOKS", "LIGHT-NOVELS"].includes(
+      (mediaItem?.type || "").toUpperCase()
+    );
 
   // 1. Prioritize Official Trailers first, then Trailers, Teasers, etc. Cap at 120 items.
   const videos = useMemo(() => {
-    const rawVideos = (movieData?.videos?.results || []).filter(
+    const rawVideos = (mediaItem?.videos?.results || []).filter(
       (video) => video.site === "YouTube"
     );
 
@@ -266,24 +274,29 @@ export default function MediaItems({ movieData }) {
         return getPriority(a) - getPriority(b);
       })
       .slice(0, 120);
-  }, [movieData?.videos?.results]);
+  }, [mediaItem?.videos?.results]);
 
   // 2. Cap Backdrops and Posters to max 120 items
   const backdrops = useMemo(() => {
-    return (movieData?.images?.backdrops || []).slice(0, 120);
-  }, [movieData?.images?.backdrops]);
+    return (mediaItem?.images?.backdrops || []).slice(0, 120);
+  }, [mediaItem?.images?.backdrops]);
 
   const posters = useMemo(() => {
-    return (movieData?.images?.posters || []).slice(0, 120);
-  }, [movieData?.images?.posters]);
+    return (mediaItem?.images?.posters || []).slice(0, 120);
+  }, [mediaItem?.images?.posters]);
 
-  const SectionTitle = ({ children, count }) => (
-    <div className="mb-4 flex items-center gap-3">
-      <h3 className="text-base font-semibold tracking-tight text-[#F5F5F5] sm:text-lg">
-        {children}
-      </h3>
-      {count > 0 && (
-        <span className="text-xs text-[#7A7A7A]">{count}</span>
+  const SectionTitle = ({ children, count, subtitle }) => (
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <h3 className="text-base font-semibold tracking-tight text-[#F5F5F5] sm:text-lg">
+          {children}
+        </h3>
+        {typeof count === "number" && count > 0 && (
+          <span className="text-xs text-[#7A7A7A]">{count}</span>
+        )}
+      </div>
+      {subtitle && (
+        <span className="text-xs text-[#7A7A7A] font-light">{subtitle}</span>
       )}
     </div>
   );
@@ -294,6 +307,117 @@ export default function MediaItems({ movieData }) {
     </p>
   );
 
+  // --- Manga/Manhwa/Books Specific Rendering ---
+  if (isBookOrManga) {
+    return (
+      <section className="w-full bg-black text-[#F5F5F5]">
+        <div className="space-y-8 py-6 sm:space-y-10 sm:py-8">
+          <SectionTitle
+            count={volumes.length}
+            subtitle={volumes.length > 0 ? "Sorted by volume" : undefined}
+          >
+            Volume Covers
+          </SectionTitle>
+
+          {volumes.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {volumes.map((vol, index) => {
+                const volBadge =
+                  vol.volume === "none" || !vol.volume
+                    ? "Full"
+                    : `Vol. ${vol.volume}`;
+
+                return (
+                  <div
+                    key={vol.id || index}
+                    onClick={() => setSelectedCover(vol)}
+                    className="group cursor-pointer flex flex-col"
+                  >
+                    <div className="relative aspect-[2/3] w-full rounded-[10px] overflow-hidden bg-[#0B0B0B] border border-[#1C1C1C] group-hover:border-[#61F1AC]/50 transition-colors shadow-sm mb-2.5">
+                      <img
+                        src={vol.cover}
+                        alt={vol.title || `Volume ${vol.volume}`}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+
+                      <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15 group-hover:border-[#61F1AC]/60 transition-colors">
+                        <span className="text-[10px] font-tabular font-semibold tracking-wider uppercase text-[#F5F5F5] group-hover:text-[#61F1AC] transition-colors">
+                          {volBadge}
+                        </span>
+                      </div>
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#61F1AC]">
+                          <BookOpen size={12} />
+                          <span>View Cover</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <h4 className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-[#61F1AC] transition-colors">
+                      {vol.title || `Volume ${vol.volume}`}
+                    </h4>
+
+                    {vol.subtitle && (
+                      <span className="text-xs text-[#7A7A7A] truncate font-light mt-0.5 font-tabular">
+                        {vol.subtitle}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState label="volume covers" />
+          )}
+        </div>
+
+        {selectedCover && (
+          <div
+            onClick={() => setSelectedCover(null)}
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-md w-full bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] overflow-hidden shadow-2xl p-4"
+            >
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#1C1C1C]">
+                <div>
+                  <h4 className="text-sm font-semibold text-[#F5F5F5]">
+                    {selectedCover.title}
+                  </h4>
+                  {selectedCover.subtitle && (
+                    <p className="text-xs text-[#7A7A7A]">
+                      {selectedCover.subtitle}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCover(null)}
+                  className="w-8 h-8 rounded-full bg-[#141414] border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 transition-colors cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <div className="aspect-[2/3] w-full rounded-[10px] overflow-hidden bg-[#050505] border border-[#1C1C1C]">
+                <img
+                  src={selectedCover.cover}
+                  alt={selectedCover.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  // --- Movies & Series Media Rendering ---
   return (
     <section className="w-full bg-black text-[#F5F5F5]">
       <div className="space-y-10 py-6 sm:py-8">

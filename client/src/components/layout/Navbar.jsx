@@ -16,7 +16,7 @@ const PROFILE_ITEMS = [
     { to: "/collection", label: "Collection", icon: Bookmark }, 
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, 
     { to: "/setting", label: "Setting", icon: Settings }, 
-]; 
+];
 
 export function Navbar({ forceBooksOpen = false }) { 
     const location = useLocation(); 
@@ -77,7 +77,7 @@ export function Navbar({ forceBooksOpen = false }) {
         !dropdownRef.current.contains(event.target) 
       ) { 
         setDropdownOpen(false); 
-      } 
+      }
       if ( 
         profileDropdownRef.current && 
         !profileDropdownRef.current.contains(event.target) 
@@ -94,7 +94,7 @@ export function Navbar({ forceBooksOpen = false }) {
     return () => { 
       document.removeEventListener("mousedown", handleClickOutside); 
       document.removeEventListener("keydown", handleKey); 
-    }; 
+    };
   }, [forceBooksOpen]); 
 
   // Measure the label of a tab relative to the nav

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Search, ChevronDown, Star } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { searchTmdb } from "../services/tmdb";
 import { Button } from "../components/ui/Button";
 import { BorderBeam } from "../components/ui/border-beam";
@@ -137,7 +137,7 @@ export function SearchPage() {
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs text-[#7A7A7A] hover:text-[#F5F5F5] bg-white/[0.04] border border-white/[0.05] hover:border-white/10 transition-all cursor-pointer"
               >
                 <span>Sort: {sortBy}</span>
-                <ChevronDown size={13} />
+                {sortOpen ? <ChevronUp size={13} className="text-[#61F1AC]" /> : <ChevronDown size={13} />}
               </button>
 
               {sortOpen && (
