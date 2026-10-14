@@ -374,14 +374,7 @@ export function MovieDetailsPage({
 
   const handleTabChange = (tab) => {
     setSelectedTabOverride(tab);
-    if (tab === "Reviews") {
-      setCropHeroOverride(true);
-      if (contentRef.current) {
-        contentRef.current.scrollIntoView({ behavior: "smooth" });
-      }
-    } else {
-      setCropHeroOverride(false);
-    }
+    setCropHeroOverride(false);
   };
 
   const toggleLike = (reviewId) => {
@@ -625,19 +618,6 @@ export function MovieDetailsPage({
               );
             })}
           </div>
-
-          {cropHero && (
-            <button
-              type="button"
-              onClick={() => {
-                setCropHeroOverride(false);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors"
-            >
-              ↑ Back to Hero
-            </button>
-          )}
         </div>
       </div>
 

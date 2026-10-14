@@ -219,14 +219,7 @@ export function SeriesDetailsPage({
 
   const handleTabChange = (tab) => {
     setSelectedTabOverride(tab);
-    if (tab === "Reviews") {
-      setCropHeroOverride(true);
-      if (contentRef.current) {
-        contentRef.current.scrollIntoView({ behavior: "smooth" });
-      }
-    } else {
-      setCropHeroOverride(false);
-    }
+    setCropHeroOverride(false);
   };
 
   const toggleLike = (reviewId) => {
