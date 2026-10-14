@@ -6,6 +6,7 @@ import tmdbRoutes from "./src/routes/tmdbRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js"; 
 import profileRoutes from "./src/routes/profileRoutes.js"; 
 import mediaRoutes from "./src/routes/mediaRoutes.js"; 
+import collectionRoutes from "./src/routes/collectionRoutes.js"; 
 import reviewRoutes from "./src/routes/reviewRoutes.js"; 
 import { errorHandler } from "./src/middlewares/errorHandler.js"; 
 
@@ -20,6 +21,7 @@ app.use("/api/tmdb", tmdbRoutes);
 app.use("/api/auth", authRoutes); 
 app.use("/api/profile", profileRoutes); 
 app.use("/api/media", mediaRoutes); 
+app.use("/api/collections", collectionRoutes); 
 app.use("/api/reviews", reviewRoutes); 
 
 app.use((req, res) => { 

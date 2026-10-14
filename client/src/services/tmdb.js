@@ -458,30 +458,32 @@ export async function getSeasonEpisodes(seriesId, seasonNumber = 1) {
 
 // get Media detials for every MovieDetailsPage, Manga and etc
 
-export async function getMovieMedia(movieId) {
-  const response = await fetch(
-    `https://api.themoviedb.org/3/movie/${movieId}?append_to_response=images,videos`,
-    {
-      headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_TMDB_API_KEY}`,
-        accept: "application/json",
-      },
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch movie media");
-  }
-
-  const data = await response.json();
-
-  return {
-    images: {
-      backdrops: data.images?.backdrops || [],
-      posters: data.images?.posters || [],
-    },
-    videos: {
-      results: data.videos?.results || [],
-    },
-  };
+export async function getMovieMedia(movieId) { 
+  const resolvedId = movieId === "interstellar" ? 157336 : (movieId || 157336); 
+  try { 
+    const data = await fetchFromApi( 
+      `/movie/${resolvedId}`, 
+      `/movie/${resolvedId}`, 
+      { append_to_response: "images,videos" } 
+    ); 
+    return { 
+      images: { 
+        backdrops: data?.images?.backdrops || [], 
+        posters: data?.images?.posters || [], 
+      }, 
+      videos: { 
+        results: data?.videos?.results || [], 
+      }, 
+    }; 
+  } catch (err) { 
+    return { 
+      images: { 
+        backdrops: [], 
+        posters: [], 
+      }, 
+      videos: { 
+        results: [], 
+      }, 
+    }; 
+  } 
 }
