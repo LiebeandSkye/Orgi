@@ -174,6 +174,10 @@ WITH CHECK (auth.uid() = reporter_id);
 CREATE POLICY "Allow reporters to read own reports" 
 ON reports FOR SELECT 
 USING (auth.uid() = reporter_id); 
+ 
+CREATE POLICY "Allow reporters to delete own reports" 
+ON reports FOR DELETE 
+USING (auth.uid() = reporter_id); 
 
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS TRIGGER AS $$ 

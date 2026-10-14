@@ -8,5 +8,6 @@ router.post("/", requireAuth, reportController.createReport);
 router.get("/my", requireAuth, reportController.getMyReports); 
 router.get("/all", requireAuth, reportController.getAllReports); 
 router.patch("/:id", requireAuth, reportController.updateReportStatus); 
+router.delete("/:id", requireAuth, reportController.deleteReport); 
 
 export default router; 

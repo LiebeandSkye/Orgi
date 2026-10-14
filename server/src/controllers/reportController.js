@@ -150,4 +150,23 @@ export const reportController = {
       next(err); 
     } 
   }, 
+
+  async deleteReport(req, res, next) { 
+    try { 
+      const userId = req.user.id; 
+      const { id } = req.params; 
+
+      const { error } = await supabase 
+        .from("reports") 
+        .delete() 
+        .eq("id", id) 
+        .eq("reporter_id", userId); 
+
+      if (error) throw error; 
+
+      res.json({ success: true, message: "Report deleted successfully" }); 
+    } catch (err) { 
+      next(err); 
+    } 
+  }, 
 }; 

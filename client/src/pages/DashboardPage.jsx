@@ -101,6 +101,8 @@ export function DashboardPage() {
 
   const [deletingReviewId, setDeletingReviewId] = useState(null); 
   const [deleting, setDeleting] = useState(false); 
+  const [deletingReportId, setDeletingReportId] = useState(null); 
+  const [deletingReport, setDeletingReport] = useState(false); 
 
   const [moderatingReport, setModeratingReport] = useState(null); 
   const [modStatus, setModStatus] = useState("resolved"); 
@@ -240,6 +242,32 @@ export function DashboardPage() {
     } catch {} 
   }; 
 
+  const handleDeleteReport = async () => { 
+    if (!deletingReportId) return; 
+    setDeletingReport(true); 
+    try { 
+      const res = await api.delete(`/reports/${deletingReportId}`); 
+      if (res?.success) { 
+        setReportsList((prev) => prev.filter((r) => r.id !== deletingReportId)); 
+        setSummary((prev) => 
+          prev 
+            ? { 
+                ...prev, 
+                stats: { 
+                  ...prev.stats, 
+                  reportCount: Math.max(0, (prev.stats?.reportCount || 1) - 1), 
+                }, 
+              } 
+            : prev 
+        ); 
+        setDeletingReportId(null); 
+      } 
+    } catch { 
+    } finally { 
+      setDeletingReport(false); 
+    } 
+  }; 
+
   const handleOpenModeration = (report) => { 
     setModeratingReport(report); 
     setModStatus(report.status || "resolved"); 
@@ -358,7 +386,7 @@ export function DashboardPage() {
         </div> 
       </div> 
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"> 
+      <div className={`grid grid-cols-1 ${isModerator ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"} gap-4 mb-8`}> 
         <button 
           type="button" 
           onClick={() => setActiveTab("reviews")} 
@@ -407,98 +435,68 @@ export function DashboardPage() {
 
         <button 
           type="button" 
-          onClick={() => setActiveTab(isModerator ? "moderation" : "reports")} 
+          onClick={() => setActiveTab("reports")} 
           className={`text-left p-5 rounded-xl border transition-all cursor-pointer ${ 
-            activeTab === (isModerator ? "moderation" : "reports") 
+            activeTab === "reports" 
               ? "bg-[#121212] border-[#61F1AC]/50 shadow-lg" 
               : "bg-[#0B0B0B] border-[#1C1C1C] hover:border-[#2C2C2C]" 
           }`} 
         > 
           <div className="flex items-center justify-between mb-2"> 
             <span className="text-xs font-semibold uppercase tracking-wider text-[#7A7A7A]"> 
-              {isModerator ? "Moderation Queue" : "Reports Filed"} 
+              Reports Filed 
             </span> 
-            {isModerator ? ( 
-              <ShieldCheck size={16} className="text-[#A78BFA]" /> 
-            ) : ( 
-              <Flag size={16} className="text-[#FBBF24]" /> 
-            )} 
+            <Flag size={16} className="text-[#FBBF24]" /> 
           </div> 
           <div className="text-2xl sm:text-3xl font-extrabold text-[#F5F5F5] font-tabular"> 
-            {isModerator ? modReportsList.length : stats.reportCount} 
+            {stats.reportCount} 
           </div> 
           <p className="text-[11px] text-[#555555] mt-1"> 
-            {isModerator ? "Community reports to review" : "Contributions to community safety"} 
+            Contributions to community safety 
           </p> 
-        </button> 
-      </div> 
-
-      <div className="flex items-center gap-2 border-b border-[#1C1C1C] mb-6 overflow-x-auto pb-1"> 
-        <button 
-          type="button" 
-          onClick={() => setActiveTab("reviews")} 
-          className={`px-4 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${ 
-            activeTab === "reviews" 
-              ? "bg-[#181818] text-[#61F1AC] border border-[#262626]" 
-              : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#121212]" 
-          }`} 
-        > 
-          <Star size={13} /> 
-          <span>My Reviews</span> 
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#222222] text-[#B5B5B5]"> 
-            {reviewsList.length} 
-          </span> 
-        </button> 
-
-        <button 
-          type="button" 
-          onClick={() => setActiveTab("likes")} 
-          className={`px-4 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${ 
-            activeTab === "likes" 
-              ? "bg-[#181818] text-[#61F1AC] border border-[#262626]" 
-              : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#121212]" 
-          }`} 
-        > 
-          <ThumbsUp size={13} /> 
-          <span>My Likes</span> 
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#222222] text-[#B5B5B5]"> 
-            {likesList.length} 
-          </span> 
-        </button> 
-
-        <button 
-          type="button" 
-          onClick={() => setActiveTab("reports")} 
-          className={`px-4 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${ 
-            activeTab === "reports" 
-              ? "bg-[#181818] text-[#61F1AC] border border-[#262626]" 
-              : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#121212]" 
-          }`} 
-        > 
-          <Flag size={13} /> 
-          <span>My Reports</span> 
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#222222] text-[#B5B5B5]"> 
-            {reportsList.length} 
-          </span> 
         </button> 
 
         {isModerator && ( 
           <button 
             type="button" 
             onClick={() => setActiveTab("moderation")} 
-            className={`px-4 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${ 
+            className={`text-left p-5 rounded-xl border transition-all cursor-pointer ${ 
               activeTab === "moderation" 
-                ? "bg-[#181818] text-[#61F1AC] border border-[#262626]" 
-                : "text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#121212]" 
+                ? "bg-[#121212] border-[#61F1AC]/50 shadow-lg" 
+                : "bg-[#0B0B0B] border-[#1C1C1C] hover:border-[#2C2C2C]" 
             }`} 
           > 
-            <ShieldCheck size={13} /> 
-            <span>Moderation Queue</span> 
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#222222] text-[#B5B5B5]"> 
+            <div className="flex items-center justify-between mb-2"> 
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#7A7A7A]"> 
+                Moderation Queue 
+              </span> 
+              <ShieldCheck size={16} className="text-[#A78BFA]" /> 
+            </div> 
+            <div className="text-2xl sm:text-3xl font-extrabold text-[#F5F5F5] font-tabular"> 
               {modReportsList.length} 
-            </span> 
+            </div> 
+            <p className="text-[11px] text-[#555555] mt-1"> 
+              Community reports to review 
+            </p> 
           </button> 
         )} 
+      </div> 
+
+      <div className="flex items-center justify-between mb-6 pb-2 border-b border-[#1C1C1C]"> 
+        <div className="flex items-center gap-2"> 
+          <h2 className="text-base font-bold text-[#F5F5F5]"> 
+            {activeTab === "reviews" && "Reviews Written"} 
+            {activeTab === "likes" && "Liked Reviews"} 
+            {activeTab === "reports" && "Reports Filed"} 
+            {activeTab === "moderation" && "Moderation Queue"} 
+          </h2> 
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#1A1A1A] text-[#7A7A7A] border border-[#262626] font-tabular"> 
+            {activeTab === "reviews" && reviewsList.length} 
+            {activeTab === "likes" && likesList.length} 
+            {activeTab === "reports" && reportsList.length} 
+            {activeTab === "moderation" && modReportsList.length} 
+          </span> 
+        </div> 
       </div> 
 
       {loading ? ( 
@@ -790,6 +788,18 @@ export function DashboardPage() {
                             </p> 
                           </div> 
                         )} 
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1C1C1C]"> 
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setDeletingReportId(report.id)} 
+                            className="text-xs gap-1.5 py-1 px-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer" 
+                          > 
+                            <Trash2 size={12} /> 
+                            <span>Delete Report</span> 
+                          </Button> 
+                        </div> 
                       </article> 
                     ); 
                   })} 
@@ -994,6 +1004,40 @@ export function DashboardPage() {
                 className="text-xs font-semibold px-4 bg-red-500 hover:bg-red-600 text-white border-0 cursor-pointer" 
               > 
                 <span>{deleting ? "Deleting..." : "Delete Review"}</span> 
+              </Button> 
+            </div> 
+          </div> 
+        </div> 
+      )} 
+
+      {deletingReportId && ( 
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
+          <div className="w-full max-w-sm bg-[#0B0B0B] border border-[#1C1C1C] rounded-2xl p-6 text-[#F5F5F5] text-center"> 
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-3"> 
+              <Trash2 size={20} /> 
+            </div> 
+            <h2 className="text-base font-bold text-[#F5F5F5] mb-2">Delete Report?</h2> 
+            <p className="text-xs text-[#7A7A7A] leading-relaxed mb-6"> 
+              Are you sure you want to delete this report? This will remove it from your records. 
+            </p> 
+            <div className="flex justify-center gap-2.5"> 
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={deletingReport} 
+                onClick={() => setDeletingReportId(null)} 
+                className="text-xs px-4 cursor-pointer" 
+              > 
+                <span>Cancel</span> 
+              </Button> 
+              <Button 
+                variant="primary" 
+                size="sm" 
+                disabled={deletingReport} 
+                onClick={handleDeleteReport} 
+                className="text-xs font-semibold px-4 bg-red-500 hover:bg-red-600 text-white border-0 cursor-pointer" 
+              > 
+                <span>{deletingReport ? "Deleting..." : "Delete Report"}</span> 
               </Button> 
             </div> 
           </div> 

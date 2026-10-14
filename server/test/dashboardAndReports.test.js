@@ -20,3 +20,11 @@ test("routes are properly defined and exported", () => {
   assert.ok(reportRoutes); 
   assert.ok(reviewRoutes); 
 }); 
+
+test("schema.sql contains delete policy for reports", () => { 
+  const schemaPath = path.resolve("schema.sql"); 
+  const sql = fs.readFileSync(schemaPath, "utf-8"); 
+
+  assert.match(sql, /CREATE POLICY "Allow reporters to delete own reports"/); 
+}); 
+

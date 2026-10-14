@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation, useParams, Link } from "react-router-dom";
+import { useLocation, useParams, Link, useNavigate } from "react-router-dom";
 import {
   Star,
   Plus,
@@ -21,6 +21,21 @@ import { CastCarousel } from "../components/ui/CastCarousel";
 import { useAuth } from "../context/AuthContext"; 
 import api from "../services/api"; 
 
+
+const formatReviewDate = (dateStr) => { 
+  if (!dateStr) return ""; 
+  try { 
+    const d = new Date(dateStr); 
+    if (isNaN(d.getTime())) return dateStr; 
+    return d.toLocaleDateString("en-US", { 
+      month: "short", 
+      day: "numeric", 
+      year: "numeric", 
+    }); 
+  } catch { 
+    return dateStr; 
+  } 
+}; 
 
 const NAVBAR_AVATAR = 
   "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
@@ -52,6 +67,7 @@ export function MovieDetailsPage({
   initialCropHero = false,
 }) {
   const location = useLocation(); 
+  const navigate = useNavigate(); 
   const { category, id } = useParams(); 
   const { user, userProfile } = useAuth(); 
   const isReviewsUrl = location.pathname.includes("/reviews"); 
@@ -167,7 +183,10 @@ export function MovieDetailsPage({
   const isLongSynopsis = contentHeight === 0 || contentHeight > 82; 
   const [newThought, setNewThought] = useState(""); 
   const [selectedScore, setSelectedScore] = useState(8); 
-  const [repliesExpanded, setRepliesExpanded] = useState(false); 
+  const [expandedReplies, setExpandedReplies] = useState({}); 
+  const [replyingToReviewId, setReplyingToReviewId] = useState(null); 
+  const [replyText, setReplyText] = useState(""); 
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false); 
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false); 
   const [sortBy, setSortBy] = useState("Top"); 
   const [likedReviews, setLikedReviews] = useState({}); 
@@ -357,6 +376,82 @@ export function MovieDetailsPage({
       } 
     } catch (err) { 
       alert(err.message || "Failed to delete review"); 
+    } 
+  }; 
+
+  const toggleReplies = (reviewId) => { 
+    setExpandedReplies((prev) => ({ 
+      ...prev, 
+      [reviewId]: !prev[reviewId], 
+    })); 
+  }; 
+
+  const handleToggleReplyBox = (reviewId) => { 
+    if (!user) { 
+      navigate("/login"); 
+      return; 
+    } 
+    if (replyingToReviewId === reviewId) { 
+      setReplyingToReviewId(null); 
+      setReplyText(""); 
+    } else { 
+      setReplyingToReviewId(reviewId); 
+      setReplyText(""); 
+      setExpandedReplies((prev) => ({ ...prev, [reviewId]: true })); 
+    } 
+  }; 
+
+  const handlePostReply = async (parentId) => { 
+    if (!user) { 
+      navigate("/login"); 
+      return; 
+    } 
+    if (!replyText.trim() || !movieData) return; 
+    setIsSubmittingReply(true); 
+    try { 
+      const currentProvider = category 
+        ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
+        : "tmdb"; 
+      const currentType = category 
+        ? (category === "manga" ? "MANGA" : category === "manhwa" ? "MANHWA" : category === "manhua" ? "MANHUA" : "BOOK") 
+        : "MOVIE"; 
+
+      const payload = { 
+        external_id: id || (movieData?.id ? String(movieData.id) : "157336"), 
+        provider: currentProvider, 
+        type: currentType, 
+        title: movieData.title, 
+        cover_url: movieData.poster || movieData.backdrop, 
+        parent_id: parentId, 
+        content: replyText.trim(), 
+      }; 
+
+      const res = await api.post("/reviews", payload); 
+      if (res?.success && res.data) { 
+        const createdReply = res.data; 
+        setCommunityData((prev) => ({ 
+          ...prev, 
+          reviews: (prev?.reviews || []).map((r) => { 
+            if (r.id === parentId) { 
+              const existingReplies = Array.isArray(r.replies) ? r.replies : []; 
+              return { 
+                ...r, 
+                repliesCount: (r.repliesCount || 0) + 1, 
+                replies: [...existingReplies, createdReply], 
+              }; 
+            } 
+            return r; 
+          }), 
+        })); 
+        setReplyText(""); 
+        setReplyingToReviewId(null); 
+        setExpandedReplies((prev) => ({ ...prev, [parentId]: true })); 
+      } 
+    } catch (err) { 
+      console.error("Failed to post reply:", err); 
+      alert(err.message || "Failed to post reply."); 
+    } finally { 
+      setIsSubmittingReply(false); 
     } 
   }; 
 
@@ -1054,7 +1149,10 @@ export function MovieDetailsPage({
 
                           <button 
                             type="button" 
-                            className="flex items-center gap-1 hover:text-[#F5F5F5] transition-colors cursor-pointer" 
+                            onClick={() => handleToggleReplyBox(rev.id)} 
+                            className={`flex items-center gap-1 transition-colors cursor-pointer ${ 
+                              replyingToReviewId === rev.id ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
+                            }`} 
                           > 
                             <Reply size={13} /> 
                             <span>Reply</span> 
@@ -1086,23 +1184,67 @@ export function MovieDetailsPage({
                         {rev.repliesCount > 0 && ( 
                           <button 
                             type="button" 
-                            onClick={() => setRepliesExpanded(!repliesExpanded)} 
+                            onClick={() => toggleReplies(rev.id)} 
                             className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1" 
                           > 
                             <span> 
-                              {repliesExpanded 
+                              {expandedReplies[rev.id] 
                                 ? "Hide replies" 
-                                : `View ${rev.repliesCount} replies ⌄`} 
+                                : `View ${rev.repliesCount} ${rev.repliesCount === 1 ? "reply" : "replies"} ⌄`} 
                             </span> 
                           </button> 
                         )} 
                       </div> 
                     )} 
 
-                    {rev.replies && repliesExpanded && rev.source === "community" && ( 
-                      <div className="mt-4 pl-11 space-y-3.5 pt-3 border-t border-[#1C1C1C]/40"> 
+                    {replyingToReviewId === rev.id && rev.source === "community" && ( 
+                      <div className="mt-3.5 pl-11"> 
+                        <div className="bg-[#101010] border border-[#222222] focus-within:border-[#61F1AC]/50 rounded-xl p-3 transition-colors"> 
+                          <div className="flex items-start gap-2.5 mb-2.5"> 
+                            <ReviewAvatar 
+                              src={currentUserAvatar} 
+                              alt="Your Avatar" 
+                              size="w-6 h-6" 
+                            /> 
+                            <textarea 
+                              value={replyText} 
+                              onChange={(e) => setReplyText(e.target.value)} 
+                              placeholder={`Reply to ${rev.author}…`} 
+                              rows={2} 
+                              className="w-full bg-transparent text-[#F5F5F5] placeholder-[#666666] text-xs resize-none outline-none leading-relaxed" 
+                              autoFocus 
+                            /> 
+                          </div> 
+                          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1C1C1C]"> 
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => { 
+                                setReplyingToReviewId(null); 
+                                setReplyText(""); 
+                              }} 
+                              className="text-xs px-2.5 py-1 text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer" 
+                            > 
+                              Cancel 
+                            </Button> 
+                            <Button 
+                              variant="primary" 
+                              size="sm" 
+                              disabled={isSubmittingReply || !replyText.trim()} 
+                              onClick={() => handlePostReply(rev.id)} 
+                              className="text-xs font-semibold px-3.5 py-1 cursor-pointer" 
+                            > 
+                              <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
+                            </Button> 
+                          </div> 
+                        </div> 
+                      </div> 
+                    )} 
+
+                    {rev.replies && expandedReplies[rev.id] && rev.source === "community" && ( 
+                      <div className="mt-3.5 pl-11 space-y-2.5 pt-3 border-t border-[#1C1C1C]/40"> 
                         {rev.replies.map((reply) => ( 
-                          <div key={reply.id} className="text-xs"> 
+                          <div key={reply.id} className="text-xs bg-[#0E0E0E] rounded-xl p-3 border border-[#1A1A1A]"> 
                             <div className="flex items-center gap-2 mb-1"> 
                               <ReviewAvatar 
                                 src={reply.avatar} 
@@ -1112,12 +1254,17 @@ export function MovieDetailsPage({
                               <span className="font-medium text-[#F5F5F5]"> 
                                 {reply.author} 
                               </span> 
-                              <span className="text-[#7A7A7A]">·</span> 
-                              <span className="text-[#7A7A7A]"> 
-                                {reply.time} 
+                              {reply.is_edited && ( 
+                                <span className="text-[10px] text-[#7A7A7A] italic"> 
+                                  (edited) 
+                                </span> 
+                              )} 
+                              <span className="text-[#555555]">·</span> 
+                              <span className="text-[11px] text-[#7A7A7A]"> 
+                                {formatReviewDate(reply.time)} 
                               </span> 
                             </div> 
-                            <p className="text-[#B5B5B5] leading-relaxed pl-7"> 
+                            <p className="text-[#B5B5B5] leading-relaxed pl-7 whitespace-pre-wrap"> 
                               {reply.content} 
                             </p> 
                           </div> 
