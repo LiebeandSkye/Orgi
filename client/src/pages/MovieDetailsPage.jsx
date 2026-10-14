@@ -14,11 +14,11 @@ import { getMovieDetails, getMovieMedia } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing"; 
 import { Button } from "../components/ui/Button"; 
 import { ReviewSlider } from "../components/ui/ReviewSlider"; 
-import { INTERSTELLAR_DATA } from "../data/mockData"; 
 import MediaItems from "../components/ui/MediaItems"; 
 import { fetchMediaDetails } from "../services/mediaApi"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import api from "../services/api"; 
+
 
 const NAVBAR_AVATAR = 
   "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
@@ -44,7 +44,6 @@ function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
     </div> 
   ); 
 } 
-
 
 export function MovieDetailsPage({
   initialTab = "Cast",
@@ -137,25 +136,24 @@ export function MovieDetailsPage({
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
   const synopsisRef = useRef(null);
   const [contentHeight, setContentHeight] = useState(0);
+  const [hasOverflow, setHasOverflow] = useState(false);
 
   const displaySynopsis =
     (movieData?.synopsis || "") +
-    (movieData?.synopsis &&
+    ((movieData?.id === 157336 || movieData?.title?.toLowerCase() === "interstellar") &&
+    movieData?.synopsis &&
     movieData.synopsis.length < 260 &&
     !movieData.synopsis.includes("dust storms")
       ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
       : "");
 
   useEffect(() => {
-    if (synopsisRef.current) {
-      setContentHeight(synopsisRef.current.scrollHeight);
-    }
-  }, [displaySynopsis]);
-
-  useEffect(() => {
-    const handleResize = () => {
+    const checkOverflow = () => {
       if (synopsisRef.current) {
-        setContentHeight(synopsisRef.current.scrollHeight);
+        const height = synopsisRef.current.scrollHeight;
+        setContentHeight(height);
+        // 5rem is 80px. If content is taller than 80px, it overflows and requires a See more button
+        setHasOverflow(height > 80);
       }
     };
     window.addEventListener("resize", handleResize);
@@ -365,7 +363,7 @@ export function MovieDetailsPage({
       default: 
         return 0; 
     } 
-  });
+  }); 
 
   const contentRef = useRef(null);
 
@@ -551,8 +549,8 @@ export function MovieDetailsPage({
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
                 style={{
-                  maxHeight: synopsisExpanded
-                    ? `${(contentHeight || 300) + 4}px`
+                  maxHeight: !hasOverflow || synopsisExpanded
+                    ? `${contentHeight > 0 ? contentHeight + 4 : 400}px`
                     : "5rem",
                 }}
                 className="relative overflow-hidden transition-[max-height] duration-500 ease-in-out"
@@ -563,20 +561,23 @@ export function MovieDetailsPage({
                   </p>
                 </div>
 
-                <div
-                  className={`pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-[#000000] via-[#000000]/70 to-transparent transition-opacity duration-300 ${
-                    synopsisExpanded ? "opacity-0" : "opacity-100"
-                  }`}
-                />
+                {/* Dark blur at the end ONLY if it has a See more button and is not expanded */}
+                {hasOverflow && (
+                  <div
+                    className={`pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-[#000000] via-[#000000]/70 to-transparent transition-opacity duration-300 ${
+                      synopsisExpanded ? "opacity-0" : "opacity-100"
+                    }`}
+                  />
+                )}
               </div>
 
-              {isLongSynopsis && (
+              {hasOverflow && (
                 <button
                   type="button"
                   onClick={() => setSynopsisExpanded((prev) => !prev)}
                   className="mt-2 text-sm font-medium text-[#61F1AC] hover:text-[#61F1AC]/80 cursor-pointer inline-flex items-center gap-1.5 transition-colors"
                 >
-                  <span>{synopsisExpanded ? "Show less" : "Read more"}</span>
+                  <span>{synopsisExpanded ? "Show less" : "See more"}</span>
                   <ChevronDown
                     size={16}
                     className={`transition-transform duration-500 ease-in-out ${
@@ -962,56 +963,50 @@ export function MovieDetailsPage({
             <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight mb-6">
               Production &amp; Technical Specifications
             </h2>
-            <div className="divide-y divide-[#1C1C1C] text-sm">
-              <div className="py-3 flex justify-between">
-                <span className="text-[#7A7A7A]">Director</span>
-                <span className="text-[#F5F5F5]">
-                  {movieData.details?.director ||
-                    INTERSTELLAR_DATA.details.director}
-                </span>
-              </div>
-              <div className="py-3 flex justify-between">
-                <span className="text-[#7A7A7A]">Writers</span>
-                <span className="text-[#F5F5F5]">
-                  {movieData.details?.writers ||
-                    INTERSTELLAR_DATA.details.writers}
-                </span>
-              </div>
-              <div className="py-3 flex justify-between">
-                <span className="text-[#7A7A7A]">Original Score</span>
-                <span className="text-[#F5F5F5]">
-                  {movieData.details?.music || INTERSTELLAR_DATA.details.music}
-                </span>
-              </div>
-              <div className="py-3 flex justify-between">
-                <span className="text-[#7A7A7A]">Cinematography</span>
-                <span className="text-[#F5F5F5]">
-                  {movieData.details?.cinematography ||
-                    INTERSTELLAR_DATA.details.cinematography}
-                </span>
-              </div>
-              <div className="py-3 flex justify-between">
-                <span className="text-[#7A7A7A]">Box Office</span>
-                <span className="text-[#F5F5F5] font-tabular">
-                  {movieData.details?.boxOffice ||
-                    INTERSTELLAR_DATA.details.boxOffice}
-                </span>
-              </div>
-              <div className="py-3 flex justify-between">
-                <span className="text-[#7A7A7A]">Aspect Ratio</span>
-                <span className="text-[#F5F5F5] font-tabular">
-                  {movieData.details?.aspectRatio ||
-                    INTERSTELLAR_DATA.details.aspectRatio}
-                </span>
-              </div>
-              <div className="py-3 flex justify-between">
-                <span className="text-[#7A7A7A]">Studio</span>
-                <span className="text-[#F5F5F5]">
-                  {movieData.details?.studio ||
-                    INTERSTELLAR_DATA.details.studio}
-                </span>
-              </div>
-            </div>
+            <div className="divide-y divide-[#1C1C1C] text-sm"> 
+              <div className="py-3 flex justify-between"> 
+                <span className="text-[#7A7A7A]">Director</span> 
+                <span className="text-[#F5F5F5]"> 
+                  {movieData.details?.director || "Christopher Nolan"} 
+                </span> 
+              </div> 
+              <div className="py-3 flex justify-between"> 
+                <span className="text-[#7A7A7A]">Writers</span> 
+                <span className="text-[#F5F5F5]"> 
+                  {movieData.details?.writers || "Jonathan Nolan, Christopher Nolan"} 
+                </span> 
+              </div> 
+              <div className="py-3 flex justify-between"> 
+                <span className="text-[#7A7A7A]">Original Score</span> 
+                <span className="text-[#F5F5F5]"> 
+                  {movieData.details?.music || "Hans Zimmer"} 
+                </span> 
+              </div> 
+              <div className="py-3 flex justify-between"> 
+                <span className="text-[#7A7A7A]">Cinematography</span> 
+                <span className="text-[#F5F5F5]"> 
+                  {movieData.details?.cinematography || "Hoyte van Hoytema"} 
+                </span> 
+              </div> 
+              <div className="py-3 flex justify-between"> 
+                <span className="text-[#7A7A7A]">Box Office</span> 
+                <span className="text-[#F5F5F5] font-tabular"> 
+                  {movieData.details?.boxOffice || "$701.7M USD"} 
+                </span> 
+              </div> 
+              <div className="py-3 flex justify-between"> 
+                <span className="text-[#7A7A7A]">Aspect Ratio</span> 
+                <span className="text-[#F5F5F5] font-tabular"> 
+                  {movieData.details?.aspectRatio || "2.39:1 (Widescreen)"} 
+                </span> 
+              </div> 
+              <div className="py-3 flex justify-between"> 
+                <span className="text-[#7A7A7A]">Studio</span> 
+                <span className="text-[#F5F5F5]"> 
+                  {movieData.details?.studio || "Syncopy, Lynda Obst Productions"} 
+                </span> 
+              </div> 
+            </div> 
           </div>
         )}
       </main>

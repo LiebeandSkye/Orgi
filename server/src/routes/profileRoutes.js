@@ -1,20 +1,21 @@
 import express from "express"; 
 import { supabase } from "../services/supabase.js"; 
 import { requireAuth } from "../middlewares/authMiddleware.js"; 
-import { helperGenerateRandomId } from "../services/functionHelper.js"; 
+import { helperGenerateRandomId } from "../utils/helperGenerateRandomId.js"; 
 
 const router = express.Router(); 
 
 router.get("/:id", async(req, res, next) => { 
     try { 
         const { id } = req.params; 
-        const { data, error } = await supabase.from("users").select("*").eq("id", id).maybeSingle(); 
+        const { data: user, error } = await supabase 
+            .from("users") 
+            .select("*") 
+            .eq("id", id) 
+            .maybeSingle(); 
         if (error) throw error; 
-        if (!data) { 
-            return res.status(404).json({ error: { message: "User profile not found", code: "NOT_FOUND" } }); 
-        } 
-        
-        res.json({ success: true, data }); 
+        if (!user) return res.status(404).json({ error: { message: "User not found" } }); 
+        res.json({ success: true, data: user }); 
     } 
     catch (err) { next(err); } 
 }); 

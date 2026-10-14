@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
     setting_preference JSONB NOT NULL DEFAULT '{}'::jsonb, 
     inventory JSONB NOT NULL DEFAULT '{"collections": {"Ring": 0, "Cloud": 0, "Box": 0}}'::jsonb, 
     collection JSONB, -- 'item_1:{external_id:"",provider:"tmdb",type:"movie"}, item_2:{external_id:"",provider:"mangadex",type:"manga"}'::jsonb, 
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
     last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW() 
 ); 

@@ -11,6 +11,18 @@
     --text-review: #D0D0D0;
     --text-muted: #7A7A7A;
     --accent-mint: #61F1AC;
+
+    /* Community Reviews / Feed Design Tokens */
+    --nav-h: 64px;
+    --feed-bg: #000000;
+    --feed-surface: #0B0B0B;
+    --feed-surface-hover: #141414;
+    --feed-border: #1C1C1C;
+    --feed-text: #F5F5F5;
+    --feed-muted: #B5B5B5;
+    --feed-faint: #7A7A7A;
+    --feed-accent: #61F1AC;
+    --feed-accent-soft: rgba(97, 241, 172, 0.12);
   }
 
   body {
@@ -20,7 +32,7 @@
     letter-spacing: -0.015em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 }
 

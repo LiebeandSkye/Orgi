@@ -45,7 +45,7 @@ async function fetchFromTMDB(endpoint, params = {}) {
         //TRENDING
         async getTrending(mediaType = "all", timeWindow = "week"){
             const data = await fetchFromTMDB(`/trending/${mediaType}/${timeWindow}`);
-            return data.results.map((item) => formatTMDBItem(item, item.media_tyoe));
+            return data.results.map((item) => formatTMDBItem(item, item.media_type));
         },
 
         //KDRAMA

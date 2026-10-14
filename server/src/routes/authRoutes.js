@@ -54,7 +54,7 @@ router.post('/anonymous', async(req, res, next) => {
         res.json({ success: true, data }); 
     }
     catch (err) { next(err) }
-})
+}); 
 
 router.post('/login', async(req, res, next) => { 
 
