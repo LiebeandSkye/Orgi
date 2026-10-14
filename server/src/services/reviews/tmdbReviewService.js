@@ -1,5 +1,5 @@
 import { createExcerpt } from "./excerpt.js";
-import { selectBestReview } from "./bestReview.js";
+import { selectBestReview, scoreReview } from "./bestReview.js";
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
@@ -133,11 +133,17 @@ export async function fetchTmdbCandidates() {
 
   const endpoints = [
     { path: "/trending/movie/week", type: "movie", page: 1 },
+    { path: "/trending/movie/week", type: "movie", page: 2 },
     { path: "/trending/tv/week", type: "tv", page: 1 },
+    { path: "/trending/tv/week", type: "tv", page: 2 },
     { path: "/movie/popular", type: "movie", page: 1 },
+    { path: "/movie/popular", type: "movie", page: 2 },
     { path: "/tv/popular", type: "tv", page: 1 },
+    { path: "/tv/popular", type: "tv", page: 2 },
     { path: "/movie/top_rated", type: "movie", page: 1 },
+    { path: "/movie/top_rated", type: "movie", page: 2 },
     { path: "/tv/top_rated", type: "tv", page: 1 },
+    { path: "/tv/top_rated", type: "tv", page: 2 },
     {
       path: "/discover/tv",
       type: "tv",
@@ -145,9 +151,21 @@ export async function fetchTmdbCandidates() {
       params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" },
     },
     {
+      path: "/discover/tv",
+      type: "tv",
+      page: 2,
+      params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" },
+    },
+    {
       path: "/discover/movie",
       type: "movie",
       page: 1,
+      params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" },
+    },
+    {
+      path: "/discover/movie",
+      type: "movie",
+      page: 2,
       params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" },
     },
   ];
@@ -217,14 +235,15 @@ export async function getTmdbReviewCards() {
         return null; // Drop titles with zero reviews
       }
 
-      const best = selectBestReview(reviewsList);
-      if (!best) return null;
+      const scored = reviewsList
+        .map((rev) => ({ rev, score: scoreReview(rev) }))
+        .filter((entry) => entry.score > -20)
+        .sort((a, b) => b.score - a.score);
 
-      const rawRating = best.author_details?.rating;
-      const normalizedRating =
-        rawRating !== null && rawRating !== undefined && !Number.isNaN(Number(rawRating))
-          ? Math.round(Number(rawRating) * 10) / 10
-          : undefined;
+      if (scored.length === 0) return null;
+
+      // Select up to 2 best quality reviews for this title
+      const topReviews = scored.slice(0, 2).map((entry) => entry.rev);
 
       const titleYear =
         item.release_date?.substring(0, 4) ||
@@ -239,38 +258,44 @@ export async function getTmdbReviewCards() {
       const category = isAnime ? "anime" : mediaType === "tv" ? "series" : "movie";
       const mediaLabel = isAnime ? "Anime" : mediaType === "tv" ? "Series" : "Movie";
 
-      const card = {
-        id: `tmdb:${item.id}:${best.id}`,
-        source: "tmdb",
-        category,
-        titleId: String(item.id),
-        title: item.title || item.name || "Untitled",
-        year: titleYear ? parseInt(titleYear, 10) : undefined,
-        mediaLabel,
-        posterUrl: item.poster_path ? `${TMDB_IMAGE_BASE}/w342${item.poster_path}` : undefined,
-        backdropUrl: item.backdrop_path ? `${TMDB_IMAGE_BASE}/w780${item.backdrop_path}` : undefined,
-        genres: itemGenres,
-        rating: normalizedRating,
-        ratingKind: "review",
-        excerpt: createExcerpt(best.content, 220),
-        excerptKind: "review",
-        rawContent: best.content,
-        author: {
-          name: best.author_details?.username || best.author || "Anonymous",
-          avatarUrl: resolveAvatarUrl(best.author_details?.avatar_path),
-        },
-        createdAt: best.created_at || new Date().toISOString(),
-        containsSpoilers: /spoiler/i.test(best.content),
-        detailHref: `/reviews/tmdb/${item.id}/${best.id}`,
-        mediaType,
-      };
+      return topReviews.map((rev) => {
+        const rawRating = rev.author_details?.rating;
+        const normalizedRating =
+          rawRating !== null && rawRating !== undefined && !Number.isNaN(Number(rawRating))
+            ? Math.round(Number(rawRating) * 10) / 10
+            : undefined;
 
-      return card;
+        return {
+          id: `tmdb:${item.id}:${rev.id}`,
+          source: "tmdb",
+          category,
+          titleId: String(item.id),
+          title: item.title || item.name || "Untitled",
+          year: titleYear ? parseInt(titleYear, 10) : undefined,
+          mediaLabel,
+          posterUrl: item.poster_path ? `${TMDB_IMAGE_BASE}/w342${item.poster_path}` : undefined,
+          backdropUrl: item.backdrop_path ? `${TMDB_IMAGE_BASE}/w780${item.backdrop_path}` : undefined,
+          genres: itemGenres,
+          rating: normalizedRating,
+          ratingKind: "review",
+          excerpt: createExcerpt(rev.content, 220),
+          excerptKind: "review",
+          rawContent: rev.content,
+          author: {
+            name: rev.author_details?.username || rev.author || "Anonymous",
+            avatarUrl: resolveAvatarUrl(rev.author_details?.avatar_path),
+          },
+          createdAt: rev.created_at || new Date().toISOString(),
+          containsSpoilers: /spoiler/i.test(rev.content),
+          detailHref: `/reviews/tmdb/${item.id}/${rev.id}`,
+          mediaType,
+        };
+      });
     },
-    8
+    12
   );
 
-  const validCards = cards.filter(Boolean);
+  const validCards = cards.filter(Boolean).flat();
   console.log(`🎬 [TMDB] Successfully built ${validCards.length} review cards.`);
 
   tmdbReviewCardsCache = validCards;

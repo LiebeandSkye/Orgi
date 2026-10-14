@@ -32,14 +32,14 @@ const LABEL_MAP = {
 // Categories grouped under the "Reading" dropdown
 const READING_IDS = ["manga", "manhwa", "book", "novel", "light-novel"];
 
-const ACTIVE_ROW = "bg-[#61F1AC]/[0.12] text-[#61F1AC]";
+const ACTIVE_ROW = "bg-[#141a17] text-[#e8ecea]";
 const IDLE_ROW =
-  "text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414]";
+  "text-[#8b9692] hover:text-[#e8ecea] hover:bg-[#101614]";
 
 function ActiveBar() {
   return (
     <span
-      className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#61F1AC]"
+      className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#19d68a]"
       aria-hidden="true"
     />
   );
@@ -75,7 +75,7 @@ export function BrowseNav({ currentCategory, onSelectCategory }) {
         <Icon
           size={18}
           strokeWidth={1.6}
-          className={`shrink-0 ${isActive ? "text-[#61F1AC]" : "text-[#7A7A7A]"}`}
+          className={`shrink-0 ${isActive ? "text-[#19d68a]" : "text-[#8b9692]"}`}
         />
         <span className="truncate flex-1">
           {LABEL_MAP[cat.id] || cat.label}
@@ -87,7 +87,7 @@ export function BrowseNav({ currentCategory, onSelectCategory }) {
   // Insert the Reading group right after the last top-level item
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#7A7A7A] mb-2.5 px-1">
+      <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#5d6763] mb-2.5 px-1">
         BROWSE
       </span>
 
@@ -109,20 +109,20 @@ export function BrowseNav({ currentCategory, onSelectCategory }) {
                 readingActive && !readingOpen
                   ? ACTIVE_ROW
                   : readingActive
-                    ? "text-[#F5F5F5] hover:bg-[#141414]"
+                    ? "text-[#e8ecea] hover:bg-[#101614]"
                     : IDLE_ROW
               }`}
             >
               <BookOpen
                 size={18}
                 strokeWidth={1.6}
-                className={`shrink-0 ${readingActive ? "text-[#61F1AC]" : "text-[#7A7A7A]"}`}
+                className={`shrink-0 ${readingActive ? "text-[#19d68a]" : "text-[#8b9692]"}`}
               />
               <span className="truncate flex-1">Reading</span>
               <ChevronDown
                 size={16}
                 strokeWidth={1.8}
-                className={`shrink-0 text-[#7A7A7A] transition-transform duration-200 ${
+                className={`shrink-0 text-[#5d6763] transition-transform duration-200 ${
                   readingOpen ? "rotate-180" : ""
                 }`}
               />
@@ -138,7 +138,7 @@ export function BrowseNav({ currentCategory, onSelectCategory }) {
               }`}
             >
               <div className="overflow-hidden">
-                <div className="ml-[21px] mt-0.5 mb-0.5 pl-2 border-l border-[#1C1C1C] flex flex-col gap-0.5">
+                <div className="ml-[21px] mt-0.5 mb-0.5 pl-2 border-l border-white/[0.08] flex flex-col gap-0.5">
                   {readingItems.map((cat) => {
                     const isActive = current === cat.id;
                     return (

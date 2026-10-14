@@ -5,7 +5,7 @@ export function Pagination({
   currentPage = 1,
   totalPages = 1,
   totalItems = 0,
-  pageSize = 25,
+  pageSize = 50,
   onPageChange,
 }) {
   if (totalPages <= 1) {

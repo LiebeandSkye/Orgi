@@ -73,15 +73,15 @@ async function getItemsForCategory(category) {
       return tmdbCards.filter((c) => c.category === "anime");
     }
     case "manga":
-      return await getMangaDexCards("manga");
+      return await getMangaDexCards("manga", 100);
     case "manhwa":
-      return await getMangaDexCards("manhwa");
+      return await getMangaDexCards("manhwa", 100);
     case "book":
-      return await getOpenLibraryCards("book");
+      return await getOpenLibraryCards("book", 100);
     case "novel":
-      return await getOpenLibraryCards("novel");
+      return await getOpenLibraryCards("novel", 100);
     case "light-novel":
-      return await getOpenLibraryCards("light-novel");
+      return await getOpenLibraryCards("light-novel", 100);
     default:
       return await getTmdbReviewCards();
   }
@@ -152,20 +152,16 @@ export async function queryReviews({
     return timeB - timeA;
   });
 
-  // 5. Cap total pool to around 50 reviews per spec
-  const MAX_REVIEWS = 50;
-  const cappedPool = sorted.slice(0, MAX_REVIEWS);
-
-  // 6. Paginate by page number or offset cursor (default 25 per page -> 2 pages for 50 reviews)
-  const parsedLimit = Math.max(1, Math.min(50, parseInt(limit, 10) || 25));
+  // 5. Paginate by page number or offset cursor (default 50 reviews per page)
+  const parsedLimit = Math.max(1, parseInt(limit, 10) || 50);
   const pageNum = page
     ? Math.max(1, parseInt(page, 10) || 1)
     : Math.floor(Math.max(0, parseInt(cursor, 10) || 0) / parsedLimit) + 1;
   const calculatedOffset = (pageNum - 1) * parsedLimit;
 
-  const total = cappedPool.length;
+  const total = sorted.length;
   const totalPages = Math.max(1, Math.ceil(total / parsedLimit));
-  const pagedItems = cappedPool.slice(calculatedOffset, calculatedOffset + parsedLimit);
+  const pagedItems = sorted.slice(calculatedOffset, calculatedOffset + parsedLimit);
   const nextOffset = calculatedOffset + parsedLimit;
   const nextCursor = nextOffset < total ? String(nextOffset) : null;
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowRight, RefreshCw, AlertCircle, Sparkles } from "lucide-react";
+import { ArrowRight, RefreshCw, AlertCircle, ArrowUp, Sparkles } from "lucide-react";
 import { useReviewFilters, CATEGORIES } from "../hooks/useReviewFilters";
 import { useReviewsFeed } from "../hooks/useReviewsFeed";
 import { useBookmarks } from "../hooks/useBookmarks";
@@ -47,9 +47,24 @@ export function ReviewsPage() {
     isLoading,
     error,
     retry,
-  } = useReviewsFeed({ category, sort, rating, type, q, page, limit: 25 });
+  } = useReviewsFeed({ category, sort, rating, type, q, page, limit: 50 });
 
   const { isBookmarked, toggleBookmark, toastMessage } = useBookmarks();
+
+  // Scroll to top button visibility state
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Mobile filter sheet state
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -381,6 +396,21 @@ export function ReviewsPage() {
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* Floating Scroll to Top Button */}
+      <button
+        type="button"
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+        title="Scroll to top"
+        className={`fixed bottom-6 right-6 z-40 w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#101010]/90 hover:bg-[#181818] text-[#8A8A8A] hover:text-[#61F1AC] border border-[#222222] hover:border-[#61F1AC]/50 shadow-xl backdrop-blur-md flex items-center justify-center transition-all duration-300 cursor-pointer active:scale-95 ${
+          showScrollTop
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+      >
+        <ArrowUp size={18} />
+      </button>
     </div>
   );
 }

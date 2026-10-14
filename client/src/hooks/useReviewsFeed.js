@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 /**
  * Hook for fetching reviews feed with page-based pagination.
  */
-export function useReviewsFeed({ category, sort, rating, type, q, page = 1, limit = 25 }) {
+export function useReviewsFeed({ category, sort, rating, type, q, page = 1, limit = 50 }) {
   const [items, setItems] = useState([]);
   const [capabilities, setCapabilities] = useState({
     hasRating: true,
@@ -27,7 +27,7 @@ export function useReviewsFeed({ category, sort, rating, type, q, page = 1, limi
     if (type && type !== "all") params.set("type", type);
     if (q && q.trim()) params.set("q", q.trim());
     params.set("page", String(page || 1));
-    params.set("limit", String(limit || 25));
+    params.set("limit", String(limit || 50));
 
     try {
       const res = await fetch(`/api/reviews?${params.toString()}`);
