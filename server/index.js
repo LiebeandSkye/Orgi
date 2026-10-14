@@ -8,6 +8,8 @@ import profileRoutes from "./src/routes/profileRoutes.js";
 import mediaRoutes from "./src/routes/mediaRoutes.js"; 
 import collectionRoutes from "./src/routes/collectionRoutes.js"; 
 import reviewRoutes from "./src/routes/reviewRoutes.js"; 
+import reportRoutes from "./src/routes/reportRoutes.js"; 
+import dashboardRoutes from "./src/routes/dashboardRoutes.js"; 
 import { errorHandler } from "./src/middlewares/errorHandler.js"; 
 
 const app = express(); 
@@ -23,6 +25,8 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/media", mediaRoutes); 
 app.use("/api/collections", collectionRoutes); 
 app.use("/api/reviews", reviewRoutes); 
+app.use("/api/reports", reportRoutes); 
+app.use("/api/dashboard", dashboardRoutes); 
 
 app.use((req, res) => { 
     res.status(404).json({ 

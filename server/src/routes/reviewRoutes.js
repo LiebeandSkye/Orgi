@@ -1,6 +1,6 @@
 import express from "express"; 
 import { reviewController } from "../controllers/reviewController.js"; 
-import { requireAuth } from "../middlewares/authMiddleware.js"; 
+import { requireAuth, optionalAuth } from "../middlewares/authMiddleware.js"; 
 import { 
   queryReviews, 
   getTopRatedReviews, 
@@ -51,10 +51,14 @@ router.get("/featured", async (req, res, next) => {
   } 
 }); 
 
+router.get("/user/my", requireAuth, reviewController.getMyReviews); 
+router.get("/user/likes", requireAuth, reviewController.getMyLikes); 
+
 router.post("/", requireAuth, reviewController.createReview); 
+router.post("/:id/like", requireAuth, reviewController.toggleLike); 
 router.delete("/:id", requireAuth, reviewController.deleteReview); 
 
-router.get("/:provider/:externalId", async (req, res, next) => { 
+router.get("/:provider/:externalId", optionalAuth, async (req, res, next) => { 
   try { 
     return reviewController.getReviews(req, res, next); 
   } catch (err) { 

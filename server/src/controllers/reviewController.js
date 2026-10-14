@@ -32,6 +32,7 @@ export const reviewController = {
           parent_id, 
           score, 
           content, 
+          is_edited, 
           created_at, 
           updated_at, 
           users ( 
@@ -60,6 +61,7 @@ export const reviewController = {
             author: rev.users?.user_name || "Unnamed Orgi", 
             avatar: rev.users?.profile_url || "", 
             content: rev.content, 
+            is_edited: rev.is_edited || false, 
             time: rev.created_at, 
             source: "community", 
           }); 
@@ -72,6 +74,24 @@ export const reviewController = {
         } 
       }); 
  
+      const reviewIds = topLevel.map((r) => r.id); 
+      const likesCountMap = {}; 
+      const userLikedSet = new Set(); 
+ 
+      if (reviewIds.length > 0) { 
+        const { data: likesData } = await supabase 
+          .from("review_likes") 
+          .select("review_id, user_id") 
+          .in("review_id", reviewIds); 
+ 
+        (likesData || []).forEach((lk) => { 
+          likesCountMap[lk.review_id] = (likesCountMap[lk.review_id] || 0) + 1; 
+          if (req.user?.id && lk.user_id === req.user.id) { 
+            userLikedSet.add(lk.review_id); 
+          } 
+        }); 
+      } 
+ 
       const formattedReviews = topLevel.map((rev) => ({ 
         id: rev.id, 
         userId: rev.user_id, 
@@ -79,9 +99,11 @@ export const reviewController = {
         avatar: rev.users?.profile_url || "", 
         score: rev.score, 
         content: rev.content, 
+        is_edited: rev.is_edited || false, 
         time: rev.created_at, 
         source: "community", 
-        likes: 0, 
+        likes: likesCountMap[rev.id] || 0, 
+        isLiked: userLikedSet.has(rev.id), 
         repliesCount: (repliesByParent[rev.id] || []).length, 
         replies: repliesByParent[rev.id] || [], 
       })); 
@@ -161,6 +183,7 @@ export const reviewController = {
             parent_id, 
             score, 
             content, 
+            is_edited, 
             created_at, 
             users ( 
               user_name, 
@@ -180,6 +203,7 @@ export const reviewController = {
             author: reply.users?.user_name || "Unnamed Orgi", 
             avatar: reply.users?.profile_url || "", 
             content: reply.content, 
+            is_edited: reply.is_edited || false, 
             time: reply.created_at, 
             source: "community", 
           } 
@@ -208,6 +232,7 @@ export const reviewController = {
           .update({ 
             score: parsedScore, 
             content: content || "", 
+            is_edited: true, 
             updated_at: new Date().toISOString(), 
           }) 
           .eq("id", existingReview.id) 
@@ -216,6 +241,7 @@ export const reviewController = {
             user_id, 
             score, 
             content, 
+            is_edited, 
             created_at, 
             updated_at, 
             users ( 
@@ -232,12 +258,14 @@ export const reviewController = {
             item_id: item.id, 
             score: parsedScore, 
             content: content || "", 
+            is_edited: false, 
           }) 
           .select(` 
             id, 
             user_id, 
             score, 
             content, 
+            is_edited, 
             created_at, 
             updated_at, 
             users ( 
@@ -260,8 +288,11 @@ export const reviewController = {
           avatar: reviewRecord.users?.profile_url || "", 
           score: reviewRecord.score, 
           content: reviewRecord.content, 
+          is_edited: reviewRecord.is_edited || false, 
           time: reviewRecord.created_at, 
           source: "community", 
+          likes: 0, 
+          isLiked: false, 
           repliesCount: 0, 
           replies: [], 
         } 
@@ -285,6 +316,136 @@ export const reviewController = {
       if (error) throw error; 
  
       res.json({ success: true }); 
+    } catch (err) { 
+      next(err); 
+    } 
+  }, 
+ 
+  async toggleLike(req, res, next) { 
+    try { 
+      const userId = req.user.id; 
+      const { id: reviewId } = req.params; 
+ 
+      const { data: existingLike } = await supabase 
+        .from("review_likes") 
+        .select("id") 
+        .eq("user_id", userId) 
+        .eq("review_id", reviewId) 
+        .maybeSingle(); 
+ 
+      let liked = false; 
+      if (existingLike) { 
+        const { error: delError } = await supabase 
+          .from("review_likes") 
+          .delete() 
+          .eq("id", existingLike.id); 
+        if (delError) throw delError; 
+        liked = false; 
+      } else { 
+        const { error: insError } = await supabase 
+          .from("review_likes") 
+          .insert({ 
+            user_id: userId, 
+            review_id: reviewId, 
+          }); 
+        if (insError) throw insError; 
+        liked = true; 
+      } 
+ 
+      const { count } = await supabase 
+        .from("review_likes") 
+        .select("*", { count: "exact", head: true }) 
+        .eq("review_id", reviewId); 
+ 
+      res.json({ 
+        success: true, 
+        data: { 
+          liked, 
+          likesCount: count || 0, 
+        } 
+      }); 
+    } catch (err) { 
+      next(err); 
+    } 
+  }, 
+ 
+  async getMyReviews(req, res, next) { 
+    try { 
+      const userId = req.user.id; 
+      const { data, error } = await supabase 
+        .from("reviews") 
+        .select(` 
+          id, 
+          score, 
+          content, 
+          is_edited, 
+          created_at, 
+          updated_at, 
+          items ( 
+            id, 
+            external_id, 
+            provider, 
+            type, 
+            title, 
+            cover_url 
+          ) 
+        `) 
+        .eq("user_id", userId) 
+        .is("parent_id", null) 
+        .eq("is_deleted", false) 
+        .order("created_at", { ascending: false }); 
+ 
+      if (error) throw error; 
+ 
+      res.json({ success: true, data: data || [] }); 
+    } catch (err) { 
+      next(err); 
+    } 
+  }, 
+ 
+  async getMyLikes(req, res, next) { 
+    try { 
+      const userId = req.user.id; 
+      const { data, error } = await supabase 
+        .from("review_likes") 
+        .select(` 
+          id, 
+          created_at, 
+          reviews ( 
+            id, 
+            score, 
+            content, 
+            is_edited, 
+            created_at, 
+            items ( 
+              id, 
+              external_id, 
+              provider, 
+              type, 
+              title, 
+              cover_url 
+            ), 
+            users ( 
+              id, 
+              user_name, 
+              profile_url 
+            ) 
+          ) 
+        `) 
+        .eq("user_id", userId) 
+        .order("created_at", { ascending: false }); 
+ 
+      if (error) throw error; 
+ 
+      const formatted = (data || []) 
+        .filter((item) => item.reviews && !item.reviews.is_deleted) 
+        .map((item) => ({ 
+          likeId: item.id, 
+          likedAt: item.created_at, 
+          review: item.reviews, 
+        })); 
+ 
+      res.json({ success: true, data: formatted }); 
     } catch (err) { 
       next(err); 
     } 
