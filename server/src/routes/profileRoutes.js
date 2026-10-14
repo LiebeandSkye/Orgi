@@ -1,7 +1,7 @@
 import express from "express"; 
 import { supabase } from "../services/supabase.js"; 
 import { requireAuth } from "../middlewares/authMiddleware.js"; 
-import { helperGenerateRandomId } from "../utils/helperGenerateRandomId.js"; 
+import { helperGenerateRandomId } from "../services/functionHelper.js"; 
 
 const router = express.Router(); 
 
