@@ -55,6 +55,8 @@ test("reviewRoutes /api/reviews endpoints respond with expected structure", asyn
     assert.equal(featuredJson.success, true);
     assert.ok(featuredJson.item?.title);
     assert.ok(featuredJson.heroBackdropUrl || featuredJson.item?.backdropUrl);
+    assert.equal(typeof featuredJson.item?.likes, "number");
+    assert.equal(typeof featuredJson.item?.comments, "number");
 
     // 2. Feed query with pagination
     const page1Res = await fetch(`http://localhost:${port}/api/reviews?page=1&limit=25`);
@@ -62,6 +64,9 @@ test("reviewRoutes /api/reviews endpoints respond with expected structure", asyn
     const page1Json = await page1Res.json();
     assert.equal(page1Json.success, true);
     assert.ok(Array.isArray(page1Json.items));
+    assert.equal(page1Json.capabilities?.hasLikes, true);
+    assert.equal(typeof page1Json.items[0]?.likes, "number");
+    assert.equal(typeof page1Json.items[0]?.comments, "number");
     assert.equal(page1Json.page, 1);
     assert.ok(page1Json.total > 0);
     assert.ok(page1Json.totalPages >= 1);

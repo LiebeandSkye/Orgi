@@ -26,6 +26,8 @@ export function ReviewCard({
   item,
   isBookmarked = false,
   onToggleBookmark,
+  isLiked = false,
+  onToggleLike,
   onOpenDetail,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -76,6 +78,8 @@ export function ReviewCard({
 
   const isSynopsis = item.excerptKind === "synopsis";
   const relativeTime = formatRelativeTime(item.createdAt);
+
+  const likesCount = (item.likes ?? 0) + (isLiked ? 1 : 0);
 
   return (
     <article className="group relative w-full bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#333333] hover:bg-[#141414] rounded-xl p-3.5 transition-colors duration-150 flex gap-3.5 sm:gap-4 select-none">
@@ -182,10 +186,28 @@ export function ReviewCard({
         {/* Footer Row: Likes / Comments */}
         <div className="flex items-center gap-4 pt-1 text-[13px] text-[#7A7A7A]">
           {item.likes !== undefined && item.likes !== null && (
-            <div className="flex items-center gap-1.5">
-              <Heart size={14} />
-              <span className="font-tabular">{item.likes}</span>
-            </div>
+            <button
+              type="button"
+              aria-pressed={isLiked}
+              aria-label={isLiked ? "Unlike review" : "Like review"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleLike?.(item);
+              }}
+              className={`relative z-10 flex items-center gap-1.5 transition-colors duration-150 cursor-pointer ${
+                isLiked
+                  ? "text-rose-500 hover:text-rose-400"
+                  : "text-[#7A7A7A] hover:text-rose-400"
+              }`}
+            >
+              <Heart
+                size={14}
+                className={`transition-transform duration-150 ${
+                  isLiked ? "fill-rose-500 scale-105" : ""
+                }`}
+              />
+              <span className="font-tabular">{likesCount}</span>
+            </button>
           )}
           {item.comments !== undefined && item.comments !== null && (
             <div className="flex items-center gap-1.5">
@@ -196,7 +218,7 @@ export function ReviewCard({
         </div>
       </div>
 
-      {/* Right Column: overflow menu (top), backdrop (lg+), bookmark (bottom) */}
+      {/* Right Column: overflow menu (top), backdrop (sm+), bookmark (bottom) */}
       <div className="flex flex-col items-end shrink-0">
         {/* Overflow Menu (relative z-10 so it sits above stretched-link) */}
         <div className="relative z-10 h-6 flex items-center" ref={menuRef}>
@@ -259,9 +281,9 @@ export function ReviewCard({
           )}
         </div>
 
-        {/* Backdrop Thumbnail (Desktop lg+ only) */}
+        {/* Backdrop Thumbnail (sm+ screen) */}
         {item.backdropUrl && (
-          <div className="hidden lg:block mt-1.5 w-[148px] h-[80px] rounded-lg overflow-hidden bg-black/40 border border-[#1C1C1C]">
+          <div className="hidden sm:block mt-1.5 w-[120px] h-[68px] sm:w-[136px] sm:h-[76px] lg:w-[148px] lg:h-[80px] rounded-lg overflow-hidden bg-black/40 border border-[#1C1C1C]">
             <img
               src={item.backdropUrl}
               alt=""
