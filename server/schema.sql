@@ -189,8 +189,17 @@ BEGIN
     ON CONFLICT (id) DO NOTHING; 
     RETURN NEW; 
 END; 
-$$ LANGUAGE plpgsql SECURITY DEFINER; 
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public; 
 
 CREATE OR REPLACE TRIGGER on_auth_user_created 
     AFTER INSERT ON auth.users 
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user(); 
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role, postgres, supabase_auth_admin; 
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role, postgres, supabase_auth_admin; 
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role, postgres, supabase_auth_admin; 
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role, postgres, supabase_auth_admin; 
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role, postgres, supabase_auth_admin; 
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role, postgres, supabase_auth_admin; 
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role, postgres, supabase_auth_admin; 
