@@ -19,9 +19,11 @@ const PROFILE_ITEMS = [
 ]; 
 
 
+const DEFAULT_AVATAR = "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
+
 export function Navbar({ forceBooksOpen = false }) { 
     const location = useLocation(); 
-    const { user, logout } = useAuth(); 
+    const { user, userProfile, logout } = useAuth(); 
     const [dropdownOpen, setDropdownOpen] = useState(false); 
     const dropdownRef = useRef(null); 
     const [profileOpen, setProfileOpen] = useState(false); 
@@ -277,11 +279,15 @@ export function Navbar({ forceBooksOpen = false }) {
                 className="w-9 h-9 rounded-full overflow-hidden cursor-pointer bg-[#141414] ring-1 ring-[#1C1C1C] " 
                 title="User Profile" 
             >
-                {/* scale-125 crops away the baked-in light edge/background of the source image */} 
                 <img 
-                    src="https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg" 
+                    src={userProfile?.profile_url || user?.user_metadata?.avatar_url || DEFAULT_AVATAR} 
                     alt="Avatar" 
-                    className="w-full h-full object-cover scale-125" 
+                    onError={(e) => { 
+                        if (e.currentTarget.src !== DEFAULT_AVATAR) { 
+                            e.currentTarget.src = DEFAULT_AVATAR; 
+                        } 
+                    }} 
+                    className="w-full h-full object-cover" 
                 />
             </button>
             {profileOpen && (
