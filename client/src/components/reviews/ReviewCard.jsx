@@ -78,9 +78,9 @@ export function ReviewCard({
   const relativeTime = formatRelativeTime(item.createdAt);
 
   return (
-    <article className="group relative w-full bg-[#0b100e] border border-white/[0.07] hover:border-white/[0.15] hover:bg-[#101614] rounded-xl p-3.5 transition-colors duration-150 flex gap-3.5 sm:gap-4 select-none">
+    <article className="group relative w-full bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#333333] hover:bg-[#141414] rounded-xl p-3.5 transition-colors duration-150 flex gap-3.5 sm:gap-4 select-none">
       {/* Poster */}
-      <div className="relative w-[84px] h-[120px] sm:w-[112px] sm:h-[160px] rounded-lg overflow-hidden bg-black/40 border border-white/[0.06] shrink-0">
+      <div className="relative w-[84px] h-[120px] sm:w-[112px] sm:h-[160px] rounded-lg overflow-hidden bg-black/40 border border-[#1C1C1C] shrink-0">
         {item.posterUrl ? (
           <img
             src={item.posterUrl}
@@ -90,7 +90,7 @@ export function ReviewCard({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-[11px] text-[#8b9692] p-2 text-center bg-[#060908]">
+          <div className="w-full h-full flex items-center justify-center text-[11px] text-[#7A7A7A] p-2 text-center bg-[#000000]">
             {item.title}
           </div>
         )}
@@ -99,93 +99,32 @@ export function ReviewCard({
       {/* Main Content Column */}
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
-          {/* Row 1: Reviewer / Source Info & Overflow Menu */}
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <div className="flex items-center gap-2 min-w-0">
-              {isSynopsis ? (
-                <span className="text-[12px] font-medium text-[#8b9692]">
-                  {item.source === "mangadex" ? "MangaDex" : "Open Library"} · Community rating
+          {/* Row 1: Reviewer / Source Info */}
+          <div className="flex items-center gap-2 min-w-0 h-6 mb-1.5">
+            {isSynopsis ? (
+              <span className="text-[12px] font-medium text-[#B5B5B5]">
+                {item.source === "mangadex" ? "MangaDex" : "Open Library"} · Community rating
+              </span>
+            ) : (
+              <>
+                <Avatar src={item.author?.avatarUrl} name={item.author?.name} size="w-6 h-6" />
+                <span className="text-[13px] sm:text-[14px] font-medium text-[#F5F5F5] truncate max-w-[140px] sm:max-w-[200px]">
+                  {item.author?.name || "Anonymous"}
                 </span>
-              ) : (
-                <>
-                  <Avatar src={item.author?.avatarUrl} name={item.author?.name} size="w-6 h-6" />
-                  <span className="text-[13px] sm:text-[14px] font-medium text-[#e8ecea] truncate max-w-[140px] sm:max-w-[200px]">
-                    {item.author?.name || "Anonymous"}
+                {relativeTime && (
+                  <span
+                    className="text-[12px] text-[#7A7A7A] shrink-0"
+                    title={new Date(item.createdAt).toLocaleString()}
+                  >
+                    · {relativeTime}
                   </span>
-                  {relativeTime && (
-                    <span
-                      className="text-[12px] text-[#8b9692] shrink-0"
-                      title={new Date(item.createdAt).toLocaleString()}
-                    >
-                      · {relativeTime}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Overflow Menu (relative z-10 so it sits above stretched-link) */}
-            <div className="relative z-10" ref={menuRef}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuOpen((prev) => !prev);
-                }}
-                aria-label="More options"
-                className="p-1 rounded-md text-[#8b9692] hover:text-[#e8ecea] hover:bg-white/[0.06] cursor-pointer transition-colors"
-              >
-                <MoreHorizontal size={17} />
-              </button>
-
-              {menuOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full mt-1 w-36 bg-[#0b100e] border border-white/[0.1] rounded-lg p-1 shadow-2xl z-20"
-                >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleCopyLink}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-[#e8ecea] hover:bg-white/[0.06] rounded cursor-pointer text-left"
-                  >
-                    {copied ? (
-                      <>
-                        <Check size={13} className="text-[#19d68a]" />
-                        <span className="text-[#19d68a]">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={13} />
-                        <span>Copy link</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleReport}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-rose-400 hover:bg-white/[0.06] rounded cursor-pointer text-left"
-                  >
-                    {reported ? (
-                      <>
-                        <Check size={13} className="text-rose-400" />
-                        <span>Reported</span>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle size={13} />
-                        <span>Report</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Title with Stretched Link covering the card */}
-          <h3 className="text-[16px] sm:text-[18px] font-medium text-[#e8ecea] leading-snug mb-1">
+          <h3 className="text-[16px] sm:text-[18px] font-medium text-[#F5F5F5] leading-snug mb-1">
             <button
               type="button"
               onClick={() => onOpenDetail(item)}
@@ -196,14 +135,14 @@ export function ReviewCard({
           </h3>
 
           {/* Meta Row */}
-          <div className="flex items-center gap-2 text-[12px] sm:text-[13px] text-[#8b9692] mb-2 font-tabular">
+          <div className="flex items-center gap-2 text-[12px] sm:text-[13px] text-[#B5B5B5] mb-2 font-tabular">
             {item.rating !== undefined && item.rating !== null && (
               <>
-                <div className="flex items-center gap-1 text-[#19d68a] font-medium">
-                  <Star size={12} className="fill-[#19d68a] text-[#19d68a]" />
+                <div className="flex items-center gap-1 text-[#61F1AC] font-medium">
+                  <Star size={12} className="fill-[#61F1AC] text-[#61F1AC]" />
                   <span>{typeof item.rating === "number" ? item.rating.toFixed(1) : item.rating}</span>
                 </div>
-                <span className="text-[#5d6763]">|</span>
+                <span className="text-[#7A7A7A]">|</span>
               </>
             )}
             <span>{item.mediaLabel}</span>
@@ -214,24 +153,24 @@ export function ReviewCard({
               </>
             )}
             {item.containsSpoilers && (
-              <span className="ml-1 px-1.5 py-0.2 rounded text-[10px] uppercase font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20">
+              <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20">
                 Spoilers
               </span>
             )}
           </div>
 
           {/* Excerpt */}
-          <p className="text-[13px] sm:text-[13.5px] leading-[1.55] text-[#8b9692] line-clamp-3 mb-2.5 break-words">
+          <p className="text-[13px] sm:text-[13.5px] leading-[1.55] text-[#B5B5B5] line-clamp-3 mb-2.5 break-words">
             {item.excerpt}
           </p>
 
-          {/* Genre Chips */}
+          {/* Genre Chips (pills) */}
           {item.genres && item.genres.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mb-2">
               {item.genres.slice(0, 3).map((g, idx) => (
                 <span
                   key={idx}
-                  className="px-2 py-0.5 rounded-md text-[11px] text-[#8b9692] border border-white/[0.07] lowercase bg-transparent"
+                  className="px-2.5 py-0.5 rounded-full text-[11px] text-[#B5B5B5] border border-[#1C1C1C] lowercase bg-transparent"
                 >
                   {g}
                 </span>
@@ -240,58 +179,120 @@ export function ReviewCard({
           )}
         </div>
 
-        {/* Footer Row: Likes / Comments (if available) & Bookmark */}
-        <div className="flex items-center justify-between pt-1 text-[13px] text-[#8b9692]">
-          <div className="flex items-center gap-4">
-            {item.likes !== undefined && item.likes !== null && (
-              <div className="flex items-center gap-1.5">
-                <Heart size={14} />
-                <span className="font-tabular">{item.likes}</span>
-              </div>
-            )}
-            {item.comments !== undefined && item.comments !== null && (
-              <div className="flex items-center gap-1.5">
-                <MessageSquare size={14} />
-                <span className="font-tabular">{item.comments}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Bookmark Button (relative z-10) */}
-          <button
-            type="button"
-            aria-pressed={isBookmarked}
-            aria-label={isBookmarked ? "Remove bookmark" : "Bookmark review"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleBookmark(item);
-            }}
-            className={`relative z-10 p-1.5 rounded-md cursor-pointer transition-colors ${
-              isBookmarked
-                ? "text-[#19d68a] hover:text-[#19d68a]/80"
-                : "text-[#8b9692] hover:text-[#e8ecea]"
-            }`}
-          >
-            <Bookmark
-              size={17}
-              className={isBookmarked ? "fill-[#19d68a]" : ""}
-            />
-          </button>
+        {/* Footer Row: Likes / Comments */}
+        <div className="flex items-center gap-4 pt-1 text-[13px] text-[#7A7A7A]">
+          {item.likes !== undefined && item.likes !== null && (
+            <div className="flex items-center gap-1.5">
+              <Heart size={14} />
+              <span className="font-tabular">{item.likes}</span>
+            </div>
+          )}
+          {item.comments !== undefined && item.comments !== null && (
+            <div className="flex items-center gap-1.5">
+              <MessageSquare size={14} />
+              <span className="font-tabular">{item.comments}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Right Backdrop Thumbnail (Desktop lg+ only) */}
-      {item.backdropUrl && (
-        <div className="hidden lg:block w-[143px] h-[80px] rounded-lg overflow-hidden shrink-0 bg-black/40 border border-white/[0.06] self-start mt-1">
-          <img
-            src={item.backdropUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover"
-          />
+      {/* Right Column: overflow menu (top), backdrop (lg+), bookmark (bottom) */}
+      <div className="flex flex-col items-end shrink-0">
+        {/* Overflow Menu (relative z-10 so it sits above stretched-link) */}
+        <div className="relative z-10 h-6 flex items-center" ref={menuRef}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((prev) => !prev);
+            }}
+            aria-label="More options"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="p-1 rounded-md text-[#7A7A7A] hover:text-[#F5F5F5] hover:bg-[#141414] cursor-pointer transition-colors"
+          >
+            <MoreHorizontal size={17} />
+          </button>
+
+          {menuOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 top-full mt-1 w-36 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg p-1 shadow-2xl z-20"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleCopyLink}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-[#F5F5F5] hover:bg-[#141414] rounded cursor-pointer text-left"
+              >
+                {copied ? (
+                  <>
+                    <Check size={13} className="text-[#61F1AC]" />
+                    <span className="text-[#61F1AC]">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>Copy link</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleReport}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-rose-400 hover:bg-[#141414] rounded cursor-pointer text-left"
+              >
+                {reported ? (
+                  <>
+                    <Check size={13} className="text-rose-400" />
+                    <span>Reported</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle size={13} />
+                    <span>Report</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Backdrop Thumbnail (Desktop lg+ only) */}
+        {item.backdropUrl && (
+          <div className="hidden lg:block mt-1.5 w-[148px] h-[80px] rounded-lg overflow-hidden bg-black/40 border border-[#1C1C1C]">
+            <img
+              src={item.backdropUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        {/* Bookmark Button (relative z-10, pinned to bottom-right) */}
+        <button
+          type="button"
+          aria-pressed={isBookmarked}
+          aria-label={isBookmarked ? "Remove bookmark" : "Bookmark review"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleBookmark(item);
+          }}
+          className={`relative z-10 mt-auto p-1.5 -mr-1 -mb-1 rounded-md cursor-pointer transition-colors ${
+            isBookmarked
+              ? "text-[#61F1AC] hover:text-[#61F1AC]/80"
+              : "text-[#7A7A7A] hover:text-[#F5F5F5]"
+          }`}
+        >
+          <Bookmark
+            size={17}
+            className={isBookmarked ? "fill-[#61F1AC]" : ""}
+          />
+        </button>
+      </div>
     </article>
   );
 }

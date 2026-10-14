@@ -120,7 +120,15 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
         </button>
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-5">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-5
+  [scrollbar-width:thin]
+  [scrollbar-color:rgba(255,255,255,0.15)_transparent]
+  [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:bg-transparent
+  [&::-webkit-scrollbar-thumb]:bg-white/10
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  hover:[&::-webkit-scrollbar-thumb]:bg-[#19d68a]/40
+  active:[&::-webkit-scrollbar-thumb]:bg-[#19d68a]">
           {/* Title & Reviewer Header */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-[12px] font-medium text-[#8b9692] uppercase tracking-wider">

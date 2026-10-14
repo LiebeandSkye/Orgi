@@ -2,7 +2,7 @@ import React from "react";
 
 export function ReviewCardSkeleton() {
   return (
-    <div className="w-full bg-[#0b100e] border border-white/[0.07] rounded-xl p-3.5 flex gap-3.5 sm:gap-4 select-none">
+    <div className="w-full bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-3.5 flex gap-3.5 sm:gap-4 select-none">
       {/* Poster Skeleton */}
       <div className="w-[84px] h-[120px] sm:w-[112px] sm:h-[160px] rounded-lg bg-white/[0.04] animate-pulse shrink-0" />
 

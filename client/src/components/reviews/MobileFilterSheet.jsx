@@ -222,7 +222,7 @@ export function MobileFilterSheet({
             onClick={handleApply}
             className="flex-1 h-[44px] rounded-full bg-[#19d68a] hover:bg-[#19d68a]/90 text-[#060908] font-semibold text-[14px] flex items-center justify-center transition-colors cursor-pointer shadow-lg"
           >
-            Show {totalCount > 0 ? `${totalCount} ` : ""}reviews
+            Show reviews
           </button>
         </div>
       </div>

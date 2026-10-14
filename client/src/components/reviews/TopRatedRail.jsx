@@ -40,11 +40,11 @@ export function TopRatedRail({ category, onOpenDetail }) {
 
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#5d6763] mb-2 px-1">
+      <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#7A7A7A] mb-2 px-1">
         TOP RATED REVIEWS
       </span>
 
-      <div className="w-full bg-[#0b100e] border border-white/[0.07] rounded-xl p-2 flex flex-col gap-1">
+      <div className="w-full bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-2 flex flex-col gap-1">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 p-1.5 rounded-lg animate-pulse">
@@ -62,9 +62,9 @@ export function TopRatedRail({ category, onOpenDetail }) {
               key={it.id}
               type="button"
               onClick={() => onOpenDetail(it)}
-              className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[#101614] text-left transition-colors cursor-pointer group"
+              className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[#141414] text-left transition-colors cursor-pointer group"
             >
-              <div className="w-[40px] h-[56px] rounded-md overflow-hidden bg-black/40 border border-white/[0.06] shrink-0">
+              <div className="w-[40px] h-[56px] rounded-md overflow-hidden bg-black/40 border border-[#1C1C1C] shrink-0">
                 {it.posterUrl ? (
                   <img
                     src={it.posterUrl}
@@ -74,22 +74,22 @@ export function TopRatedRail({ category, onOpenDetail }) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[9px] text-[#8b9692] text-center p-0.5">
+                  <div className="w-full h-full flex items-center justify-center text-[9px] text-[#7A7A7A] text-center p-0.5">
                     {it.title}
                   </div>
                 )}
               </div>
 
               <div className="flex-1 min-w-0">
-                <h4 className="text-[14px] font-medium text-[#e8ecea] truncate group-hover:text-white transition-colors">
+                <h4 className="text-[14px] font-medium text-[#F5F5F5] truncate group-hover:text-white transition-colors">
                   {it.title}
                 </h4>
-                <p className="text-[12px] text-[#8b9692] truncate mb-1">
+                <p className="text-[12px] text-[#B5B5B5] truncate mb-1">
                   {it.author?.name || "Community score"}
                 </p>
                 {it.rating !== undefined && it.rating !== null && (
-                  <div className="flex items-center gap-1 text-[12px] font-medium text-[#19d68a]">
-                    <Star size={11} className="fill-[#19d68a] text-[#19d68a]" />
+                  <div className="flex items-center gap-1 text-[12px] font-medium text-[#61F1AC]">
+                    <Star size={11} className="fill-[#61F1AC] text-[#61F1AC]" />
                     <span className="font-tabular">
                       {typeof it.rating === "number" ? it.rating.toFixed(1) : it.rating}
                     </span>

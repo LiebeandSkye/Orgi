@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
+import { BorderBeam } from "../ui/border-beam";
 
 export function ReviewsHero({ backdropUrl, initialQuery = "", onSearchChange }) {
   const [localQuery, setLocalQuery] = useState(initialQuery);
@@ -52,7 +53,7 @@ export function ReviewsHero({ backdropUrl, initialQuery = "", onSearchChange }) 
   };
 
   return (
-    <section className="relative w-full min-h-[200px] md:min-h-[230px] overflow-hidden bg-[#060908] border-b border-white/[0.07] flex items-center">
+    <section className="relative w-full min-h-[200px] md:min-h-[230px] overflow-hidden bg-[#000000] border-b border-[#1C1C1C] flex items-center">
       {/* Dark Cinematic Backdrop with Smooth Melts */}
       {backdropUrl && !backdropError && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -67,59 +68,70 @@ export function ReviewsHero({ backdropUrl, initialQuery = "", onSearchChange }) 
               backdropLoaded ? "opacity-45 md:opacity-55" : "opacity-0"
             }`}
           />
-          {/* Left-to-right fade: #060908 -> transparent */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#060908] via-[#060908]/90 md:via-[#060908]/75 to-transparent" />
+          {/* Left-to-right fade: #000000 -> transparent */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#000000] via-[#000000]/90 md:via-[#000000]/75 to-transparent" />
           {/* Bottom fade into page background */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#060908] via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-transparent to-transparent" />
         </div>
       )}
 
       {/* Content Container */}
-      <div className="relative z-10 w-full max-w-[1280px] mx-auto px-4 md:px-6 py-6 md:py-8 flex flex-col justify-center">
+      <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 lg:px-[120px] py-6 md:py-8 flex flex-col justify-center">
         {/* Eyebrow */}
-        <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#5d6763] mb-2">
+        <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#7A7A7A] mb-2">
           REAL OPINIONS. DIFFERENT PERSPECTIVES.
         </span>
 
         {/* Headline */}
-        <h1 className="text-[26px] sm:text-[32px] md:text-[40px] font-normal tracking-tight text-[#e8ecea] leading-tight mb-2">
+        <h1 className="text-[26px] sm:text-[32px] md:text-[40px] font-light tracking-tight text-[#F5F5F5] leading-tight mb-2">
           Explore what others think.
         </h1>
 
         {/* Subtext */}
-        <p className="text-[14px] md:text-[15px] text-[#8b9692] max-w-[420px] leading-relaxed mb-5 line-clamp-2">
+        <p className="text-[14px] md:text-[15px] text-[#B5B5B5] max-w-[420px] leading-relaxed mb-5 line-clamp-2">
           Read reviews, discover new favorites, and see different perspectives on the movies, series, books and more you love.
         </p>
 
         {/* Search Bar */}
-        <div className="relative w-full max-w-[500px]">
-          <div className="relative h-[44px] rounded-full bg-[#0b100e] border border-[#19d68a]/60 flex items-center px-4 transition-all focus-within:border-[#19d68a] focus-within:ring-1 focus-within:ring-[#19d68a]/40">
-            <Search size={18} className="text-[#19d68a] shrink-0 mr-3" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={localQuery}
-              onChange={(e) => setLocalQuery(e.target.value)}
-              placeholder="Search for a title, person, or keyword..."
-              aria-label="Search reviews"
-              className="w-full bg-transparent text-[14px] text-[#e8ecea] placeholder-[#8b9692] focus:outline-none"
-            />
+        <div className="relative w-full max-w-[500px] group">
+          <BorderBeam
+            size="md"
+            colorVariant="mint"
+            borderRadius={22}
+            className="w-full rounded-full"
+          >
+            <div className="relative w-full h-[44px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-4 flex items-center justify-between shadow-2xl transition-all">
+              <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                <Search size={18} className="text-[#61F1AC] shrink-0" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={localQuery}
+                  onChange={(e) => setLocalQuery(e.target.value)}
+                  placeholder="Search for a title, person, or keyword..."
+                  aria-label="Search reviews"
+                  className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]"
+                />
+              </div>
 
-            {localQuery ? (
-              <button
-                type="button"
-                onClick={handleClear}
-                aria-label="Clear search"
-                className="text-[#8b9692] hover:text-[#e8ecea] p-1 rounded-full cursor-pointer transition-colors"
-              >
-                <X size={15} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex items-center justify-center w-5 h-5 text-[11px] font-mono text-[#8b9692] bg-white/[0.06] border border-white/[0.08] rounded">
-                /
-              </kbd>
-            )}
-          </div>
+              {/* Clear button or shortcut chip */}
+              {localQuery ? (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  aria-label="Clear search"
+                  className="inline-flex items-center gap-1 text-xs text-[#7A7A7A] hover:text-[#F5F5F5] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] cursor-pointer transition-colors"
+                >
+                  <X size={14} />
+                  <span>Clear</span>
+                </button>
+              ) : (
+                <kbd className="inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors">
+                  /
+                </kbd>
+              )}
+            </div>
+          </BorderBeam>
         </div>
       </div>
     </section>
