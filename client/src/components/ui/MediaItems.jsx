@@ -195,7 +195,8 @@ function ImageModal({ image, format, onClose }) {
   }, []);
 
   const isBackdrop = format === "backdrop";
-  const imageSrc = getTMDBImage(image?.file_path, isBackdrop ? "w1280" : "w780");
+  const rawPath = image?.file_path || image?.url || image?.cover;
+  const imageSrc = getTMDBImage(rawPath, isBackdrop ? "w1280" : "w780");
 
   return (
     <div
@@ -207,27 +208,69 @@ function ImageModal({ image, format, onClose }) {
 
       {/* Modal Container */}
       <div
-        className={`relative z-10 overflow-hidden rounded-2xl border-2 border-white/20 bg-[#0B0B0B] shadow-2xl flex items-center justify-center animate-modal-pop cursor-default ${
+        className={`relative z-10 overflow-hidden rounded-2xl border border-white/20 bg-[#0B0B0B] shadow-2xl flex flex-col animate-modal-pop cursor-default max-h-[90vh] ${
           isBackdrop
-            ? "w-[92vw] max-w-[1100px] aspect-video"
-            : "h-[85vh] max-h-[85vh] max-w-[90vw] aspect-[2/3]"
+            ? "w-[94vw] max-w-[1100px]"
+            : "w-[90vw] max-w-[480px]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Loading shimmer until image is fetched from CDN */}
-        {!loaded && (
-          <div className="absolute inset-0 skeleton-shimmer" />
+        {/* Header Bar */}
+        {(image?.title || image?.subtitle) && (
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[#1C1C1C] bg-[#0E0E0E]/90 backdrop-blur-sm z-20 shrink-0">
+            <div className="min-w-0 pr-4">
+              <h4 className="text-sm font-semibold text-[#F5F5F5] truncate">
+                {image.title || (isBackdrop ? "Official Artwork" : "Cover Preview")}
+              </h4>
+              {image.subtitle && (
+                <p className="text-xs text-[#7A7A7A] truncate font-light mt-0.5">
+                  {image.subtitle}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close image preview"
+              className="w-8 h-8 rounded-full bg-[#161616] border border-[#262626] flex items-center justify-center text-[#9A9A9A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 transition-colors cursor-pointer shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
         )}
 
-        {/* Full Image */}
-        <img
-          src={imageSrc}
-          alt={isBackdrop ? "Backdrop preview" : "Poster preview"}
-          onLoad={() => setLoaded(true)}
-          className={`w-full h-full object-cover select-none transition-opacity duration-300 ${
-            loaded ? "opacity-100" : "opacity-0"
+        {/* Floating close button if no header */}
+        {!image?.title && !image?.subtitle && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close image preview"
+            className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-[#9A9A9A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        )}
+
+        {/* Image Content */}
+        <div
+          className={`relative flex items-center justify-center overflow-hidden bg-black/60 ${
+            isBackdrop ? "aspect-video w-full" : "aspect-[2/3] w-full"
           }`}
-        />
+        >
+          {!loaded && <div className="absolute inset-0 skeleton-shimmer" />}
+
+          <img
+            src={imageSrc}
+            alt={image?.title || (isBackdrop ? "Backdrop preview" : "Cover preview")}
+            referrerPolicy="no-referrer"
+            onLoad={() => setLoaded(true)}
+            className={`w-full h-full ${
+              isBackdrop ? "object-cover" : "object-contain"
+            } select-none transition-opacity duration-300 ${
+              loaded ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        </div>
       </div>
     </div>
   );
@@ -240,7 +283,6 @@ export default function MediaItems({ movieData, seriesData }) {
   const mediaItem = movieData || seriesData || {};
   const [activeVideo, setActiveVideo] = useState(null);
   const [activeImage, setActiveImage] = useState(null);
-  const [selectedCover, setSelectedCover] = useState(null);
 
   const volumes = mediaItem?.volumes || [];
   const isBookOrManga =
@@ -248,6 +290,31 @@ export default function MediaItems({ movieData, seriesData }) {
     ["MANGA", "MANHWA", "MANHUA", "BOOK / NOVEL", "NOVELS", "BOOKS", "LIGHT-NOVELS"].includes(
       (mediaItem?.type || "").toUpperCase()
     );
+
+  const officialArt = useMemo(() => {
+    const list = [];
+    if (Array.isArray(mediaItem?.artworks) && mediaItem.artworks.length > 0) {
+      mediaItem.artworks.forEach((art) => {
+        const artPath = art.url || art.file_path || art.cover;
+        if (!list.some((existing) => (existing.url || existing.file_path || existing.cover) === artPath)) {
+          list.push(art);
+        }
+      });
+    }
+    if (Array.isArray(mediaItem?.images?.backdrops) && mediaItem.images.backdrops.length > 0) {
+      mediaItem.images.backdrops.forEach((bd) => {
+        const bdPath = bd.file_path || bd.url;
+        if (!list.some((existing) => (existing.file_path || existing.url) === bdPath)) {
+          list.push({
+            ...bd,
+            format: "backdrop",
+            type: bd.type || "Official Banner",
+          });
+        }
+      });
+    }
+    return list;
+  }, [mediaItem?.artworks, mediaItem?.images?.backdrops]);
 
   // 1. Prioritize Official Trailers first, then Trailers, Teasers, etc. Cap at 120 items.
   const videos = useMemo(() => {
@@ -307,111 +374,233 @@ export default function MediaItems({ movieData, seriesData }) {
     </p>
   );
 
-  // --- Manga/Manhwa/Books Specific Rendering ---
+  // --- Manga/Manhwa/Books Specific Rendering using Carousel (ScrollRow) ---
   if (isBookOrManga) {
+    const hasOfficialArt = officialArt.length > 0;
+    const hasVolumes = volumes.length > 0;
+    const hasVideos = videos.length > 0;
+
     return (
       <section className="w-full bg-black text-[#F5F5F5]">
-        <div className="space-y-8 py-6 sm:space-y-10 sm:py-8">
-          <SectionTitle
-            count={volumes.length}
-            subtitle={volumes.length > 0 ? "Sorted by volume" : undefined}
-          >
-            Volume Covers
-          </SectionTitle>
+        <div className="space-y-10 py-6 sm:py-8">
 
-          {volumes.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {volumes.map((vol, index) => {
-                const volBadge =
-                  vol.volume === "none" || !vol.volume
-                    ? "Full"
-                    : `Vol. ${vol.volume}`;
+          {/* 1. Official Art & Key Visuals Carousel (If exists) */}
+          {hasOfficialArt && (
+            <section>
+              <SectionTitle
+                count={officialArt.length}
+                subtitle="Official illustrations, banners & key visuals"
+              >
+                Official Art
+              </SectionTitle>
 
-                return (
-                  <div
-                    key={vol.id || index}
-                    onClick={() => setSelectedCover(vol)}
-                    className="group cursor-pointer flex flex-col"
-                  >
-                    <div className="relative aspect-[2/3] w-full rounded-[10px] overflow-hidden bg-[#0B0B0B] border border-[#1C1C1C] group-hover:border-[#61F1AC]/50 transition-colors shadow-sm mb-2.5">
-                      <img
-                        src={vol.cover}
-                        alt={vol.title || `Volume ${vol.volume}`}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                      />
+              <ScrollRow label="Official Art">
+                {officialArt.map((art, index) => {
+                  const isBackdrop =
+                    art.format === "backdrop" ||
+                    (art.type && art.type.toLowerCase().includes("banner"));
+                  const artSrc = art.url || art.file_path || art.cover;
+                  const badgeText = art.type || (isBackdrop ? "Official Banner" : "Official Art");
 
-                      <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15 group-hover:border-[#61F1AC]/60 transition-colors">
-                        <span className="text-[10px] font-tabular font-semibold tracking-wider uppercase text-[#F5F5F5] group-hover:text-[#61F1AC] transition-colors">
-                          {volBadge}
-                        </span>
+                  return (
+                    <button
+                      key={art.id || index}
+                      type="button"
+                      onClick={() =>
+                        setActiveImage({
+                          id: art.id,
+                          title: art.title || "Official Artwork",
+                          subtitle: art.subtitle || (isBackdrop ? "Landscape Banner" : "Illustration"),
+                          format: isBackdrop ? "backdrop" : "poster",
+                          file_path: artSrc,
+                        })
+                      }
+                      className={`group shrink-0 text-left cursor-pointer ${
+                        isBackdrop
+                          ? "w-[280px] sm:w-[360px] lg:w-[420px]"
+                          : "w-[150px] sm:w-[175px] lg:w-[195px]"
+                      }`}
+                    >
+                      <div
+                        className={`relative overflow-hidden rounded-xl border border-[#202020] bg-[#0B0B0B] transition-all duration-300 group-hover:border-[#61F1AC]/50 group-hover:scale-[1.02] group-hover:shadow-[0_0_20px_rgba(97,241,172,0.15)] ${
+                          isBackdrop ? "aspect-video" : "aspect-[2/3]"
+                        }`}
+                      >
+                        <img
+                          src={artSrc}
+                          alt={art.title || `Official Artwork ${index + 1}`}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+
+                        {/* Top Badge */}
+                        <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15 group-hover:border-[#61F1AC]/60 transition-colors">
+                          <span className="text-[10px] font-tabular font-semibold tracking-wider uppercase text-[#F5F5F5] group-hover:text-[#61F1AC] transition-colors">
+                            {badgeText}
+                          </span>
+                        </div>
+
+                        {/* Hover Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#61F1AC]">
+                            <BookOpen size={12} />
+                            <span>View Full Art</span>
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#61F1AC]">
-                          <BookOpen size={12} />
-                          <span>View Cover</span>
+                      {art.title && (
+                        <p className="mt-2 line-clamp-1 text-sm font-medium text-[#F5F5F5] group-hover:text-[#61F1AC] transition-colors">
+                          {art.title}
+                        </p>
+                      )}
+                      {art.subtitle && (
+                        <p className="mt-0.5 line-clamp-1 text-xs text-[#7A7A7A] font-light">
+                          {art.subtitle}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </ScrollRow>
+            </section>
+          )}
+
+          {/* 2. Volume Covers Carousel (Always present; primary fallback if no official art) */}
+          <section>
+            <SectionTitle
+              count={volumes.length}
+              subtitle={volumes.length > 1 ? "Sorted by volume / edition" : undefined}
+            >
+              Volume Covers
+            </SectionTitle>
+
+            {hasVolumes ? (
+              <ScrollRow label="Volume Covers">
+                {volumes.map((vol, index) => {
+                  const volBadge =
+                    vol.volume === "none" || !vol.volume
+                      ? "Full"
+                      : `Vol. ${vol.volume}`;
+
+                  return (
+                    <button
+                      key={vol.id || index}
+                      type="button"
+                      onClick={() =>
+                        setActiveImage({
+                          id: vol.id,
+                          title: vol.title || `Volume ${vol.volume}`,
+                          subtitle: vol.subtitle,
+                          format: "poster",
+                          file_path: vol.cover,
+                        })
+                      }
+                      className="group w-[140px] shrink-0 sm:w-[165px] lg:w-[185px] text-left cursor-pointer flex flex-col"
+                    >
+                      <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-[#0B0B0B] border border-[#202020] transition-all duration-300 group-hover:border-[#61F1AC]/50 group-hover:scale-[1.02] group-hover:shadow-[0_0_20px_rgba(97,241,172,0.15)] mb-2.5">
+                        <img
+                          src={vol.cover}
+                          alt={vol.title || `Volume ${vol.volume}`}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+
+                        {/* Volume Badge */}
+                        <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15 group-hover:border-[#61F1AC]/60 transition-colors">
+                          <span className="text-[10px] font-tabular font-semibold tracking-wider uppercase text-[#F5F5F5] group-hover:text-[#61F1AC] transition-colors">
+                            {volBadge}
+                          </span>
+                        </div>
+
+                        {/* View Cover hover overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#61F1AC]">
+                            <BookOpen size={12} />
+                            <span>View Cover</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <h4 className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-[#61F1AC] transition-colors">
+                        {vol.title || `Volume ${vol.volume}`}
+                      </h4>
+
+                      {vol.subtitle && (
+                        <span className="text-xs text-[#7A7A7A] truncate font-light mt-0.5 font-tabular">
+                          {vol.subtitle}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </ScrollRow>
+            ) : (
+              <EmptyState label="volume covers" />
+            )}
+          </section>
+
+          {/* 3. Trailers & Videos Carousel (if any exist) */}
+          {hasVideos && (
+            <section>
+              <SectionTitle count={videos.length}>Trailers &amp; Videos</SectionTitle>
+              <ScrollRow label="Videos">
+                {videos.map((video) => (
+                  <button
+                    key={video.id}
+                    type="button"
+                    onClick={() => setActiveVideo(video)}
+                    className="group w-[240px] shrink-0 sm:w-[300px] lg:w-[340px] text-left cursor-pointer"
+                  >
+                    <div className="relative aspect-video overflow-hidden rounded-xl border border-[#202020] bg-[#0B0B0B]">
+                      <img
+                        src={`https://img.youtube.com/vi/${video.key}/hqdefault.jpg`}
+                        alt={video.name}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/80 bg-black/40 backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-black/60 group-hover:border-white">
+                          <Play
+                            size={22}
+                            className="text-white ml-0.5"
+                            fill="white"
+                            strokeWidth={0}
+                          />
                         </span>
                       </div>
                     </div>
-
-                    <h4 className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-[#61F1AC] transition-colors">
-                      {vol.title || `Volume ${vol.volume}`}
-                    </h4>
-
-                    {vol.subtitle && (
-                      <span className="text-xs text-[#7A7A7A] truncate font-light mt-0.5 font-tabular">
-                        {vol.subtitle}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState label="volume covers" />
+                    <p className="mt-2 line-clamp-1 text-sm font-medium text-[#F5F5F5] group-hover:text-white transition-colors">
+                      {video.name}
+                    </p>
+                    <p className="mt-1 text-xs text-[#7A7A7A]">
+                      {video.type || "Video"}
+                    </p>
+                  </button>
+                ))}
+              </ScrollRow>
+            </section>
           )}
+
         </div>
 
-        {selectedCover && (
-          <div
-            onClick={() => setSelectedCover(null)}
-            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="relative max-w-md w-full bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] overflow-hidden shadow-2xl p-4"
-            >
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#1C1C1C]">
-                <div>
-                  <h4 className="text-sm font-semibold text-[#F5F5F5]">
-                    {selectedCover.title}
-                  </h4>
-                  {selectedCover.subtitle && (
-                    <p className="text-xs text-[#7A7A7A]">
-                      {selectedCover.subtitle}
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCover(null)}
-                  className="w-8 h-8 rounded-full bg-[#141414] border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 transition-colors cursor-pointer"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-              <div className="aspect-[2/3] w-full rounded-[10px] overflow-hidden bg-[#050505] border border-[#1C1C1C]">
-                <img
-                  src={selectedCover.cover}
-                  alt={selectedCover.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </div>
-          </div>
+        {/* Modal Previews */}
+        {activeVideo && (
+          <VideoModal
+            videoKey={activeVideo.key}
+            videoName={activeVideo.name}
+            onClose={() => setActiveVideo(null)}
+          />
+        )}
+
+        {activeImage && (
+          <ImageModal
+            image={activeImage}
+            format={activeImage.format}
+            onClose={() => setActiveImage(null)}
+          />
         )}
       </section>
     );

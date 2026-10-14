@@ -371,6 +371,25 @@ export const mediaController = {
               { id: "author", name: authorName, character: "Author", avatar: authorAvatar }
             ],
             volumes: volumeCovers,
+            artworks: volumeCovers.map((v) => ({
+              id: v.id,
+              title: v.title,
+              subtitle: v.subtitle,
+              type: "Edition Cover",
+              file_path: v.cover,
+              url: v.cover,
+              format: "poster",
+            })),
+            images: {
+              backdrops: [],
+              posters: volumeCovers.map((v) => ({
+                id: v.id,
+                file_path: v.cover,
+                title: v.title,
+                subtitle: v.subtitle,
+                format: "poster",
+              })),
+            },
             reviews: [],
             details: {
               director: authorName,
@@ -450,6 +469,7 @@ export const mediaController = {
           : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover";
 
         let volumeCovers = [];
+        let promoArtworks = [];
         if (coversRes && coversRes.ok) {
           try {
             const coversJson = await coversRes.json();
@@ -473,6 +493,17 @@ export const mediaController = {
                   subtitle: chCountForVol
                     ? `${chCountForVol} ${chCountForVol === 1 ? "Chapter" : "Chapters"}`
                     : cAttrs.description || (volNum !== "Main" ? `Vol. ${volNum}` : "Key Visual"),
+                });
+              }
+              if (!cAttrs.volume || cAttrs.volume === "none" || (cAttrs.description && cAttrs.description.trim().length > 0)) {
+                promoArtworks.push({
+                  id: cItem.id,
+                  title: cAttrs.description || "Official Illustration",
+                  subtitle: cAttrs.locale ? `Locale: ${cAttrs.locale.toUpperCase()}` : "Special Art",
+                  type: "Official Illustration",
+                  file_path: `${MANGADEX_COVERS}/${itemData.id}/${cFile}.512.jpg`,
+                  url: `${MANGADEX_COVERS}/${itemData.id}/${cFile}.512.jpg`,
+                  format: "poster",
                 });
               }
             });
@@ -503,6 +534,96 @@ export const mediaController = {
 
         if (!volumeCount && volumeCovers.length > 0) {
           volumeCount = volumeCovers.length;
+        }
+
+        // Fetch official banner and art from AniList / Kitsu
+        let officialArtworks = [];
+        let officialBanner = null;
+
+        const alId = attrs.links?.al;
+        try {
+          const aniQuery = `
+            query ($id: Int, $search: String) {
+              Media(id: $id, search: $search, type: MANGA) {
+                bannerImage
+                coverImage {
+                  extraLarge
+                  large
+                }
+              }
+            }
+          `;
+          const aniRes = await fetch("https://graphql.anilist.co", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query: aniQuery,
+              variables: alId ? { id: parseInt(alId, 10) } : { search: title },
+            }),
+          }).catch(() => null);
+
+          if (aniRes && aniRes.ok) {
+            const aniJson = await aniRes.json();
+            const media = aniJson?.data?.Media;
+            if (media?.bannerImage) {
+              officialBanner = media.bannerImage;
+              officialArtworks.push({
+                id: "official-banner-anilist",
+                title: "Official Banner Art",
+                subtitle: "AniList Official Media",
+                type: "Official Banner",
+                file_path: media.bannerImage,
+                url: media.bannerImage,
+                format: "backdrop",
+              });
+            }
+            if (media?.coverImage?.extraLarge && media.coverImage.extraLarge !== coverUrl) {
+              officialArtworks.push({
+                id: "official-key-art",
+                title: "Key Visual Artwork",
+                subtitle: "Original High-Res Key Visual",
+                type: "Key Visual",
+                file_path: media.coverImage.extraLarge,
+                url: media.coverImage.extraLarge,
+                format: "poster",
+              });
+            }
+          }
+        } catch {
+          // Fallback gracefully
+        }
+
+        if (!officialBanner) {
+          try {
+            const ktRes = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(title)}&page[limit]=1`).catch(() => null);
+            if (ktRes && ktRes.ok) {
+              const ktJson = await ktRes.json();
+              const ktCover = ktJson?.data?.[0]?.attributes?.coverImage;
+              const ktBanner = ktCover?.original || ktCover?.large;
+              if (ktBanner) {
+                officialBanner = ktBanner;
+                officialArtworks.unshift({
+                  id: "official-banner-kitsu",
+                  title: "Official Header Artwork",
+                  subtitle: "Kitsu Official Media",
+                  type: "Official Banner",
+                  file_path: ktBanner,
+                  url: ktBanner,
+                  format: "backdrop",
+                });
+              }
+            }
+          } catch {
+            // Fallback gracefully
+          }
+        }
+
+        if (promoArtworks.length > 0) {
+          promoArtworks.forEach((art) => {
+            if (!officialArtworks.some((a) => a.file_path === art.file_path)) {
+              officialArtworks.push(art);
+            }
+          });
         }
 
         const genres = (attrs.tags || [])
@@ -541,7 +662,7 @@ export const mediaController = {
           runtime: volAndChapSummary,
           certificate: (attrs.contentRating || "safe").toUpperCase(),
           poster: coverUrl,
-          backdrop: coverUrl,
+          backdrop: officialBanner || coverUrl,
           tmdbRating: liveRating,
           tmdbVotes: liveFollows,
           communityRating: liveRating,
@@ -552,6 +673,17 @@ export const mediaController = {
             "No synopsis available.",
           cast: creatorCards,
           volumes: volumeCovers,
+          artworks: officialArtworks,
+          images: {
+            backdrops: officialArtworks.filter((a) => a.format === "backdrop"),
+            posters: volumeCovers.map((v) => ({
+              id: v.id,
+              file_path: v.cover,
+              title: v.title,
+              subtitle: v.subtitle,
+              format: "poster",
+            })),
+          },
           reviews: [],
           details: {
             director: authorName,
