@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react"; 
+import React, { useState, useEffect, useCallback, useRef } from "react"; 
 import { Link } from "react-router-dom"; 
 import { 
   Bookmark, 
   Trash2, 
   ChevronDown, 
+  ChevronUp, 
+  X, 
   Film, 
   BookOpen, 
   ArrowRight, 
@@ -27,14 +29,36 @@ const STATUS_COLORS = {
   completed: "bg-[#1E3A2B] text-[#78F5B8] border-[#2E5E43]", 
 }; 
 
+const TYPE_OPTIONS = [ 
+  { key: "all", label: "All Types" }, 
+  { key: "MOVIE", label: "Movies" }, 
+  { key: "SERIES", label: "Series" }, 
+  { key: "BOOK", label: "Books" }, 
+  { key: "MANGA", label: "Manga" }, 
+  { key: "MANHWA", label: "Manhwa" }, 
+  { key: "MANHUA", label: "Manhua" }, 
+]; 
+
+const SORT_OPTIONS = [ 
+  { key: "recent", label: "Recently Added" }, 
+  { key: "title_asc", label: "Title (A–Z)" }, 
+  { key: "title_desc", label: "Title (Z–A)" }, 
+]; 
+
 export function CollectionPage() { 
   const { session } = useAuth(); 
   const [items, setItems] = useState([]); 
   const [isLoading, setIsLoading] = useState(Boolean(session)); 
   const [errorMessage, setErrorMessage] = useState(null); 
-  const [activeTab, setActiveTab] = useState("all"); 
+  const [statusFilter, setStatusFilter] = useState("all"); 
+  const [typeFilter, setTypeFilter] = useState("all"); 
+  const [sortBy, setSortBy] = useState("recent"); 
+  const [statusOpen, setStatusOpen] = useState(false); 
+  const [typeOpen, setTypeOpen] = useState(false); 
+  const [sortOpen, setSortOpen] = useState(false); 
   const [statusMenuOpen, setStatusMenuOpen] = useState(null); 
   const [isUpdating, setIsUpdating] = useState({}); 
+  const toolbarRef = useRef(null); 
 
   const loadCollections = useCallback(async () => { 
     const saved = typeof localStorage !== "undefined" ? localStorage.getItem("orgi_session") : null; 
@@ -43,7 +67,7 @@ export function CollectionPage() {
       const parsed = saved ? JSON.parse(saved) : null; 
       token = parsed?.access_token || parsed?.session?.access_token; 
     } catch {} 
- 
+
     if (!session || !token) { 
       setIsLoading(false); 
       return; 
@@ -70,6 +94,30 @@ export function CollectionPage() {
       setIsLoading(false); 
     } 
   }, [session, loadCollections]); 
+
+  useEffect(() => { 
+    function handleClickOutside(event) { 
+      if (toolbarRef.current && !toolbarRef.current.contains(event.target)) { 
+        setStatusOpen(false); 
+        setTypeOpen(false); 
+        setSortOpen(false); 
+      } 
+    } 
+    function handleKey(event) { 
+      if (event.key === "Escape") { 
+        setStatusOpen(false); 
+        setTypeOpen(false); 
+        setSortOpen(false); 
+        setStatusMenuOpen(null); 
+      } 
+    } 
+    document.addEventListener("mousedown", handleClickOutside); 
+    document.addEventListener("keydown", handleKey); 
+    return () => { 
+      document.removeEventListener("mousedown", handleClickOutside); 
+      document.removeEventListener("keydown", handleKey); 
+    }; 
+  }, []); 
 
   const handleUpdateStatus = async (itemId, newStatus) => { 
     setStatusMenuOpen(null); 
@@ -117,18 +165,6 @@ export function CollectionPage() {
     } 
   }; 
 
-  const counts = { 
-    all: items.length, 
-    plan: items.filter((i) => i.status === "plan").length, 
-    progress: items.filter((i) => i.status === "progress").length, 
-    completed: items.filter((i) => i.status === "completed").length, 
-  }; 
-
-  const filteredItems = items.filter((item) => { 
-    if (activeTab === "all") return true; 
-    return item.status === activeTab; 
-  }); 
-
   const getItemLink = (item) => { 
     if (item.type === "MOVIE") { 
       return `/movie/${item.externalId}`; 
@@ -139,6 +175,50 @@ export function CollectionPage() {
     const cat = item.type ? item.type.toLowerCase() : "manhwa"; 
     return `/books/${cat}/${item.externalId}`; 
   }; 
+
+  const statusCounts = { 
+    all: items.length, 
+    plan: items.filter((i) => i.status === "plan").length, 
+    progress: items.filter((i) => i.status === "progress").length, 
+    completed: items.filter((i) => i.status === "completed").length, 
+  }; 
+
+  const typeCounts = { 
+    all: items.length, 
+    MOVIE: items.filter((i) => (i.type || "").toUpperCase() === "MOVIE").length, 
+    SERIES: items.filter((i) => (i.type || "").toUpperCase() === "SERIES").length, 
+    BOOK: items.filter((i) => (i.type || "").toUpperCase() === "BOOK").length, 
+    MANGA: items.filter((i) => (i.type || "").toUpperCase() === "MANGA").length, 
+    MANHWA: items.filter((i) => (i.type || "").toUpperCase() === "MANHWA").length, 
+    MANHUA: items.filter((i) => (i.type || "").toUpperCase() === "MANHUA").length, 
+  }; 
+
+  const isFilterActive = statusFilter !== "all" || typeFilter !== "all" || sortBy !== "recent"; 
+
+  const handleResetFilters = () => { 
+    setStatusFilter("all"); 
+    setTypeFilter("all"); 
+    setSortBy("recent"); 
+  }; 
+
+  const filteredItems = items 
+    .filter((item) => { 
+      if (statusFilter !== "all" && item.status !== statusFilter) return false; 
+      if (typeFilter !== "all") { 
+        const itemType = (item.type || "").toUpperCase(); 
+        if (itemType !== typeFilter) return false; 
+      } 
+      return true; 
+    }) 
+    .sort((a, b) => { 
+      if (sortBy === "title_asc") { 
+        return (a.title || "").localeCompare(b.title || ""); 
+      } 
+      if (sortBy === "title_desc") { 
+        return (b.title || "").localeCompare(a.title || ""); 
+      } 
+      return 0; 
+    }); 
 
   const hasValidToken = Boolean( 
     session?.access_token || 
@@ -168,6 +248,12 @@ export function CollectionPage() {
     ); 
   } 
 
+  const activeStatusLabel = statusFilter === "all" ? "Status" : `Status: ${STATUS_LABELS[statusFilter]}`; 
+  const activeTypeObj = TYPE_OPTIONS.find((t) => t.key === typeFilter); 
+  const activeTypeLabel = typeFilter === "all" ? "Filter" : `Filter: ${activeTypeObj?.label || typeFilter}`; 
+  const activeSortObj = SORT_OPTIONS.find((s) => s.key === sortBy); 
+  const activeSortLabel = `Sort: ${activeSortObj?.label || "Recently Added"}`; 
+
   return ( 
     <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24 pt-8"> 
       <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px]"> 
@@ -182,45 +268,173 @@ export function CollectionPage() {
             </h1> 
           </div> 
 
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1"> 
-            {[ 
-              { key: "all", label: "All" }, 
-              { key: "plan", label: "Plan" }, 
-              { key: "progress", label: "Progress" }, 
-              { key: "completed", label: "Completed" }, 
-            ].map((tab) => { 
-              const isActive = activeTab === tab.key; 
-              const isProgress = tab.key === "progress"; 
-              return ( 
-                <button 
-                  key={tab.key} 
-                  type="button" 
-                  onClick={() => setActiveTab(tab.key)} 
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${ 
-                    isActive 
-                      ? isProgress 
-                        ? "bg-[#3B82F6] text-white font-semibold shadow-[0_0_15px_rgba(59,130,246,0.35)]" 
-                        : "bg-[#61F1AC] text-black font-semibold shadow-[0_0_15px_rgba(97,241,172,0.25)]" 
-                      : isProgress 
-                        ? "bg-[#0B0B0B] border border-[#1C1C1C] text-[#B5B5B5] hover:text-[#60A5FA] hover:border-[#3B82F6]/40" 
-                        : "bg-[#0B0B0B] border border-[#1C1C1C] text-[#B5B5B5] hover:text-white hover:border-[#61F1AC]/40" 
-                  }`} 
-                > 
-                  <span>{tab.label}</span> 
-                  <span 
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-tabular ${ 
-                      isActive 
-                        ? isProgress 
-                          ? "bg-white/20 text-white font-bold" 
-                          : "bg-black/20 text-black font-bold" 
-                        : "bg-[#181818] text-[#7A7A7A]" 
-                    }`} 
-                  > 
-                    {counts[tab.key] || 0} 
-                  </span> 
-                </button> 
-              ); 
-            })} 
+          <div ref={toolbarRef} className="flex items-center gap-2.5 flex-wrap"> 
+            <div className="relative"> 
+              <button 
+                type="button" 
+                onClick={() => { 
+                  setStatusOpen(!statusOpen); 
+                  setTypeOpen(false); 
+                  setSortOpen(false); 
+                }} 
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors cursor-pointer ${ 
+                  statusOpen || statusFilter !== "all" 
+                    ? "text-[#F5F5F5] bg-[#141414] border border-[#61F1AC]/50 shadow-[0_0_12px_rgba(97,241,172,0.1)]" 
+                    : "text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/50 hover:text-[#F5F5F5]" 
+                }`} 
+              > 
+                <span>{activeStatusLabel}</span> 
+                {statusOpen ? ( 
+                  <ChevronUp size={14} className="text-[#61F1AC]" /> 
+                ) : ( 
+                  <ChevronDown 
+                    size={14} 
+                    className={statusFilter !== "all" ? "text-[#61F1AC]" : "text-[#7A7A7A]"} 
+                  /> 
+                )} 
+              </button> 
+
+              {statusOpen && ( 
+                <div className="absolute left-0 top-full mt-2 w-44 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl py-1.5 shadow-2xl z-30"> 
+                  {[ 
+                    { key: "all", label: "All" }, 
+                    { key: "plan", label: "Plan" }, 
+                    { key: "progress", label: "Progress" }, 
+                    { key: "completed", label: "Completed" }, 
+                  ].map((s) => ( 
+                    <button 
+                      key={s.key} 
+                      type="button" 
+                      onClick={() => { 
+                        setStatusFilter(s.key); 
+                        setStatusOpen(false); 
+                      }} 
+                      className={`w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors cursor-pointer ${ 
+                        statusFilter === s.key 
+                          ? "text-[#61F1AC] bg-[#141414] font-medium" 
+                          : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]" 
+                      }`} 
+                    > 
+                      <span>{s.label}</span> 
+                      <span className="text-[10px] text-[#7A7A7A] font-tabular"> 
+                        {statusCounts[s.key] || 0} 
+                      </span> 
+                    </button> 
+                  ))} 
+                </div> 
+              )} 
+            </div> 
+
+            <div className="relative"> 
+              <button 
+                type="button" 
+                onClick={() => { 
+                  setTypeOpen(!typeOpen); 
+                  setStatusOpen(false); 
+                  setSortOpen(false); 
+                }} 
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors cursor-pointer ${ 
+                  typeOpen || typeFilter !== "all" 
+                    ? "text-[#F5F5F5] bg-[#141414] border border-[#61F1AC]/50 shadow-[0_0_12px_rgba(97,241,172,0.1)]" 
+                    : "text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/50 hover:text-[#F5F5F5]" 
+                }`} 
+              > 
+                <span>{activeTypeLabel}</span> 
+                {typeOpen ? ( 
+                  <ChevronUp size={14} className="text-[#61F1AC]" /> 
+                ) : ( 
+                  <ChevronDown 
+                    size={14} 
+                    className={typeFilter !== "all" ? "text-[#61F1AC]" : "text-[#7A7A7A]"} 
+                  /> 
+                )} 
+              </button> 
+
+              {typeOpen && ( 
+                <div className="absolute left-0 top-full mt-2 w-44 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl py-1.5 shadow-2xl z-30"> 
+                  {TYPE_OPTIONS.map((t) => ( 
+                    <button 
+                      key={t.key} 
+                      type="button" 
+                      onClick={() => { 
+                        setTypeFilter(t.key); 
+                        setTypeOpen(false); 
+                      }} 
+                      className={`w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors cursor-pointer ${ 
+                        typeFilter === t.key 
+                          ? "text-[#61F1AC] bg-[#141414] font-medium" 
+                          : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]" 
+                      }`} 
+                    > 
+                      <span>{t.label}</span> 
+                      <span className="text-[10px] text-[#7A7A7A] font-tabular"> 
+                        {typeCounts[t.key] || 0} 
+                      </span> 
+                    </button> 
+                  ))} 
+                </div> 
+              )} 
+            </div> 
+
+            <div className="relative"> 
+              <button 
+                type="button" 
+                onClick={() => { 
+                  setSortOpen(!sortOpen); 
+                  setStatusOpen(false); 
+                  setTypeOpen(false); 
+                }} 
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors cursor-pointer ${ 
+                  sortOpen || sortBy !== "recent" 
+                    ? "text-[#F5F5F5] bg-[#141414] border border-[#61F1AC]/50 shadow-[0_0_12px_rgba(97,241,172,0.1)]" 
+                    : "text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/50 hover:text-[#F5F5F5]" 
+                }`} 
+              > 
+                <span>{activeSortLabel}</span> 
+                {sortOpen ? ( 
+                  <ChevronUp size={14} className="text-[#61F1AC]" /> 
+                ) : ( 
+                  <ChevronDown 
+                    size={14} 
+                    className={sortBy !== "recent" ? "text-[#61F1AC]" : "text-[#7A7A7A]"} 
+                  /> 
+                )} 
+              </button> 
+
+              {sortOpen && ( 
+                <div className="absolute right-0 md:left-0 top-full mt-2 w-44 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl py-1.5 shadow-2xl z-30"> 
+                  {SORT_OPTIONS.map((so) => ( 
+                    <button 
+                      key={so.key} 
+                      type="button" 
+                      onClick={() => { 
+                        setSortBy(so.key); 
+                        setSortOpen(false); 
+                      }} 
+                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors cursor-pointer ${ 
+                        sortBy === so.key 
+                          ? "text-[#61F1AC] bg-[#141414] font-medium" 
+                          : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]" 
+                      }`} 
+                    > 
+                      {so.label} 
+                    </button> 
+                  ))} 
+                </div> 
+              )} 
+            </div> 
+
+            {isFilterActive && ( 
+              <button 
+                type="button" 
+                onClick={handleResetFilters} 
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs text-[#7A7A7A] hover:text-[#F5F5F5] bg-white/[0.04] border border-white/[0.06] transition-colors cursor-pointer" 
+                title="Reset filters" 
+              > 
+                <X size={12} /> 
+                <span>Reset</span> 
+              </button> 
+            )} 
           </div> 
         </div> 
 
@@ -244,25 +458,39 @@ export function CollectionPage() {
               <Sparkles size={22} /> 
             </div> 
             <h2 className="text-xl font-light text-[#F5F5F5] mb-2"> 
-              No items in {STATUS_LABELS[activeTab] || "collection"} 
+              {items.length === 0 ? "Your collection is empty" : "No items match your filter"} 
             </h2> 
             <p className="text-sm text-[#7A7A7A] max-w-sm mb-6 font-light"> 
-              Explore trending titles, movies, and stories to add them to your collection. 
+              {items.length === 0 
+                ? "Explore trending titles, movies, and stories to add them to your collection." 
+                : "Try clearing your filters or selecting a different status or media type."} 
             </p> 
-            <div className="flex items-center gap-3"> 
-              <Link to="/movies"> 
-                <Button variant="outline" size="sm" className="px-4 py-2 rounded-lg text-xs cursor-pointer"> 
-                  <Film size={14} /> 
-                  <span>Browse Movies</span> 
-                </Button> 
-              </Link> 
-              <Link to="/books/manhwa"> 
-                <Button variant="mintGhost" size="sm" className="px-4 py-2 rounded-lg text-xs cursor-pointer"> 
-                  <BookOpen size={14} /> 
-                  <span>Browse Manhwa</span> 
-                </Button> 
-              </Link> 
-            </div> 
+            {isFilterActive ? ( 
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleResetFilters} 
+                className="px-4 py-2 rounded-lg text-xs cursor-pointer" 
+              > 
+                <X size={14} /> 
+                <span>Reset Filters</span> 
+              </Button> 
+            ) : ( 
+              <div className="flex items-center gap-3"> 
+                <Link to="/movies"> 
+                  <Button variant="outline" size="sm" className="px-4 py-2 rounded-lg text-xs cursor-pointer"> 
+                    <Film size={14} /> 
+                    <span>Browse Movies</span> 
+                  </Button> 
+                </Link> 
+                <Link to="/books/manhwa"> 
+                  <Button variant="mintGhost" size="sm" className="px-4 py-2 rounded-lg text-xs cursor-pointer"> 
+                    <BookOpen size={14} /> 
+                    <span>Browse Manhwa</span> 
+                  </Button> 
+                </Link> 
+              </div> 
+            )} 
           </div> 
         ) : ( 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 pt-8"> 
