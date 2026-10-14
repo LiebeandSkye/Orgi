@@ -3,21 +3,48 @@ import { useLocation, useParams, Link } from "react-router-dom";
 import {
   Star,
   Plus,
+  Check,
   Share2,
   ThumbsUp,
   Reply,
   MoreHorizontal,
   ChevronDown,
-  ChevronUp,
 } from "lucide-react";
-import { getMovieDetails } from "../services/tmdb";
-import { getMovieMedia } from "../services/tmdb";
-import { ScoreRing } from "../components/ui/ScoreRing";
-import { Button } from "../components/ui/Button";
-import { StarRating } from "../components/ui/StarRating";
-import { INTERSTELLAR_DATA } from "../data/mockData";
-import MediaItems from "../components/ui/MediaItems";
-import { fetchMediaDetails } from "../services/mediaApi";
+import { getMovieDetails, getMovieMedia } from "../services/tmdb"; 
+import { ScoreRing } from "../components/ui/ScoreRing"; 
+import { Button } from "../components/ui/Button"; 
+import { ReviewSlider } from "../components/ui/ReviewSlider"; 
+import { INTERSTELLAR_DATA } from "../data/mockData"; 
+import MediaItems from "../components/ui/MediaItems"; 
+import { fetchMediaDetails } from "../services/mediaApi"; 
+import { CastCarousel } from "../components/ui/CastCarousel"; 
+import api from "../services/api"; 
+
+const NAVBAR_AVATAR = 
+  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
+
+function ReviewAvatar({ src, alt, size = "w-9 h-9" }) { 
+  const [errorSrc, setErrorSrc] = useState(null); 
+  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src; 
+  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR; 
+
+  return ( 
+    <div 
+      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`} 
+    > 
+      <img 
+        key={src} 
+        src={effectiveSrc} 
+        alt={alt || "Avatar"} 
+        onError={() => setErrorSrc(src)} 
+        className={`w-full h-full object-cover ${ 
+          isNavbarAvatar ? "scale-125" : "" 
+        }`} 
+      /> 
+    </div> 
+  ); 
+} 
+
 
 export function MovieDetailsPage({
   initialTab = "Cast",
@@ -57,40 +84,41 @@ export function MovieDetailsPage({
     };
   }, [category, id]);
 
-  const [mediaData, setMediaData] = useState({
-    images: {
-      backdrops: [],
-      posters: [],
-    },
-    videos: {
-      results: [],
-    },
-  });
+  const [mediaData, setMediaData] = useState({ 
+    images: { 
+      backdrops: [], 
+      posters: [], 
+    }, 
+    videos: { 
+      results: [], 
+    }, 
+  }); 
 
-  useEffect(() => {
-    if (category) return;
-    const targetMovieId = id || 157336;
+  useEffect(() => { 
+    if (category) return; 
+    const targetMovieId = id || 157336; 
 
-    let cancelled = false;
+    let cancelled = false; 
 
-    async function fetchMedia() {
-      try {
-        const data = await getMovieMedia(targetMovieId);
+    async function fetchMedia() { 
+      try { 
+        const data = await getMovieMedia(targetMovieId); 
 
-        if (!cancelled) {
-          setMediaData(data);
-        }
-      } catch (error) {
-        console.error("Failed to load movie media:", error);
-      }
-    }
+        if (!cancelled) { 
+          setMediaData(data); 
+        } 
+      } catch (error) { 
+        console.error("Failed to load movie media:", error); 
+      } 
+    } 
 
-    fetchMedia();
+    fetchMedia(); 
 
-    return () => {
-      cancelled = true;
-    };
-  }, [category, id]);
+    return () => { 
+      cancelled = true; 
+    }; 
+  }, [category, id]); 
+
 
   const activeTab =
     selectedTabOverride !== null
@@ -107,12 +135,237 @@ export function MovieDetailsPage({
         : initialCropHero;
 
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
-  const [newThought, setNewThought] = useState("");
-  const [selectedStars, setSelectedStars] = useState(0);
-  const [repliesExpanded, setRepliesExpanded] = useState(false);
-  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  const [sortBy, setSortBy] = useState("Top");
-  const [likedReviews, setLikedReviews] = useState({});
+  const synopsisRef = useRef(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  const displaySynopsis =
+    (movieData?.synopsis || "") +
+    (movieData?.synopsis &&
+    movieData.synopsis.length < 260 &&
+    !movieData.synopsis.includes("dust storms")
+      ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
+      : "");
+
+  useEffect(() => {
+    if (synopsisRef.current) {
+      setContentHeight(synopsisRef.current.scrollHeight);
+    }
+  }, [displaySynopsis]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (synopsisRef.current) {
+        setContentHeight(synopsisRef.current.scrollHeight);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isLongSynopsis = contentHeight === 0 || contentHeight > 82; 
+  const [newThought, setNewThought] = useState(""); 
+  const [selectedScore, setSelectedScore] = useState(8); 
+  const [repliesExpanded, setRepliesExpanded] = useState(false); 
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false); 
+  const [sortBy, setSortBy] = useState("Top"); 
+  const [likedReviews, setLikedReviews] = useState({}); 
+  const [visibleReviews, setVisibleReviews] = useState(4); 
+  const [inCollection, setInCollection] = useState(false); 
+  const [collectionLoading, setCollectionLoading] = useState(false); 
+  const [communityData, setCommunityData] = useState({ 
+    communityAverage: null, 
+    communityVotes: 0, 
+    reviews: [], 
+  }); 
+  const [reviewFilter, setReviewFilter] = useState("all"); 
+  const [isPostingReview, setIsPostingReview] = useState(false); 
+ 
+  useEffect(() => { 
+    if (!movieData) return; 
+    const currentProvider = category 
+      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "open_library") 
+      : "tmdb"; 
+    const currentExternalId = String(category ? id : (id || 157336)); 
+ 
+    let mounted = true; 
+    async function loadCollectionAndReviews() { 
+      try { 
+        const [colRes, revRes] = await Promise.allSettled([ 
+          api.get(`/collections/check/${currentProvider}/${currentExternalId}`), 
+          api.get(`/reviews/${currentProvider}/${currentExternalId}`), 
+        ]); 
+ 
+        if (mounted) { 
+          if (colRes.status === "fulfilled" && colRes.value?.success) { 
+            setInCollection(!!colRes.value.data?.inCollection); 
+          } 
+          if (revRes.status === "fulfilled" && revRes.value?.success) { 
+            setCommunityData(revRes.value.data || { 
+              communityAverage: null, 
+              communityVotes: 0, 
+              reviews: [], 
+            }); 
+          } 
+        } 
+      } catch (err) { 
+        console.error("Failed to load collection or review status:", err); 
+      } 
+    } 
+    loadCollectionAndReviews(); 
+ 
+    return () => { 
+      mounted = false; 
+    }; 
+  }, [movieData, category, id]); 
+ 
+  const handleToggleCollection = async () => { 
+    if (!movieData) return; 
+    const token = localStorage.getItem("orgi_session"); 
+    if (!token) { 
+      alert("Please sign in to add items to your collection."); 
+      return; 
+    } 
+ 
+    const currentProvider = category 
+      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "open_library") 
+      : "tmdb"; 
+    const currentExternalId = String(category ? id : (id || 157336)); 
+    const currentType = category ? category.toUpperCase() : "MOVIE"; 
+ 
+    setCollectionLoading(true); 
+    try { 
+      const res = await api.post("/collections/toggle", { 
+        external_id: currentExternalId, 
+        provider: currentProvider, 
+        type: currentType, 
+        title: movieData.title, 
+        cover_url: movieData.poster || movieData.backdrop, 
+      }); 
+ 
+      if (res?.success) { 
+        setInCollection(!!res.data?.inCollection); 
+      } 
+    } catch (err) { 
+      console.error("Failed to toggle collection:", err); 
+      alert(err.message || "Failed to update collection."); 
+    } finally { 
+      setCollectionLoading(false); 
+    } 
+  }; 
+ 
+  const handlePostReview = async () => { 
+    if (!newThought.trim()) return; 
+    const token = localStorage.getItem("orgi_session"); 
+    if (!token) { 
+      alert("Please sign in to rate and review."); 
+      return; 
+    } 
+ 
+    const currentProvider = category 
+      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "open_library") 
+      : "tmdb"; 
+    const currentExternalId = String(category ? id : (id || 157336)); 
+    const currentType = category ? category.toUpperCase() : "MOVIE"; 
+ 
+    setIsPostingReview(true); 
+    try { 
+      const res = await api.post("/reviews", { 
+        external_id: currentExternalId, 
+        provider: currentProvider, 
+        type: currentType, 
+        title: movieData.title, 
+        cover_url: movieData.poster || movieData.backdrop, 
+        score: selectedScore, 
+        content: newThought.trim(), 
+      }); 
+ 
+      if (res?.success) { 
+        setNewThought(""); 
+        const newRev = res.data; 
+        setCommunityData((prev) => { 
+          const existingIdx = prev.reviews.findIndex( 
+            (r) => r.id === newRev.id || (r.userId && r.userId === newRev.userId) 
+          ); 
+          let updatedReviews = [...prev.reviews]; 
+          if (existingIdx >= 0) { 
+            updatedReviews[existingIdx] = newRev; 
+          } else { 
+            updatedReviews = [newRev, ...updatedReviews]; 
+          } 
+ 
+          const scores = updatedReviews 
+            .map((r) => r.score) 
+            .filter((s) => typeof s === "number" && s > 0); 
+          const avg = scores.length > 0 
+            ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)) 
+            : null; 
+ 
+          return { 
+            ...prev, 
+            communityAverage: avg, 
+            communityVotes: scores.length, 
+            reviews: updatedReviews, 
+          }; 
+        }); 
+      } 
+    } catch (err) { 
+      console.error("Failed to post review:", err); 
+      alert(err.message || "Failed to post review."); 
+    } finally { 
+      setIsPostingReview(false); 
+    } 
+  }; 
+ 
+  const providerScore = parseFloat(movieData?.tmdbRating) || 0; 
+  const providerVotesCount = 
+    typeof movieData?.tmdbVotes === "string" && (movieData.tmdbVotes.includes("K") || movieData.tmdbVotes.includes("k")) 
+      ? parseFloat(movieData.tmdbVotes) * 1000 
+      : parseInt(movieData?.tmdbVotes, 10) || 100; 
+ 
+  const communityScore = communityData.communityAverage; 
+  const communityVotesCount = communityData.communityVotes || 0; 
+ 
+  let blendedScore = providerScore; 
+  let totalVotesLabel = movieData?.tmdbVotes; 
+ 
+  if (communityScore !== null && communityVotesCount > 0) { 
+    blendedScore = Number( 
+      ( 
+        (providerScore * providerVotesCount + communityScore * communityVotesCount) / 
+        (providerVotesCount + communityVotesCount) 
+      ).toFixed(1) 
+    ); 
+    const totalCount = providerVotesCount + communityVotesCount; 
+    totalVotesLabel = totalCount >= 1000 
+      ? `${(totalCount / 1000).toFixed(1)}k ratings` 
+      : `${totalCount} ratings`; 
+  } 
+ 
+  const rawProviderReviews = (movieData?.reviews || []).map((r) => ({ 
+    ...r, 
+    source: "provider", 
+  })); 
+  const allReviews = [...communityData.reviews, ...rawProviderReviews]; 
+  const filteredReviews = allReviews.filter((r) => { 
+    if (reviewFilter === "community") return r.source === "community"; 
+    if (reviewFilter === "provider") return r.source === "provider"; 
+    return true; 
+  }); 
+ 
+  const sortedReviews = [...filteredReviews].sort((a, b) => { 
+    switch (sortBy) { 
+      case "Top": 
+        return (b.likes || 0) - (a.likes || 0); 
+      case "Newest": 
+        return new Date(b.time || b.createdAt || 0) - new Date(a.time || a.createdAt || 0); 
+      case "Highest Rated": 
+        return (b.score || 0) - (a.score || 0); 
+      case "Lowest Rated": 
+        return (a.score || 0) - (b.score || 0); 
+      default: 
+        return 0; 
+    } 
+  });
 
   const contentRef = useRef(null);
 
@@ -238,46 +491,46 @@ export function MovieDetailsPage({
 
             {/* Row with two circular score rings */}
             <div className="flex items-center gap-8 mb-8">
-              {/* Large circular score ring in mint (stroke 4px, TMDB score in tabular numerals, beneath it TMDB votes in muted text) */}
-              <ScoreRing
-                score={movieData.tmdbRating}
-                label={movieData.tmdbVotes}
-                size="lg"
-              />
-
-              <div className="w-[1px] h-12 bg-[#1C1C1C]" />
-
-              {/* Second smaller ring labeled "Community 8.9" with "342 ratings" */}
-              <ScoreRing
-                score={movieData.communityRating}
-                label={movieData.communityVotes}
-                size="sm"
-                variant="inline"
-              />
-            </div>
-
-            {/* Button row: solid mint #61F1AC primary button "Rate this", ghost outline "Add to list", small circular share */}
-            <div className="flex items-center gap-3.5 mb-8">
-              <Button
-                variant="primary"
-                size="md"
-                className="px-5 py-2.5 rounded-[10px]"
-                onClick={() => {
-                  handleTabChange("Reviews");
-                }}
-              >
-                <Star size={15} className="fill-black text-black" />
-                <span>Rate this</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="md"
-                className="px-5 py-2.5 rounded-[10px]"
-                onClick={() => alert("Added to your watchlist")}
-              >
-                <Plus size={15} />
-                <span>Add to list</span>
+              <ScoreRing 
+                score={blendedScore} 
+                label={totalVotesLabel} 
+                size="lg" 
+              /> 
+ 
+              <div className="w-[1px] h-12 bg-[#1C1C1C]" /> 
+ 
+              <ScoreRing 
+                score={communityScore !== null ? communityScore : movieData.communityRating} 
+                label={communityVotesCount > 0 ? `${communityVotesCount} Orgi votes` : movieData.communityVotes} 
+                size="sm" 
+                variant="inline" 
+              /> 
+            </div> 
+ 
+            <div className="flex items-center gap-3.5 mb-8"> 
+              <Button 
+                variant="primary" 
+                size="md" 
+                className="px-5 py-2.5 rounded-[10px]" 
+                onClick={() => { 
+                  handleTabChange("Reviews"); 
+                }} 
+              > 
+                <Star size={15} className="fill-black text-black" /> 
+                <span>Rate this</span> 
+              </Button> 
+ 
+              <Button 
+                variant={inCollection ? "mintGhost" : "outline"} 
+                size="md" 
+                disabled={collectionLoading} 
+                className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${ 
+                  inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : "" 
+                }`} 
+                onClick={handleToggleCollection} 
+              > 
+                {inCollection ? <Check size={15} /> : <Plus size={15} />} 
+                <span>{inCollection ? "In collection" : "Add to collection"}</span> 
               </Button>
 
               <button
@@ -297,37 +550,41 @@ export function MovieDetailsPage({
 
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
-                className={`relative overflow-hidden transition-[max-height] duration-700 ease-in-out ${
-                  synopsisExpanded ? "max-h-[1000px]" : "max-h-[5.5rem]"
-                }`}
+                style={{
+                  maxHeight: synopsisExpanded
+                    ? `${(contentHeight || 300) + 4}px`
+                    : "5rem",
+                }}
+                className="relative overflow-hidden transition-[max-height] duration-500 ease-in-out"
               >
-                <p
-                  className={`transition-[filter] duration-700 ease-in-out ${
-                    synopsisExpanded ? "" : "line-clamp-3"
-                  }`}
-                >
-                  {movieData.synopsis}
-                  {!synopsisExpanded &&
-                    " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."}
-                </p>
+                <div ref={synopsisRef}>
+                  <p className="font-light text-[#B5B5B5] leading-relaxed">
+                    {displaySynopsis}
+                  </p>
+                </div>
 
-                {!synopsisExpanded && (
-                  <div className="pointer-events-none absolute bottom-0 left-0 h-6 w-full backdrop-brightness-50 bg-gradient-to-t from-[#000000] to-transparent" />
-                )}
+                <div
+                  className={`pointer-events-none absolute bottom-0 left-0 h-8 w-full bg-gradient-to-t from-[#000000] via-[#000000]/70 to-transparent transition-opacity duration-300 ${
+                    synopsisExpanded ? "opacity-0" : "opacity-100"
+                  }`}
+                />
               </div>
 
-              <button
-                type="button"
-                onClick={() => setSynopsisExpanded(!synopsisExpanded)}
-                className="mt-1 text-sm font-medium text-[#61F1AC]  cursor-pointer inline-flex items-center gap-2 transition-colors"
-              >
-                {synopsisExpanded ? "Show less" : "Read more"}
-                {synopsisExpanded ? (
-                  <ChevronUp size={18} />
-                ) : (
-                  <ChevronDown size={18} />
-                )}
-              </button>
+              {isLongSynopsis && (
+                <button
+                  type="button"
+                  onClick={() => setSynopsisExpanded((prev) => !prev)}
+                  className="mt-2 text-sm font-medium text-[#61F1AC] hover:text-[#61F1AC]/80 cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <span>{synopsisExpanded ? "Show less" : "Read more"}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-500 ease-in-out ${
+                      synopsisExpanded ? "rotate-180" : "rotate-0"
+                    }`}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -385,18 +642,14 @@ export function MovieDetailsPage({
         {/* ======================================================== */}
         {activeTab === "Cast" && (
           <div className="animate-in fade-in duration-300">
-            {/* Header row */}
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
-                Cast
-              </h2>
-              <button
-                type="button"
-                className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors cursor-pointer"
-              >
-                See all 24 →
-              </button>
-            </div>
+            {category && ( 
+              <div className="flex items-center justify-between mb-8"> 
+                <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight"> 
+                  Author 
+                </h2> 
+              </div> 
+            )} 
+
 
             {category ? (
               /* Vertical Portrait Author Cards for Book, Manga, Manhwa, and Manhua */
@@ -433,36 +686,11 @@ export function MovieDetailsPage({
               </div>
             ) : (
               /* Horizontal scrollable row of 8 circular 88px cast portraits with subtle fade on right edge */
-              <div className="relative">
-                <div className="flex items-start gap-8 overflow-x-auto no-scrollbar pb-4 pr-16">
-                  {(movieData.cast || []).map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex flex-col items-center text-center shrink-0 w-[100px] group cursor-pointer"
-                    >
-                      {/* 88px circular portrait */}
-                      <div className="w-[88px] h-[88px] rounded-full overflow-hidden border border-[#1C1C1C] mb-3 group-hover:border-[#61F1AC]/50 transition-all bg-[#0B0B0B]">
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      {/* Name in white */}
-                      <span className="text-xs font-medium text-[#F5F5F5] line-clamp-1 group-hover:text-white transition-colors">
-                        {member.name}
-                      </span>
-                      {/* Character name in muted grey below */}
-                      <span className="text-[11px] text-[#7A7A7A] line-clamp-1 mt-0.5">
-                        {member.character}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Subtle fade on the right edge */}
-                <div className="absolute top-0 right-0 bottom-0 w-24 bg-gradient-to-l from-[#000000] via-[#000000]/60 to-transparent pointer-events-none" />
-              </div>
+              <CastCarousel
+                title="Cast"
+                items={movieData.cast || []}
+                variant="cast"
+              />
             )}
           </div>
         )}
@@ -475,10 +703,10 @@ export function MovieDetailsPage({
             {/* COMPOSER CARD: #0B0B0B, 1px border, 16px radius */}
             <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm">
               <div className="flex items-start gap-3.5 mb-4">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
+                <ReviewAvatar
+                  src={NAVBAR_AVATAR}
                   alt="User Avatar"
-                  className="w-9 h-9 rounded-full object-cover border border-[#1C1C1C] shrink-0"
+                  size="w-9 h-9"
                 />
                 <textarea
                   value={newThought}
@@ -489,104 +717,119 @@ export function MovieDetailsPage({
                 />
               </div>
 
-              {/* Bottom row: compact 5-star selector & solid mint Post button */}
-              <div className="flex items-center justify-between pt-3 border-t border-[#1C1C1C]/60">
-                <div className="flex items-center gap-2">
-                  <StarRating
-                    value={selectedStars}
-                    onChange={setSelectedStars}
-                    size={17}
-                  />
-                  {selectedStars > 0 && (
-                    <span className="text-xs font-tabular text-[#61F1AC]">
-                      {selectedStars}/5
-                    </span>
-                  )}
-                </div>
-
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={newThought.trim().length === 0}
-                  onClick={() => {
-                    alert("Thought posted!");
-                    setNewThought("");
-                    setSelectedStars(0);
-                  }}
-                  className="px-4 py-1.5 rounded-lg text-xs"
-                >
-                  Post
-                </Button>
-              </div>
-            </div>
-
-            {/* THIN ROW: left "342 reviews" in muted caps, right dropdown chip "Sort: Top ⌄" */}
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#1C1C1C]">
-              <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]">
-                {movieData.communityVotes}
-              </span>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/40 hover:text-[#F5F5F5] transition-colors cursor-pointer"
-                >
-                  <span>Sort: {sortBy}</span>
-                  <ChevronDown size={12} className="text-[#7A7A7A]" />
-                </button>
-
-                {sortDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-xl z-20">
-                    {["Top", "Newest", "Highest Rated", "Lowest Rated"].map(
-                      (opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => {
-                            setSortBy(opt);
-                            setSortDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                            sortBy === opt
-                              ? "text-[#61F1AC] bg-[#141414]"
-                              : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]"
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* REVIEW LIST: 4 comment items separated by 1px #1C1C1C lines, no card boxes */}
-            <div className="flex flex-col divide-y divide-[#1C1C1C]">
-              {(movieData.reviews || []).map((rev) => {
-                const isLiked = likedReviews[rev.id];
-                const likeCount = rev.likes + (isLiked ? 1 : 0);
-
-                return (
-                  <article key={rev.id} className="py-6 first:pt-0">
-                    {/* Header: 36px round avatar, bold username in white, relative time in muted, small mint star with score */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={rev.avatar}
-                          alt={rev.author}
-                          className="w-9 h-9 rounded-full object-cover border border-[#1C1C1C]"
-                        />
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-[#F5F5F5]">
-                            {rev.author}
-                          </span>
-                          <span className="text-xs text-[#7A7A7A]">·</span>
-                          <span className="text-xs text-[#7A7A7A] font-light">
-                            {rev.time}
-                          </span>
-                        </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-[#1C1C1C]/60"> 
+                <ReviewSlider 
+                  value={selectedScore} 
+                  onChange={setSelectedScore} 
+                /> 
+ 
+                <Button 
+                  variant="primary" 
+                  size="sm" 
+                  disabled={newThought.trim().length === 0 || isPostingReview} 
+                  onClick={handlePostReview} 
+                  className="px-4 py-1.5 rounded-lg text-xs self-end sm:self-center cursor-pointer" 
+                > 
+                  {isPostingReview ? "Posting..." : "Post"} 
+                </Button> 
+              </div> 
+            </div> 
+ 
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-[#1C1C1C]"> 
+              <div className="flex items-center gap-1.5 flex-wrap"> 
+                {[ 
+                  { key: "all", label: "All" }, 
+                  { key: "community", label: "Community (Ours)" }, 
+                  { key: "provider", label: category ? "Provider" : "TMDB" }, 
+                ].map((f) => { 
+                  const isActive = reviewFilter === f.key; 
+                  return ( 
+                    <button 
+                      key={f.key} 
+                      type="button" 
+                      onClick={() => setReviewFilter(f.key)} 
+                      className={`px-3 py-1 rounded-full text-xs transition-colors cursor-pointer ${ 
+                        isActive 
+                          ? "bg-[#61F1AC] text-black font-semibold" 
+                          : "bg-[#0B0B0B] border border-[#1C1C1C] text-[#B5B5B5] hover:text-white hover:border-[#61F1AC]/40" 
+                      }`} 
+                    > 
+                      <span>{f.label}</span> 
+                    </button> 
+                  ); 
+                })} 
+              </div> 
+ 
+              <div className="flex items-center justify-between sm:justify-end gap-3"> 
+                <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]"> 
+                  {sortedReviews.length} {sortedReviews.length === 1 ? "review" : "reviews"} 
+                </span> 
+ 
+                <div className="relative"> 
+                  <button 
+                    type="button" 
+                    onClick={() => setSortDropdownOpen(!sortDropdownOpen)} 
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/40 hover:text-[#F5F5F5] transition-colors cursor-pointer" 
+                  > 
+                    <span>Sort: {sortBy}</span> 
+                    <ChevronDown size={12} className="text-[#7A7A7A]" /> 
+                  </button> 
+ 
+                  {sortDropdownOpen && ( 
+                    <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-xl z-20"> 
+                      {["Top", "Newest", "Highest Rated", "Lowest Rated"].map( 
+                        (opt) => ( 
+                          <button 
+                            key={opt} 
+                            type="button" 
+                            onClick={() => { 
+                              setSortBy(opt); 
+                              setSortDropdownOpen(false); 
+                            }} 
+                            className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${ 
+                              sortBy === opt 
+                                ? "text-[#61F1AC] bg-[#141414]" 
+                                : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]" 
+                            }`} 
+                          > 
+                            {opt} 
+                          </button> 
+                        ), 
+                      )} 
+                    </div> 
+                  )} 
+                </div> 
+              </div> 
+            </div> 
+ 
+            <div className="flex flex-col divide-y divide-[#1C1C1C]"> 
+              {sortedReviews.slice(0, visibleReviews).map((rev) => { 
+                const isLiked = likedReviews[rev.id]; 
+                const likeCount = rev.likes + (isLiked ? 1 : 0); 
+ 
+                return ( 
+                  <article key={rev.id} className="py-6 first:pt-0"> 
+                    <div className="flex items-center justify-between mb-3"> 
+                      <div className="flex items-center gap-3"> 
+                        <ReviewAvatar 
+                          src={rev.avatar} 
+                          alt={rev.author} 
+                          size="w-9 h-9" 
+                        /> 
+                        <div className="flex items-center gap-2"> 
+                          <span className="font-semibold text-sm text-[#F5F5F5]"> 
+                            {rev.author} 
+                          </span> 
+                          {rev.source === "community" && ( 
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#61F1AC]/10 text-[#61F1AC] border border-[#61F1AC]/30"> 
+                              Orgi 
+                            </span> 
+                          )} 
+                          <span className="text-xs text-[#7A7A7A]">·</span> 
+                          <span className="text-xs text-[#7A7A7A] font-light"> 
+                            {rev.time} 
+                          </span> 
+                        </div> 
                       </div>
 
                       <div className="flex items-center gap-1 text-xs font-tabular text-[#61F1AC] font-semibold">
@@ -655,10 +898,10 @@ export function MovieDetailsPage({
                         {rev.replies.map((reply) => (
                           <div key={reply.id} className="text-xs">
                             <div className="flex items-center gap-2 mb-1">
-                              <img
+                              <ReviewAvatar
                                 src={reply.avatar}
                                 alt={reply.author}
-                                className="w-5 h-5 rounded-full object-cover"
+                                size="w-5 h-5"
                               />
                               <span className="font-medium text-[#F5F5F5]">
                                 {reply.author}
@@ -682,14 +925,16 @@ export function MovieDetailsPage({
 
             {/* Mint "Load more" ghost button centered at end */}
             <div className="flex justify-center mt-10">
-              <Button
-                variant="mintGhost"
-                size="md"
-                className="px-6 py-2 rounded-full text-xs font-medium"
-                onClick={() => alert("Loaded additional reviews")}
-              >
-                Load more reviews
-              </Button>
+              {visibleReviews < sortedReviews.length && (
+                <Button
+                  variant="mintGhost"
+                  size="md"
+                  className="px-6 py-2 rounded-full text-xs font-medium"
+                  onClick={() => setVisibleReviews((prev) => prev + 4)}
+                >
+                  Load more reviews
+                </Button>
+              )}
             </div>
           </div>
         )}

@@ -12,6 +12,7 @@ const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY  ;
 export function getTmdbImageUrl(path, size = "w500") {
   if (!path) return "";
   if (path.startsWith("http")) return path;
+  if (path.startsWith("/http")) return path.slice(1);
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
 }
   
@@ -221,7 +222,7 @@ export async function getMovieDetails(movieId = 157336) {
   const data = await fetchFromApi(
     `/movie/${resolvedId}`,
     `/movie/${resolvedId}`,
-    { append_to_response: "credits,reviews,release_dates,similar" }
+    { append_to_response: "credits,reviews,release_dates,similar,images,videos" }
   );
 
   const director =
@@ -302,7 +303,28 @@ export async function getMovieDetails(movieId = 157336) {
       content: r.content || "",
       likes: 12 + i * 9,
       repliesCount: 0
-    }))
+    })),
+    images: {
+      backdrops: (data.images?.backdrops || []).map((img) => ({
+        file_path: img.file_path,
+        width: img.width,
+        height: img.height,
+      })),
+      posters: (data.images?.posters || []).map((img) => ({
+        file_path: img.file_path,
+        width: img.width,
+        height: img.height,
+      })),
+    },
+    videos: {
+      results: (data.videos?.results || []).map((v) => ({
+        id: v.id,
+        key: v.key,
+        name: v.name,
+        site: v.site,
+        type: v.type,
+      })),
+    },
   };
 }
 
@@ -314,7 +336,7 @@ export async function getSeriesDetails(seriesId = 1396) {
   const data = await fetchFromApi(
     `/tv/${resolvedId}`,
     `/tv/${resolvedId}`,
-    { append_to_response: "credits,reviews,season/1" }
+    { append_to_response: "credits,reviews,season/1,images,videos" }
   );
 
   const episodes = (data["season/1"]?.episodes || []).slice(0, 15).map((ep, idx) => ({
@@ -384,7 +406,28 @@ export async function getSeriesDetails(seriesId = 1396) {
       content: r.content || "",
       likes: 20 + i * 8,
       repliesCount: 0
-    }))
+    })),
+    images: {
+      backdrops: (data.images?.backdrops || []).map((img) => ({
+        file_path: img.file_path,
+        width: img.width,
+        height: img.height,
+      })),
+      posters: (data.images?.posters || []).map((img) => ({
+        file_path: img.file_path,
+        width: img.width,
+        height: img.height,
+      })),
+    },
+    videos: {
+      results: (data.videos?.results || []).map((v) => ({
+        id: v.id,
+        key: v.key,
+        name: v.name,
+        site: v.site,
+        type: v.type,
+      })),
+    },
   };
 }
 

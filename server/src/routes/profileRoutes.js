@@ -15,24 +15,24 @@ router.get("/:id", async(req, res, next) => {
         } 
         
         res.json({ success: true, data }); 
-    }
-    catch (err) { next(err) }
-})
+    } 
+    catch (err) { next(err); } 
+}); 
 
 router.put("/", requireAuth, async (req, res, next) => { 
     try { 
         const userId = req.user.id; 
         const { user_name, profile_url, banner_url, current_status } = req.body; 
-        const { data: existingUser } = await supabase
-            .from("users")
-            .select("id")
-            .eq("id", userId)
+        const { data: existingUser } = await supabase 
+            .from("users") 
+            .select("id") 
+            .eq("id", userId) 
             .maybeSingle(); 
 
         let query; 
         if (!existingUser) { 
-            query = supabase
-                .from("users")
+            query = supabase 
+                .from("users") 
                 .insert({ 
                     id: userId, 
                     public_id: helperGenerateRandomId(), 
@@ -41,20 +41,20 @@ router.put("/", requireAuth, async (req, res, next) => {
                     profile_url, 
                     banner_url, 
                     current_status: current_status || 'Online', 
-                })
-                .select()
+                }) 
+                .select() 
                 .single(); 
         } else { 
-            query = supabase
-                .from("users")
+            query = supabase 
+                .from("users") 
                 .update({ 
                     user_name, 
                     profile_url, 
                     banner_url, 
                     current_status, 
-                })
-                .eq("id", userId)
-                .select()
+                }) 
+                .eq("id", userId) 
+                .select() 
                 .single(); 
         } 
 
@@ -62,8 +62,8 @@ router.put("/", requireAuth, async (req, res, next) => {
         if (error) throw error; 
         
         res.json({ success: true, data }); 
-    }
-    catch (err) { next(err) }
-})
+    } 
+    catch (err) { next(err); } 
+}); 
 
 export default router; 
