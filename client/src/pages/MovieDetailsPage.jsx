@@ -794,9 +794,7 @@ export function MovieDetailsPage({
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* 2. REVIEWS TAB CONTENT (720px centered single column)     */}
-        {/* =====================================================        {activeTab === "Reviews" && ( 
+        {activeTab === "Reviews" && ( 
           <div className="max-w-[720px] mx-auto animate-in fade-in duration-300"> 
             {userReview && !isEditingUserReview ? ( 
               <div className="bg-[#0B0B0B] border border-[#61F1AC]/40 rounded-[16px] p-5 mb-8 shadow-[0_0_20px_rgba(97,241,172,0.06)] animate-in fade-in"> 
@@ -1145,12 +1143,7 @@ export function MovieDetailsPage({
             </div> 
           </div> 
         )} 
-/div>
-        )}
 
-        {/* ======================================================== */}
-        {/* 3.  MEDIA TAB CONTENT                                   */}
-        {/* ======================================================== */}
         {activeTab === "Media" && (
           <div className="animate-in fade-in duration-300">
             <MediaItems
