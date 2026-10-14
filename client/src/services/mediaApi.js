@@ -210,6 +210,57 @@ export async function fetchMangaDexByCategory(
     return results;
 }
 
+export async function fetchBooksDashboardFeeds() {
+    try {
+        const [
+            trendingManhwa,
+            trendingManga,
+            trendingManhua,
+            popularBooks,
+            fanFavoritesManhwa,
+            fanFavoritesManga,
+        ] = await Promise.all([
+            fetchMangaDexByCategory("manhwa", 1, "", "All", "All", "Most popular").catch(() => []),
+            fetchMangaDexByCategory("manga", 1, "", "All", "All", "Most popular").catch(() => []),
+            fetchMangaDexByCategory("manhua", 1, "", "All", "All", "Most popular").catch(() => []),
+            fetchBooks(1, "").catch(() => []),
+            fetchMangaDexByCategory("manhwa", 1, "", "All", "All", "Top rated").catch(() => []),
+            fetchMangaDexByCategory("manga", 1, "", "All", "All", "Top rated").catch(() => []),
+        ]);
+
+        const formatRoute = (item, cat) => ({
+            ...item,
+            route: `/books/${cat}/${item.id}`,
+            score: item.rating,
+        });
+
+        // Combined top rated fan favorites alternating Manhwa & Manga
+        const fanFavorites = [];
+        const maxLen = Math.max(fanFavoritesManhwa.length, fanFavoritesManga.length);
+        for (let i = 0; i < maxLen; i++) {
+            if (fanFavoritesManhwa[i]) fanFavorites.push(formatRoute(fanFavoritesManhwa[i], "manhwa"));
+            if (fanFavoritesManga[i]) fanFavorites.push(formatRoute(fanFavoritesManga[i], "manga"));
+        }
+
+        return {
+            trendingManhwa: (trendingManhwa || []).map((m) => formatRoute(m, "manhwa")),
+            trendingManga: (trendingManga || []).map((m) => formatRoute(m, "manga")),
+            trendingManhua: (trendingManhua || []).map((m) => formatRoute(m, "manhua")),
+            trendingBooks: (popularBooks || []).map((b) => formatRoute(b, "novels")),
+            fanFavorites: fanFavorites.slice(0, 16),
+        };
+    } catch (err) {
+        console.error("Failed to fetch books dashboard feeds:", err);
+        return {
+            trendingManhwa: [],
+            trendingManga: [],
+            trendingManhua: [],
+            trendingBooks: [],
+            fanFavorites: [],
+        };
+    }
+}
+
 export async function fetchBooks(page = 1, query = "") {
     try {
         const proxyParams = new URLSearchParams({ page, q: query });
@@ -267,6 +318,53 @@ export async function fetchBooks(page = 1, query = "") {
     }
     results.totalPages = Math.max(1, totalPages);
     return results;
+}
+
+export async function searchMangaDex(query, category = "all", limit = 18) {
+    if (!query?.trim()) return [];
+    const params = new URLSearchParams();
+    params.append("limit", limit);
+    params.append("title", query.trim());
+    params.append("includes[]", "cover_art");
+    params.append("includes[]", "author");
+    params.append("order[relevance]", "desc");
+    params.append("contentRating[]", "safe");
+    params.append("contentRating[]", "suggestive");
+
+    if (category === "manhwa") params.append("originalLanguage[]", "ko");
+    else if (category === "manga") params.append("originalLanguage[]", "ja");
+    else if (category === "manhua") params.append("originalLanguage[]", "zh");
+
+    const res = await fetch(`${MANGADEX_BASE}/manga?${params.toString()}`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    const list = json.data || [];
+
+    return list.map((item) => {
+        const attrs = item.attributes || {};
+        const title = getEnglishTitle(attrs);
+        const coverRel = item.relationships?.find((r) => r.type === "cover_art");
+        const authorRel = item.relationships?.find((r) => r.type === "author");
+        const fileName = coverRel?.attributes?.fileName;
+        const origLang = attrs.originalLanguage;
+        const type = origLang === "ko" ? "manhwa" : origLang === "zh" ? "manhua" : "manga";
+
+        return {
+            id: item.id,
+            title,
+            author: authorRel?.attributes?.name || "MangaDex",
+            cover: fileName
+                ? `${MANGADEX_COVERS}/${item.id}/${fileName}.512.jpg`
+                : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover",
+            rating: "8.8",
+            chapters: attrs.lastChapter ? `Ch. ${attrs.lastChapter}` : "Ongoing",
+            type,
+        };
+    });
+}
+
+export async function searchBooks(query, page = 1) {
+    return fetchBooks(page, query);
 }
 
 export async function fetchMediaDetails(category, id) {
