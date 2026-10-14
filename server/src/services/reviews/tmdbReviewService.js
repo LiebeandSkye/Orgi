@@ -290,6 +290,8 @@ export async function getTmdbReviewCards() {
           containsSpoilers: /spoiler/i.test(rev.content),
           detailHref: `/reviews/tmdb/${item.id}/${rev.id}`,
           mediaType,
+          likes: item.vote_count || 0,
+          comments: reviewsData.total_results || reviewsList.length || 0,
         };
       });
     },
@@ -401,6 +403,8 @@ export async function searchTmdbReviews(query) {
         containsSpoilers: /spoiler/i.test(best.content),
         detailHref: `/reviews/tmdb/${item.id}/${best.id}`,
         mediaType,
+        likes: item.vote_count || 0,
+        comments: reviewsList.length || 0,
       };
     },
     6
@@ -471,6 +475,8 @@ export async function getTmdbReviewDetail(titleId, reviewId) {
     containsSpoilers: /spoiler/i.test(matchingReview.content),
     externalUrl: matchingReview.url || `https://www.themoviedb.org/${isTv ? "tv" : "movie"}/${titleId}`,
     mediaRoute: isTv ? `/series/${titleId}` : `/movie/${titleId}`,
+    likes: movieDetail.vote_count || 0,
+    comments: reviews.length || 0,
   };
 }
 
@@ -547,6 +553,8 @@ export async function getTmdbFeaturedReview() {
             createdAt: best.created_at || new Date().toISOString(),
             containsSpoilers: /spoiler/i.test(best.content),
             detailHref: `/reviews/tmdb/${movie.id}/${best.id}`,
+            likes: movie.vote_count || 0,
+            comments: reviewsList.length || 0,
           };
 
           const result = {

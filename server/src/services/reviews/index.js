@@ -21,7 +21,7 @@ export function getCapabilitiesForCategory(category, items = []) {
       return {
         hasRating: true,
         hasReviewText: true,
-        hasLikes: false, // TMDB has no likes
+        hasLikes: true,
         hasSocial: false,
       };
     case "manga":

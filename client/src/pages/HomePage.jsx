@@ -12,6 +12,7 @@ import {
 import { BorderBeam } from "../components/ui/border-beam";
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 import { MediaCarousel } from "../components/ui/MediaCarousel";
+import { Banner } from "../components/ui/Banner";
 
 export function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -333,6 +334,11 @@ export function HomePage() {
               title="Trending this week"
               items={trendingItems}
               isLoading={isLoadingTrending}
+            />
+
+            <Banner
+              items={fanFavoritesItems}
+              isLoading={isLoadingFanFavorites}
             />
 
             <MediaCarousel
