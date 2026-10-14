@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, Star, X, BookOpen, Layers, Bookmark, Sparkles, Plus, Check } from "lucide-react";
+import { Search, Star, X, Sparkles, Plus, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { BorderBeam } from "../components/ui/border-beam";
 import { MediaCarousel } from "../components/ui/MediaCarousel";
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
@@ -31,7 +31,8 @@ export function BooksDashboard() {
 
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [inList, setInList] = useState(false);
+  const [inListMap, setInListMap] = useState({});
+  const [heroIndex, setHeroIndex] = useState(0);
 
   // Load all carousel feeds on mount
   useEffect(() => {
@@ -98,11 +99,15 @@ export function BooksDashboard() {
         if (!mounted) return;
         const formattedManga = (mangaRes || []).map((m) => ({
           ...m,
+          cover: m.cover || m.poster,
+          poster: m.poster || m.cover,
           route: `/books/${m.type || "manhwa"}/${m.id}`,
           score: m.rating,
         }));
         const formattedBooks = (booksRes || []).map((b) => ({
           ...b,
+          cover: b.cover || b.poster,
+          poster: b.poster || b.cover,
           route: `/books/novels/${b.id}`,
           score: b.rating,
         }));
@@ -119,18 +124,48 @@ export function BooksDashboard() {
 
   const isSearchActive = searchQuery.trim().length > 0;
 
-  // Filter spotlight recommendations or select hero item
-  const heroRecommendation = feeds.trendingManhwa[0] || {
-    id: "omniscient-reader",
-    title: "Omniscient Reader's Viewpoint",
-    rating: "9.6",
-    synopsis:
-      "Dokja was an average office worker whose sole interest was reading his favorite web novel. But when the novel suddenly becomes reality, he is the only person who knows how the world will end.",
-    cover: "https://uploads.mangadex.org/covers/a0445479-7a7d-411a-8c7c-473d82136e65/7a83f982-b7e6-4279-9fc6-cfb06df489f4.jpg.512.jpg",
-    backdrop: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1600&auto=format&fit=crop&q=80",
-    route: "/books/manhwa/a0445479-7a7d-411a-8c7c-473d82136e65",
-    type: "MANHWA",
-    chapters: "Ch. 220+",
+  // Build a diverse spotlight pool containing top titles across ALL literature types
+  const spotlightPool = useMemo(() => {
+    const pool = [];
+    if (feeds.trendingManhwa[0]) pool.push({ ...feeds.trendingManhwa[0], badge: "Trending Manhwa" });
+    if (feeds.trendingManga[0]) pool.push({ ...feeds.trendingManga[0], badge: "Trending Manga" });
+    if (feeds.trendingBooks[0]) pool.push({ ...feeds.trendingBooks[0], badge: "Trending Book / Novel" });
+    if (feeds.trendingManhua[0]) pool.push({ ...feeds.trendingManhua[0], badge: "Trending Manhua" });
+    if (feeds.trendingManhwa[1]) pool.push({ ...feeds.trendingManhwa[1], badge: "Featured Webtoon" });
+    if (feeds.trendingManga[1]) pool.push({ ...feeds.trendingManga[1], badge: "Featured Manga" });
+
+    if (pool.length > 0) return pool;
+
+    return [
+      {
+        id: "omniscient-reader",
+        title: "Omniscient Reader's Viewpoint",
+        rating: "9.6",
+        synopsis:
+          "Dokja was an average office worker whose sole interest was reading his favorite web novel. But when the novel suddenly becomes reality, he is the only person who knows how the world will end.",
+        cover: "https://uploads.mangadex.org/covers/a0445479-7a7d-411a-8c7c-473d82136e65/7a83f982-b7e6-4279-9fc6-cfb06df489f4.jpg.512.jpg",
+        backdrop: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1600&auto=format&fit=crop&q=80",
+        route: "/books/manhwa/a0445479-7a7d-411a-8c7c-473d82136e65",
+        type: "MANHWA",
+        chapters: "Ch. 220+",
+        badge: "Trending Manhwa",
+      },
+    ];
+  }, [feeds]);
+
+  const currentHero = spotlightPool[heroIndex % spotlightPool.length] || spotlightPool[0];
+
+  // Auto-advance spotlight banner every 8 seconds
+  useEffect(() => {
+    if (spotlightPool.length <= 1) return;
+    const interval = setInterval(() => {
+      setHeroIndex((prev) => (prev + 1) % spotlightPool.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [spotlightPool.length]);
+
+  const toggleReadingList = (id) => {
+    setInListMap((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
@@ -139,7 +174,7 @@ export function BooksDashboard() {
         {/* CENTER HERO SEARCH BAR */}
         <section className="flex flex-col items-center justify-center pt-2 pb-8 text-center">
           <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
-            BOOKS · NOVELS · MANGA · MANHWA
+            BOOKS · NOVELS · MANGA · MANHWA · MANHUA
           </span>
 
           <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-light tracking-tight text-[#F5F5F5] mb-8">
@@ -218,6 +253,7 @@ export function BooksDashboard() {
                           src={item.cover || item.poster}
                           alt={item.title}
                           loading="lazy"
+                          referrerPolicy="no-referrer"
                           className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
                         />
                       ) : (
@@ -265,14 +301,16 @@ export function BooksDashboard() {
           /* DASHBOARD CAROUSEL VIEW                                  */
           /* ======================================================== */
           <div className="space-y-12 animate-in fade-in duration-300">
-            {/* 1. SPOTLIGHT RECOMMENDATION BANNER */}
-            <section className="relative w-full rounded-[16px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl">
+            {/* 1. MULTI-CATEGORY SPOTLIGHT HERO BANNER */}
+            <section className="relative w-full rounded-[16px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500">
               {/* Cinematic backdrop artwork with vignette */}
               <div className="absolute inset-0 z-0">
                 <img
-                  src={heroRecommendation.cover || heroRecommendation.backdrop}
-                  alt={heroRecommendation.title}
-                  className="w-full h-full object-cover object-top opacity-35 scale-105 blur-sm sm:blur-none"
+                  key={currentHero.id}
+                  src={currentHero.backdrop || currentHero.cover || currentHero.poster}
+                  alt={currentHero.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover object-top opacity-30 scale-105 blur-sm sm:blur-none transition-opacity duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#070707] via-[#070707]/90 to-transparent" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#070707] via-transparent to-transparent" />
@@ -282,71 +320,111 @@ export function BooksDashboard() {
               {/* Banner content */}
               <div className="relative z-10 p-6 sm:p-10 lg:p-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
                 <div className="max-w-2xl flex flex-col">
-                  {/* Spotlight label */}
+                  {/* Spotlight label & format pill */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider text-[#61F1AC] bg-[#61F1AC]/10 border border-[#61F1AC]/30">
                       <Sparkles size={12} />
-                      Featured Spotlight
+                      {currentHero.badge || "Featured Spotlight"}
                     </span>
                     <span className="text-xs text-[#7A7A7A] uppercase tracking-wider">
-                      {heroRecommendation.type || "Manhwa"}
+                      {currentHero.type}
                     </span>
                   </div>
 
                   {/* Title */}
                   <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-[#F5F5F5] mb-3">
-                    {heroRecommendation.title}
+                    {currentHero.title}
                   </h2>
 
                   {/* Stats Pill */}
                   <div className="flex items-center gap-3 text-xs text-[#7A7A7A] mb-4">
                     <div className="flex items-center gap-1 font-semibold text-[#61F1AC]">
                       <Star size={13} className="fill-[#61F1AC]" />
-                      <span>{heroRecommendation.rating || "9.5"} Rating</span>
+                      <span>{currentHero.score || currentHero.rating || "9.0"} Rating</span>
                     </div>
                     <span>·</span>
-                    <span>{heroRecommendation.chapters || "Serialized"}</span>
+                    <span>{currentHero.chapters || currentHero.author || "Serialized"}</span>
                     <span>·</span>
                     <span className="text-[#B5B5B5]">Editor's Recommendation</span>
                   </div>
 
                   {/* Synopsis */}
                   <p className="text-sm text-[#B5B5B5] leading-relaxed line-clamp-3 mb-6 font-light max-w-xl">
-                    {heroRecommendation.synopsis}
+                    {currentHero.overview || currentHero.synopsis || "Explore one of the highest-rated titles across the community reading list."}
                   </p>
 
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-3.5">
+                  {/* Action buttons + Slide Controls */}
+                  <div className="flex flex-wrap items-center gap-4">
                     <button
                       type="button"
-                      onClick={() => setInList(!inList)}
+                      onClick={() => toggleReadingList(currentHero.id)}
                       className={`px-5 py-2.5 rounded-[10px] text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition-all ${
-                        inList
+                        inListMap[currentHero.id]
                           ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/60"
                           : "bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_16px_rgba(97,241,172,0.25)]"
                       }`}
                     >
-                      {inList ? <Check size={14} /> : <Plus size={14} />}
-                      <span>{inList ? "In Reading List" : "Add to List"}</span>
+                      {inListMap[currentHero.id] ? <Check size={14} /> : <Plus size={14} />}
+                      <span>{inListMap[currentHero.id] ? "In Reading List" : "Add to List"}</span>
                     </button>
 
                     <Link
-                      to={heroRecommendation.route}
+                      to={currentHero.route}
                       className="px-5 py-2.5 rounded-[10px] text-xs font-medium text-[#F5F5F5] bg-[#141414] border border-[#1C1C1C] hover:border-[#61F1AC]/50 hover:text-white transition-colors"
                     >
                       Read Details →
                     </Link>
+
+                    {/* Spotlight carousel dots & arrows */}
+                    {spotlightPool.length > 1 && (
+                      <div className="flex items-center gap-2 ml-auto sm:ml-4">
+                        <button
+                          type="button"
+                          aria-label="Previous recommendation"
+                          onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
+                          className="w-8 h-8 rounded-full border border-[#1C1C1C] bg-[#101010] flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+
+                        <div className="flex items-center gap-1.5 px-2">
+                          {spotlightPool.map((_, dotIdx) => (
+                            <button
+                              key={dotIdx}
+                              type="button"
+                              aria-label={`Jump to recommendation ${dotIdx + 1}`}
+                              onClick={() => setHeroIndex(dotIdx)}
+                              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                                dotIdx === heroIndex % spotlightPool.length
+                                  ? "w-5 bg-[#61F1AC]"
+                                  : "w-1.5 bg-white/20 hover:bg-white/40"
+                              }`}
+                            />
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          aria-label="Next recommendation"
+                          onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
+                          className="w-8 h-8 rounded-full border border-[#1C1C1C] bg-[#101010] flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Hero portrait cover card (hidden on small screens) */}
+                {/* Hero portrait cover card with zoom on hover */}
                 <Link
-                  to={heroRecommendation.route}
-                  className="hidden md:block shrink-0 w-[190px] aspect-[2/3] rounded-[12px] overflow-hidden border border-[#1C1C1C] hover:border-[#61F1AC]/60 shadow-2xl transition-all group"
+                  to={currentHero.route}
+                  className="hidden md:block shrink-0 w-[190px] aspect-[2/3] rounded-[12px] overflow-hidden border border-[#1C1C1C] hover:border-[#61F1AC]/60 shadow-2xl transition-all group bg-[#0B0B0B]"
                 >
                   <img
-                    src={heroRecommendation.cover}
-                    alt={heroRecommendation.title}
+                    src={currentHero.cover || currentHero.poster}
+                    alt={currentHero.title}
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 </Link>

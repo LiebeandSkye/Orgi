@@ -195,11 +195,12 @@ export function MediaCarousel({
                   {/* Rank number for Top 10 */}
                   {showRank && <RankNumber rank={idx + 1} />}
 
-                  {item.poster ? (
+                  {item.poster || item.cover ? (
                     <img
-                      src={item.poster}
+                      src={item.poster || item.cover}
                       alt={item.title}
                       loading="lazy"
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
                     />
                   ) : (

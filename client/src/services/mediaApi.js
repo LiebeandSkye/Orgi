@@ -228,11 +228,18 @@ export async function fetchBooksDashboardFeeds() {
             fetchMangaDexByCategory("manga", 1, "", "All", "All", "Top rated").catch(() => []),
         ]);
 
-        const formatRoute = (item, cat) => ({
-            ...item,
-            route: `/books/${cat}/${item.id}`,
-            score: item.rating,
-        });
+        const formatRoute = (item, cat) => {
+            const image = item.cover || item.poster || null;
+            return {
+                ...item,
+                cover: image,
+                poster: image,
+                backdrop: item.backdrop || image,
+                route: `/books/${cat}/${item.id}`,
+                score: item.rating || "8.5",
+                type: (item.type || cat).toUpperCase(),
+            };
+        };
 
         // Combined top rated fan favorites alternating Manhwa & Manga
         const fanFavorites = [];
