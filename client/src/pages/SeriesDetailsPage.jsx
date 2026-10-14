@@ -13,7 +13,6 @@ import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
-import { BREAKING_BAD_DATA } from "../data/mockData";
 import MediaItems from "../components/ui/MediaItems";
 import { CastCarousel } from "../components/ui/CastCarousel";
 
@@ -52,6 +51,7 @@ export function SeriesDetailsPage({
 
   const [seriesData, setSeriesData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
 
@@ -82,10 +82,15 @@ export function SeriesDetailsPage({
   useEffect(() => {
     let mounted = true;
     async function loadSeries() {
+      if (!id) {
+        setIsLoading(false);
+        setError("Series ID is missing");
+        return;
+      }
       setIsLoading(true);
+      setError(null);
       try {
-        const targetId = id || "breaking-bad";
-        const data = await getSeriesDetails(targetId);
+        const data = await getSeriesDetails(id);
 
         if (mounted && data) {
           setSeriesData(data);
@@ -97,13 +102,9 @@ export function SeriesDetailsPage({
           }
         }
       } catch (err) {
-        console.error("Failed to load series details, using fallback:", err);
+        console.error("Failed to load series details:", err);
         if (mounted) {
-          setSeriesData(BREAKING_BAD_DATA);
-          setEpisodesList(BREAKING_BAD_DATA.episodes || []);
-          if (BREAKING_BAD_DATA.seasons?.length) {
-            setSelectedSeason(BREAKING_BAD_DATA.seasons[0]);
-          }
+          setError(err.message || "Failed to load series");
         }
       } finally {
         if (mounted) setIsLoading(false);
@@ -122,7 +123,7 @@ export function SeriesDetailsPage({
     setSeasonDropdownOpen(false);
 
     const seasonNum = parseInt(season.replace("Season ", ""), 10) || 1;
-    const seriesTmdbId = seriesData?.tmdbId || (id === "breaking-bad" || !id ? 1396 : id);
+    const seriesTmdbId = seriesData?.tmdbId || id;
 
     try {
       const liveEps = await getSeasonEpisodes(seriesTmdbId, seasonNum);
@@ -209,6 +210,22 @@ export function SeriesDetailsPage({
     seriesData?.seasons && seriesData.seasons.length > 0
       ? seriesData.seasons
       : ["Season 1", "Season 2", "Season 3", "Season 4", "Season 5"];
+
+  if (error && !seriesData) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col items-center justify-center p-6 text-center">
+        <h2 className="text-xl font-medium mb-2 text-[#F5F5F5]">Series Not Found</h2>
+        <p className="text-sm text-[#7A7A7A] max-w-md mb-6">{error || "Could not find the requested TV series."}</p>
+        <button
+          type="button"
+          onClick={() => window.history.back()}
+          className="px-4 py-2 rounded-full text-xs font-medium text-[#000000] bg-[#61F1AC] hover:bg-[#61F1AC]/90 transition-colors cursor-pointer"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading || !seriesData) {
     return (
