@@ -57,6 +57,7 @@ export function MovieDetailsPage({
   const isReviewsUrl = location.pathname.includes("/reviews"); 
 
   const currentUserAvatar = userProfile?.profile_url || user?.user_metadata?.avatar_url || NAVBAR_AVATAR; 
+  const [movieData, setMovieData] = useState(null); 
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
