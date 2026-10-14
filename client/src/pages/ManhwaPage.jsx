@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { Star, Grid, List, Search, X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { fetchMangaDexByCategory, fetchBooks, AVAILABLE_GENRES } from "../services/mediaApi";
-import { MANHWA_DATA } from "../data/mockData";
 import { BorderBeam } from "../components/ui/border-beam";
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 
@@ -288,10 +287,9 @@ export function ManhwaPage() {
         }
       } catch (err) {
         console.error("Failed to fetch media:", err);
-        if (mounted && (category?.toLowerCase() || "manhwa") === "manhwa") {
-          setItems(MANHWA_DATA);
+        if (mounted) {
+          setItems([]);
           setTotalPages(1);
-          if (MANHWA_DATA[0]) setHoveredCardId(MANHWA_DATA[0].id);
         }
       } finally {
         if (mounted) setisLoading(false);

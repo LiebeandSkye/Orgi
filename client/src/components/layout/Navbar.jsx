@@ -57,10 +57,11 @@ export function Navbar({ forceBooksOpen = false }) {
   const isMovies = 
     location.pathname === "/" || 
     location.pathname === "/movies" || 
-    location.pathname.startsWith("/movie"); 
-  const isSeries = location.pathname.startsWith("/series"); 
+    location.pathname.startsWith("/movie") ||
+    location.pathname.startsWith("/series"); 
   const isBooks = location.pathname.startsWith("/books"); 
-  const active = isBooks ? "books" : isSeries ? "series" : isMovies ? "movies" : null; 
+  const isFeed = location.pathname.startsWith("/feed") || location.pathname.startsWith("/reviews");
+  const active = isFeed ? "feed" : isBooks ? "books" : isMovies ? "movies" : null; 
 
   // Close dropdown on route change 
   useEffect(() => { 
@@ -199,11 +200,7 @@ export function Navbar({ forceBooksOpen = false }) {
         {/* Centered navigation tabs */}
         <nav ref={navRef} className="relative flex items-center gap-8 h-16">
           <Link to="/" className={tabClass(isMovies)}>
-            <span ref={(el) => (labelRefs.current.movies = el)}>Movies</span>
-          </Link>
-
-          <Link to="/series" className={tabClass(isSeries)}>
-            <span ref={(el) => (labelRefs.current.series = el)}>Series</span>
+            <span ref={(el) => (labelRefs.current.movies = el)}>Movies &amp; Series</span>
           </Link>
 
           {/* Books tab with dropdown */}
@@ -255,6 +252,10 @@ export function Navbar({ forceBooksOpen = false }) {
               </div>
             )}
           </div>
+
+          <Link to="/feed" className={tabClass(isFeed)}>
+            <span ref={(el) => (labelRefs.current.feed = el)}>Feed</span>
+          </Link>
 
           {/* Sliding underline */}
           <span

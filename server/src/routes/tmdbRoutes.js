@@ -205,6 +205,7 @@ router.get("/movie/:id", async (req, res, next) => {
 
 router.get("/tv/:id", async (req, res, next) => { 
   try { 
+    const { id } = req.params;
     const cacheKey = `tmdb:tv:v2:${id}`;
     const data = await getOrSetCache(cacheKey, 24 * 3600, () =>
       fetchTmdbApi(`/tv/${id}`, { append_to_response: "credits,reviews,season/1,images,videos" })
