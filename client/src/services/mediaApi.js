@@ -196,6 +196,10 @@ export async function fetchMangaDexByCategory(
                 : "Ongoing",
             genres: genreList,
             genre: genreList.join(", "),
+            synopsis:
+                attrs.description?.en ||
+                Object.values(attrs.description || {})[0] ||
+                "",
             follows: statsMap[item.id]?.follows || 0,
             updatedAt: attrs.updatedAt || attrs.createdAt || "",
         };
