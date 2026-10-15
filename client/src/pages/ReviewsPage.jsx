@@ -16,6 +16,7 @@ import { FeaturedReview } from "../components/reviews/FeaturedReview";
 import { MobileCategoryChips } from "../components/reviews/MobileCategoryChips";
 import { MobileFilterSheet } from "../components/reviews/MobileFilterSheet";
 import { ReviewDetailModal } from "../components/reviews/ReviewDetailModal";
+import { API_BASE_URL, safeFetchJson } from "../services/api";
 
 export function ReviewsPage() {
   const { source, titleId, reviewId } = useParams();
@@ -85,8 +86,7 @@ export function ReviewsPage() {
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/reviews/featured")
-      .then((res) => (res.ok ? res.json() : null))
+    safeFetchJson(`${API_BASE_URL}/reviews/featured`)
       .then((data) => {
         if (mounted && data?.success) {
           setFeaturedData({

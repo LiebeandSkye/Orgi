@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Star } from "lucide-react";
+import { API_BASE_URL, safeFetchJson } from "../../services/api";
 
 export function TopRatedRail({ category, onOpenDetail }) {
   const [items, setItems] = useState([]);
@@ -12,11 +13,7 @@ export function TopRatedRail({ category, onOpenDetail }) {
     setError(null);
 
     const catParam = category && category !== "all" ? `?category=${category}` : "";
-    fetch(`/api/reviews/top${catParam}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load top reviews");
-        return res.json();
-      })
+    safeFetchJson(`${API_BASE_URL}/reviews/top${catParam}`)
       .then((data) => {
         if (mounted && data.success) {
           setItems(data.items || []);
