@@ -1,21 +1,129 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, Star, X, Sparkles, Plus, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Star,
+  X,
+  Plus,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  LayoutGrid,
+  Columns3,
+  ArrowRight,
+  BookOpen,
+} from "lucide-react";
 import { BorderBeam } from "../components/ui/border-beam";
 import { MediaCarousel } from "../components/ui/MediaCarousel";
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 import { fetchBooksDashboardFeeds, searchMangaDex, searchBooks } from "../services/mediaApi";
 
 const CATEGORY_TABS = [
-  { key: "all", label: "All Literature", to: "/books" },
-  { key: "novels", label: "Books & Novels", to: "/books/novels" },
-  { key: "manga", label: "Manga", to: "/books/manga" },
-  { key: "manhwa", label: "Manhwa", to: "/books/manhwa" },
-  { key: "manhua", label: "Manhua", to: "/books/manhua" },
+  { key: "all", label: "All Literature", count: null, sectionId: null, catalogUrl: null },
+  { key: "manhwa", label: "Manhwa", count: "1.4k", sectionId: "section-manhwa", catalogUrl: "/books/manhwa" },
+  { key: "manga", label: "Manga", count: "2.8k", sectionId: "section-manga", catalogUrl: "/books/manga" },
+  { key: "novels", label: "Books & Novels", count: "4.1k", sectionId: "section-novels", catalogUrl: "/books/novels" },
+  { key: "manhua", label: "Manhua", count: "3.2k", sectionId: "section-manhua", catalogUrl: "/books/manhua" },
+  { key: "favorites", label: "Fan Favorites", count: "Top", sectionId: "section-favorites", catalogUrl: null },
 ];
+
+const SECTION_OPTIONS = [
+  { label: "Trending Manhwa", id: "section-manhwa" },
+  { label: "Trending Manga", id: "section-manga" },
+  { label: "Books & Novels", id: "section-novels" },
+  { label: "Trending Manhua", id: "section-manhua" },
+  { label: "Fan Favorites", id: "section-favorites" },
+];
+
+function ShelfGrid({ title, items, isLoading, sectionId, catalogUrl, showRank = false }) {
+  if (isLoading) {
+    return (
+      <div id={sectionId} className="space-y-4 pt-4 scroll-mt-20">
+        <div className="flex items-center justify-between border-b border-[#1C1C1C] pb-3">
+          <h3 className="text-lg font-light tracking-tight text-[#F5F5F5]">{title}</h3>
+        </div>
+        <CardSkeletonGrid count={6} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" />
+      </div>
+    );
+  }
+
+  if (!items || items.length === 0) return null;
+
+  return (
+    <section id={sectionId} className="space-y-4 pt-4 scroll-mt-20">
+      <div className="flex items-center justify-between border-b border-[#1C1C1C] pb-3">
+        <h3 className="text-lg font-light tracking-tight text-[#F5F5F5] flex items-center gap-2.5">
+          <span>{title}</span>
+          <span className="text-xs font-mono font-medium text-[#61F1AC] px-2 py-0.5 rounded-full bg-[#141414] border border-[#61F1AC]/30">
+            {items.length} titles
+          </span>
+        </h3>
+        {catalogUrl && (
+          <Link
+            to={catalogUrl}
+            className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors flex items-center gap-1 group font-medium cursor-pointer"
+          >
+            <span>Explore catalog</span>
+            <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {items.map((item, idx) => (
+          <Link
+            key={item.id || idx}
+            to={item.route}
+            className="group flex flex-col cursor-pointer transition-all"
+          >
+            <div className="relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] border border-[#1C1C1C] group-hover:border-[#61F1AC]/60 group-hover:shadow-[0_0_20px_rgba(97,241,172,0.12)] transition-all duration-300">
+              <img
+                src={item.cover || item.poster}
+                alt={item.title}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover object-center group-hover:scale-104 transition-transform duration-500"
+              />
+
+              {showRank && (
+                <div className="absolute top-2 left-2 z-10 w-7 h-7 rounded-full bg-black/85 backdrop-blur-md border border-white/20 flex items-center justify-center">
+                  <span className="text-xs font-bold text-[#F5F5F5] font-tabular">
+                    {idx + 1}
+                  </span>
+                </div>
+              )}
+
+              <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md border border-white/10 flex items-center gap-1">
+                <Star size={10} className="fill-[#61F1AC] text-[#61F1AC]" />
+                <span className="text-[10px] font-tabular font-semibold text-[#61F1AC]">
+                  {item.score || item.rating || "8.8"}
+                </span>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+
+            <div className="mt-2.5 flex flex-col">
+              <span className="text-xs sm:text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white transition-colors">
+                {item.title}
+              </span>
+              <span className="text-[11px] text-[#7A7A7A] truncate font-tabular mt-0.5">
+                {item.chapters || item.author || item.type}
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function BooksDashboard() {
   const [activeTab, setActiveTab] = useState("all");
+  const [viewMode, setViewMode] = useState("carousel");
+  const [jumpMenuOpen, setJumpMenuOpen] = useState(false);
+  const jumpMenuRef = useRef(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const searchInputRef = useRef(null);
@@ -33,6 +141,17 @@ export function BooksDashboard() {
   const [isSearching, setIsSearching] = useState(false);
   const [inListMap, setInListMap] = useState({});
   const [heroIndex, setHeroIndex] = useState(0);
+
+  // Close jump menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (jumpMenuRef.current && !jumpMenuRef.current.contains(e.target)) {
+        setJumpMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Load all carousel feeds on mount
   useEffect(() => {
@@ -124,7 +243,6 @@ export function BooksDashboard() {
 
   const isSearchActive = searchQuery.trim().length > 0;
 
-
   const spotlightPool = useMemo(() => {
     const pool = [];
     if (feeds.trendingManhwa[0]) pool.push({ ...feeds.trendingManhwa[0], badge: "Trending Manhwa" });
@@ -155,7 +273,6 @@ export function BooksDashboard() {
 
   const currentHero = spotlightPool[heroIndex % spotlightPool.length] || spotlightPool[0];
 
-
   useEffect(() => {
     if (spotlightPool.length <= 1) return;
     const interval = setInterval(() => {
@@ -168,9 +285,33 @@ export function BooksDashboard() {
     setInListMap((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleTabClick = (tab) => {
+    setActiveTab(tab.key);
+    if (tab.key !== "all" && tab.sectionId) {
+      setTimeout(() => {
+        const el = document.getElementById(tab.sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+    }
+  };
+
+  const scrollToSection = (id) => {
+    setActiveTab("all");
+    setJumpMenuOpen(false);
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 50);
+  };
+
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col justify-between pt-10 pb-24 select-none">
       <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-[120px]">
+        {/* HEADER SEARCH HERO */}
         <section className="flex flex-col items-center justify-center pt-2 pb-8 text-center">
           <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
             BOOKS · NOVELS · MANGA · MANHWA · MANHUA
@@ -296,7 +437,8 @@ export function BooksDashboard() {
             )}
           </section>
         ) : (
-          <div className="space-y-12 animate-in fade-in duration-300">
+          <div className="space-y-10 animate-in fade-in duration-300">
+            {/* HERO SPOTLIGHT BANNER */}
             <section className="relative w-full rounded-[16px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500">
               <div className="absolute inset-0 z-0">
                 <img
@@ -360,6 +502,7 @@ export function BooksDashboard() {
                     </Link>
                   </div>
                 </div>
+
                 <Link
                   to={currentHero.route}
                   className="hidden md:block shrink-0 w-[190px] aspect-[2/3] rounded-[12px] overflow-hidden border border-[#1C1C1C] hover:border-[#61F1AC]/60 shadow-2xl transition-all group bg-[#0B0B0B]"
@@ -372,6 +515,7 @@ export function BooksDashboard() {
                   />
                 </Link>
               </div>
+
               {spotlightPool.length > 1 && (
                 <div className="absolute bottom-4 left-6 sm:left-10 lg:left-12 z-20 flex items-center gap-2.5">
                   <button
@@ -410,55 +554,240 @@ export function BooksDashboard() {
                 </div>
               )}
             </section>
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 pt-2 border-b border-[#1C1C1C]">
-              {CATEGORY_TABS.map((tab) => {
-                const isActive = activeTab === tab.key;
-                return (
-                  <Link
-                    key={tab.key}
-                    to={tab.to}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/50 shadow-[0_0_14px_rgba(97,241,172,0.15)]"
-                        : "text-[#7A7A7A] bg-white/[0.03] border border-white/[0.05] hover:text-[#F5F5F5] hover:border-white/10"
-                    }`}
-                  >
-                    {tab.label}
-                  </Link>
-                );
-              })}
+
+            {/* OPTION 2: STREAMING-STYLE MINIMALIST UNDERLINE CATEGORY TABS (STICKY) */}
+            <div className="sticky top-0 z-30 bg-[#000000]/95 backdrop-blur-md border-b border-[#1C1C1C] pt-2 pb-0 -mx-6 px-6 lg:-mx-[120px] lg:px-[120px] transition-all">
+              <div className="flex items-center justify-between gap-4">
+                {/* Left Underline Tabs */}
+                <div className="flex items-center gap-5 sm:gap-7 overflow-x-auto no-scrollbar py-1">
+                  {CATEGORY_TABS.map((tab) => {
+                    const isActive = activeTab === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => handleTabClick(tab)}
+                        className={`relative pb-3 text-xs sm:text-sm font-medium tracking-tight whitespace-nowrap transition-colors cursor-pointer flex items-center gap-2 group ${
+                          isActive ? "text-[#F5F5F5]" : "text-[#7A7A7A] hover:text-[#D4D4D4]"
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        {tab.count && (
+                          <span
+                            className={`text-[10px] font-tabular font-semibold px-1.5 py-0.5 rounded-full transition-colors ${
+                              isActive
+                                ? "bg-[#61F1AC]/15 text-[#61F1AC] border border-[#61F1AC]/30"
+                                : "bg-[#141414] text-[#7A7A7A] border border-[#1C1C1C] group-hover:text-[#B5B5B5]"
+                            }`}
+                          >
+                            {tab.count}
+                          </span>
+                        )}
+                        {/* Glowing Electric Mint Underline */}
+                        {isActive && (
+                          <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#61F1AC] rounded-full shadow-[0_0_12px_rgba(97,241,172,0.85)] animate-in fade-in duration-200" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Right Controls: View Mode Toggle & Jump to Section Dropdown */}
+                <div className="hidden sm:flex items-center gap-3 shrink-0 pb-3">
+                  {/* View Mode Toggle (Carousel vs Grid) */}
+                  <div className="flex items-center bg-[#0B0B0B] border border-[#1C1C1C] rounded-[8px] p-0.5">
+                    <button
+                      type="button"
+                      aria-label="Carousel View"
+                      onClick={() => setViewMode("carousel")}
+                      className={`p-1.5 rounded-[6px] transition-colors cursor-pointer ${
+                        viewMode === "carousel"
+                          ? "bg-[#161616] text-[#61F1AC]"
+                          : "text-[#7A7A7A] hover:text-[#F5F5F5]"
+                      }`}
+                    >
+                      <Columns3 size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Grid View"
+                      onClick={() => setViewMode("grid")}
+                      className={`p-1.5 rounded-[6px] transition-colors cursor-pointer ${
+                        viewMode === "grid"
+                          ? "bg-[#161616] text-[#61F1AC]"
+                          : "text-[#7A7A7A] hover:text-[#F5F5F5]"
+                      }`}
+                    >
+                      <LayoutGrid size={14} />
+                    </button>
+                  </div>
+
+                  {/* Jump to Section Dropdown */}
+                  <div className="relative" ref={jumpMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setJumpMenuOpen(!jumpMenuOpen)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#0B0B0B] border border-[#1C1C1C] text-xs font-medium text-[#B5B5B5] hover:text-[#F5F5F5] hover:border-[#61F1AC]/40 transition-colors cursor-pointer"
+                    >
+                      <span>Jump to Section</span>
+                      <ChevronDown
+                        size={12}
+                        className={`text-[#7A7A7A] transition-transform duration-200 ${
+                          jumpMenuOpen ? "rotate-180 text-[#61F1AC]" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {jumpMenuOpen && (
+                      <div className="absolute right-0 top-full mt-1.5 w-48 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl py-1.5 shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-150">
+                        {SECTION_OPTIONS.map((sec) => (
+                          <button
+                            key={sec.id}
+                            type="button"
+                            onClick={() => scrollToSection(sec.id)}
+                            className="w-full text-left px-3.5 py-2 text-xs text-[#B5B5B5] hover:text-[#61F1AC] hover:bg-[#141414] transition-colors cursor-pointer flex items-center justify-between"
+                          >
+                            <span>{sec.label}</span>
+                            <span className="text-[10px] text-[#555555] font-mono">↓</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="space-y-6 pb-12">
-              <MediaCarousel
-                title="Trending this week — Manhwa"
-                items={feeds.trendingManhwa}
-                isLoading={isLoadingFeeds}
-              />
-              <MediaCarousel
-                title="Trending this week — Manga"
-                items={feeds.trendingManga}
-                isLoading={isLoadingFeeds}
-              />
 
-              <MediaCarousel
-                title="Trending this month — Novels & Books"
-                items={feeds.trendingBooks}
-                isLoading={isLoadingFeeds}
-              />
+            {/* DASHBOARD SHELVES (CAROUSEL OR GRID VIEW) */}
+            <div className="space-y-8 pb-12">
+              {/* Category Filter Banner (When viewing a single filtered category) */}
+              {activeTab !== "all" && (
+                <div className="flex items-center justify-between px-4 py-2.5 rounded-[10px] bg-[#0E0E0E] border border-[#1C1C1C]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#61F1AC] animate-pulse" />
+                    <span className="text-xs text-[#B5B5B5]">
+                      Filtering by <strong className="text-[#F5F5F5] font-semibold">{CATEGORY_TABS.find((t) => t.key === activeTab)?.label}</strong>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("all")}
+                    className="text-xs text-[#61F1AC] hover:underline cursor-pointer font-medium"
+                  >
+                    Reset to All Literature
+                  </button>
+                </div>
+              )}
 
-              <MediaCarousel
-                title="Trending this month — Manhua"
-                items={feeds.trendingManhua}
-                isLoading={isLoadingFeeds}
-              />
+              {/* 1. MANHWA SHELF */}
+              {(activeTab === "all" || activeTab === "manhwa") && (
+                viewMode === "carousel" ? (
+                  <div id="section-manhwa" className="scroll-mt-24">
+                    <MediaCarousel
+                      title="Trending this week — Manhwa"
+                      items={feeds.trendingManhwa}
+                      isLoading={isLoadingFeeds}
+                      seeAllLink="/books/manhwa"
+                    />
+                  </div>
+                ) : (
+                  <ShelfGrid
+                    sectionId="section-manhwa"
+                    title="Trending this week — Manhwa"
+                    items={feeds.trendingManhwa}
+                    isLoading={isLoadingFeeds}
+                    catalogUrl="/books/manhwa"
+                  />
+                )
+              )}
 
-              <MediaCarousel
-                title="Fan Favorites — All Time"
-                items={feeds.fanFavorites}
-                isLoading={isLoadingFeeds}
-                showRank={true}
-              />
+              {/* 2. MANGA SHELF */}
+              {(activeTab === "all" || activeTab === "manga") && (
+                viewMode === "carousel" ? (
+                  <div id="section-manga" className="scroll-mt-24">
+                    <MediaCarousel
+                      title="Trending this week — Manga"
+                      items={feeds.trendingManga}
+                      isLoading={isLoadingFeeds}
+                      seeAllLink="/books/manga"
+                    />
+                  </div>
+                ) : (
+                  <ShelfGrid
+                    sectionId="section-manga"
+                    title="Trending this week — Manga"
+                    items={feeds.trendingManga}
+                    isLoading={isLoadingFeeds}
+                    catalogUrl="/books/manga"
+                  />
+                )
+              )}
+
+              {/* 3. BOOKS & NOVELS SHELF */}
+              {(activeTab === "all" || activeTab === "novels") && (
+                viewMode === "carousel" ? (
+                  <div id="section-novels" className="scroll-mt-24">
+                    <MediaCarousel
+                      title="Trending this month — Novels & Books"
+                      items={feeds.trendingBooks}
+                      isLoading={isLoadingFeeds}
+                      seeAllLink="/books/novels"
+                    />
+                  </div>
+                ) : (
+                  <ShelfGrid
+                    sectionId="section-novels"
+                    title="Trending this month — Novels & Books"
+                    items={feeds.trendingBooks}
+                    isLoading={isLoadingFeeds}
+                    catalogUrl="/books/novels"
+                  />
+                )
+              )}
+
+              {/* 4. MANHUA SHELF */}
+              {(activeTab === "all" || activeTab === "manhua") && (
+                viewMode === "carousel" ? (
+                  <div id="section-manhua" className="scroll-mt-24">
+                    <MediaCarousel
+                      title="Trending this month — Manhua"
+                      items={feeds.trendingManhua}
+                      isLoading={isLoadingFeeds}
+                      seeAllLink="/books/manhua"
+                    />
+                  </div>
+                ) : (
+                  <ShelfGrid
+                    sectionId="section-manhua"
+                    title="Trending this month — Manhua"
+                    items={feeds.trendingManhua}
+                    isLoading={isLoadingFeeds}
+                    catalogUrl="/books/manhua"
+                  />
+                )
+              )}
+
+              {/* 5. FAN FAVORITES SHELF */}
+              {(activeTab === "all" || activeTab === "favorites") && (
+                viewMode === "carousel" ? (
+                  <div id="section-favorites" className="scroll-mt-24">
+                    <MediaCarousel
+                      title="Fan Favorites — All Time"
+                      items={feeds.fanFavorites}
+                      isLoading={isLoadingFeeds}
+                      showRank={true}
+                    />
+                  </div>
+                ) : (
+                  <ShelfGrid
+                    sectionId="section-favorites"
+                    title="Fan Favorites — All Time"
+                    items={feeds.fanFavorites}
+                    isLoading={isLoadingFeeds}
+                    showRank={true}
+                  />
+                )
+              )}
             </div>
           </div>
         )}
