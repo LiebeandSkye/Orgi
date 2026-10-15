@@ -149,6 +149,61 @@ export function ProfilePage() {
     } 
   }; 
 
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false); 
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false); 
+
+  const handleAvatarChange = async (dataUrl) => { 
+    setProfile((prev) => ({ 
+      ...(prev || GUEST_PROFILE), 
+      profile_url: dataUrl, 
+    })); 
+
+    if (!user) return; 
+
+    setIsUploadingAvatar(true); 
+    try { 
+      const res = await profileApi.uploadImage({ file: dataUrl, type: "avatar" }); 
+      if (res?.success && res.data?.url) { 
+        setProfile((prev) => ({ 
+          ...prev, 
+          profile_url: res.data.url, 
+        })); 
+        if (refreshProfile) refreshProfile(); 
+      } 
+    } catch (err) { 
+      console.error("Failed to upload avatar:", err); 
+      alert(err.message || "Failed to upload avatar"); 
+    } finally { 
+      setIsUploadingAvatar(false); 
+    } 
+  }; 
+
+  const handleBannerChange = async (dataUrl) => { 
+    setProfile((prev) => ({ 
+      ...(prev || GUEST_PROFILE), 
+      banner_url: dataUrl, 
+    })); 
+
+    if (!user) return; 
+
+    setIsUploadingBanner(true); 
+    try { 
+      const res = await profileApi.uploadImage({ file: dataUrl, type: "banner" }); 
+      if (res?.success && res.data?.url) { 
+        setProfile((prev) => ({ 
+          ...prev, 
+          banner_url: res.data.url, 
+        })); 
+        if (refreshProfile) refreshProfile(); 
+      } 
+    } catch (err) { 
+      console.error("Failed to upload banner:", err); 
+      alert(err.message || "Failed to upload banner"); 
+    } finally { 
+      setIsUploadingBanner(false); 
+    } 
+  }; 
+
   const displayProfile = profile || userProfile || GUEST_PROFILE; 
 
   // Compute real stats from user data
@@ -258,6 +313,10 @@ export function ProfilePage() {
         <ProfileCard 
           profile={displayProfile} 
           onEdit={() => setIsEditing(true)} 
+          onAvatarChange={handleAvatarChange} 
+          onBannerChange={handleBannerChange} 
+          isUploadingAvatar={isUploadingAvatar} 
+          isUploadingBanner={isUploadingBanner} 
           isGuest={!user} 
         /> 
 
