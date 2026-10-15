@@ -76,9 +76,10 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
   // Determine media link
   let mediaRoute = data.mediaRoute;
   if (!mediaRoute) {
-    if (data.source === "tmdb") {
-      mediaRoute = data.category === "series" ? `/series/${data.titleId}` : `/movie/${data.titleId}`;
-    } else if (data.source === "mangadex") {
+    if (data.source === "tmdb" || data.source === "orgi") { 
+      mediaRoute = data.category === "series" ? `/series/${data.titleId}` : `/movie/${data.titleId}`; 
+    } else if (data.source === "mangadex") { 
+
       mediaRoute = `/books/${data.category || "manga"}/${data.titleId}`;
     } else {
       mediaRoute = `/books/novels/${data.titleId}`;

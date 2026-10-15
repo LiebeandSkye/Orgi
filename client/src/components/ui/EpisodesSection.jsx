@@ -19,9 +19,13 @@ import { getSeasonEpisodes } from "../../services/tmdb";
 
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p";
 
-function getImage(path, size = "w500") {
-  return path ? `${TMDB_IMAGE_URL}/${size}${path}` : "";
-}
+function getImage(path, size = "w500") { 
+  if (!path) return ""; 
+  if (path.startsWith("http")) return path; 
+  const cleanPath = path.startsWith("/") ? path : `/${path}`; 
+  return `${TMDB_IMAGE_URL}/${size}${cleanPath}`; 
+} 
+
 
 function formatDate(date) {
   if (!date) return "Air date unavailable";
@@ -68,15 +72,22 @@ async function tmdbFetch(endpoint, signal) {
 // ============================================================
 
 
-export default function EpisodesSection({
-  seriesId,
-  onRateEpisode,
-}) {
-  const [series, setSeries] = useState(null);
-  const [seasons, setSeasons] = useState([]);
-  const [episodes, setEpisodes] = useState([]);
-  const [selectedSeason, setSelectedSeason] = useState(1);
-  const [selectedEpisodeNumber, setSelectedEpisodeNumber] = useState(1);
+export default function EpisodesSection({ 
+  seriesId, 
+  seriesData, 
+  onRateEpisode, 
+}) { 
+  const [series, setSeries] = useState(seriesData || null); 
+  const [seasons, setSeasons] = useState(() => { 
+    if (seriesData?.seasons && Array.isArray(seriesData.seasons)) { 
+      return seriesData.seasons.filter((s) => s.season_number > 0); 
+    } 
+    return []; 
+  }); 
+  const [episodes, setEpisodes] = useState([]); 
+  const [selectedSeason, setSelectedSeason] = useState(1); 
+  const [selectedEpisodeNumber, setSelectedEpisodeNumber] = useState(1); 
+
 
   const [sortBy, setSortBy] = useState("episode");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
@@ -173,27 +184,36 @@ useEffect(() => {
 
       if (controller.signal.aborted) return;
 
-      setEpisodes(
-        seasonEpisodes.map((episode) => ({
-          ...episode,
-          id: episode.id ?? `${selectedSeason}-${episode.episodeNumber ?? episode.number}`,
-          episode_number:
-            episode.episodeNumber ?? Number(episode.number),
-          name: episode.title,
-          overview: episode.description,
-          runtime: Number.parseInt(episode.runtime, 10) || null,
-          vote_average:
-            Number.parseFloat(episode.score) || 0,
-          still_path: episode.thumbnail
-            ? episode.thumbnail.replace(
-                "https://image.tmdb.org/t/p/w342",
-                ""
-              )
-            : null,
-          air_date: episode.air_date || "",
-          vote_count: episode.vote_count || 0,
-        }))
-      );
+      setEpisodes( 
+        seasonEpisodes.map((episode) => { 
+          const rawScore = 
+            typeof episode.vote_average === "number" && episode.vote_average > 0 
+              ? episode.vote_average 
+              : parseFloat(episode.score) || 0; 
+ 
+          return { 
+            ...episode, 
+            id: episode.id ?? `${selectedSeason}-${episode.episodeNumber ?? episode.number}`, 
+            episode_number: 
+              episode.episodeNumber ?? Number(episode.number), 
+            name: episode.name || episode.title, 
+            overview: episode.overview || episode.description, 
+            runtime: 
+              typeof episode.runtime === "number" 
+                ? episode.runtime 
+                : parseInt(episode.runtime, 10) || null, 
+            vote_average: rawScore, 
+            still_path: 
+              episode.still_path || 
+              (episode.thumbnail 
+                ? episode.thumbnail.replace("https://image.tmdb.org/t/p/w342", "") 
+                : null), 
+            air_date: episode.air_date || "", 
+            vote_count: Number(episode.vote_count) || 0, 
+          }; 
+        }) 
+      ); 
+
 
       if (seasonEpisodes.length > 0) {
         const firstEpisode = seasonEpisodes[0];
@@ -262,16 +282,19 @@ useEffect(() => {
     }
   }, [episodes, sortBy]);
 
-  const seasonAverage = useMemo(() => {
-    const rated = episodes.filter((episode) => episode.vote_count > 0);
+  const seasonAverage = useMemo(() => { 
+    const rated = episodes.filter( 
+      (episode) => (episode.vote_count || 0) > 0 || (episode.vote_average || 0) > 0 
+    ); 
+ 
+    if (rated.length === 0) return null; 
+ 
+    return ( 
+      rated.reduce((total, episode) => total + (episode.vote_average || 0), 0) / 
+      rated.length 
+    ); 
+  }, [episodes]); 
 
-    if (rated.length === 0) return null;
-
-    return (
-      rated.reduce((total, episode) => total + episode.vote_average, 0) /
-      rated.length
-    );
-  }, [episodes]);
 
   // ----------------------------------------------------------
   // 4. INTERACTIONS
@@ -594,16 +617,20 @@ useEffect(() => {
                   : "Runtime N/A"}
               </span>
 
-              <span className="inline-flex items-center gap-1.5">
-                <Tag size={14} />
-                {series.genres?.map((genre) => genre.name).join(", ") ||
-                  "Genres N/A"}
-              </span>
+              <span className="inline-flex items-center gap-1.5"> 
+                <Tag size={14} /> 
+                {Array.isArray(series?.genres) 
+                  ? series.genres.map((g) => g.name || g).join(", ") 
+                  : typeof series?.genres === "string" 
+                    ? series.genres 
+                    : seriesData?.genres || "Genres N/A"} 
+              </span> 
+ 
+              <span className="inline-flex items-center gap-1.5"> 
+                <Monitor size={14} /> 
+                {(series?.original_language || seriesData?.original_language || "TV").toUpperCase()} 
+              </span> 
 
-              <span className="inline-flex items-center gap-1.5">
-                <Monitor size={14} />
-                {series.original_language?.toUpperCase() || "TV"}
-              </span>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">

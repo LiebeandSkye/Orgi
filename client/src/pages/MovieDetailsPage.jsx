@@ -12,9 +12,9 @@ import {
   X, 
 } from "lucide-react"; 
 import { getMovieDetails, getMovieMedia } from "../services/tmdb"; 
-import { ScoreRing } from "../components/ui/ScoreRing"; 
+import { DetailScoreRings } from "../components/ui/DetailScoreRings"; 
 import { Button } from "../components/ui/Button"; 
-import { ReviewSlider } from "../components/ui/ReviewSlider"; 
+import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab"; 
 import MediaItems from "../components/ui/MediaItems"; 
 import { fetchMediaDetails } from "../services/mediaApi"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
@@ -181,32 +181,13 @@ export function MovieDetailsPage({
   }, [displaySynopsis]);
 
   const isLongSynopsis = contentHeight === 0 || contentHeight > 82; 
-  const [newThought, setNewThought] = useState(""); 
-  const [selectedScore, setSelectedScore] = useState(8); 
-  const [expandedReplies, setExpandedReplies] = useState({}); 
-  const [replyingToReviewId, setReplyingToReviewId] = useState(null); 
-  const [replyText, setReplyText] = useState(""); 
-  const [isSubmittingReply, setIsSubmittingReply] = useState(false); 
-  const [sortDropdownOpen, setSortDropdownOpen] = useState(false); 
-  const [sortBy, setSortBy] = useState("Top"); 
-  const [likedReviews, setLikedReviews] = useState({}); 
-  const [visibleReviews, setVisibleReviews] = useState(4); 
   const [inCollection, setInCollection] = useState(false); 
   const [collectionLoading, setCollectionLoading] = useState(false); 
-  const [isEditingUserReview, setIsEditingUserReview] = useState(false); 
-  const [expandedReviews, setExpandedReviews] = useState({}); 
-  const [activeMenuReviewId, setActiveMenuReviewId] = useState(null); 
-  const [reportModalOpen, setReportModalOpen] = useState(false); 
-  const [reportingReviewId, setReportingReviewId] = useState(null); 
-  const [reportReason, setReportReason] = useState(""); 
-  const [isSubmittingReport, setIsSubmittingReport] = useState(false); 
   const [communityData, setCommunityData] = useState({ 
     communityAverage: null, 
     communityVotes: 0, 
     reviews: [], 
   }); 
-  const [reviewFilter, setReviewFilter] = useState("all"); 
-  const [isPostingReview, setIsPostingReview] = useState(false); 
  
   useEffect(() => { 
     if (!movieData) return; 
@@ -230,11 +211,6 @@ export function MovieDetailsPage({
           if (revRes.status === "fulfilled" && revRes.value?.success) { 
             const revData = revRes.value.data || {}; 
             const reviewsList = Array.isArray(revData.reviews) ? revData.reviews : []; 
-            const initLikes = {}; 
-            reviewsList.forEach((r) => { 
-              if (r.isLiked) initLikes[r.id] = true; 
-            }); 
-            setLikedReviews((prev) => ({ ...initLikes, ...prev })); 
             setCommunityData({ 
               communityAverage: typeof revData.communityAverage === "number" ? revData.communityAverage : null, 
               communityVotes: typeof revData.communityVotes === "number" ? revData.communityVotes : 0, 
@@ -288,202 +264,6 @@ export function MovieDetailsPage({
     } 
   }; 
  
-  const handlePostReview = async () => { 
-    if (!newThought.trim()) return; 
-    const token = localStorage.getItem("orgi_session"); 
-    if (!token) { 
-      alert("Please sign in to rate and review."); 
-      return; 
-    } 
- 
-    const currentProvider = category 
-      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
-      : "tmdb"; 
-    const currentExternalId = String(category ? id : (id || 157336)); 
-    const currentType = category ? category.toUpperCase() : "MOVIE"; 
- 
-    setIsPostingReview(true); 
-    try { 
-      const res = await api.post("/reviews", { 
-        external_id: currentExternalId, 
-        provider: currentProvider, 
-        type: currentType, 
-        title: movieData.title, 
-        cover_url: movieData.poster || movieData.backdrop, 
-        score: selectedScore, 
-        content: newThought.trim(), 
-      }); 
- 
-      if (res?.success) { 
-        setNewThought(""); 
-        setIsEditingUserReview(false); 
-        const newRev = res.data; 
-        setCommunityData((prev) => { 
-          const currentReviews = Array.isArray(prev?.reviews) ? prev.reviews : []; 
-          const existingIdx = currentReviews.findIndex( 
-            (r) => r.id === newRev.id || (r.userId && r.userId === newRev.userId) 
-          ); 
-          let updatedReviews = [...currentReviews]; 
-          if (existingIdx >= 0) { 
-            updatedReviews[existingIdx] = newRev; 
-          } else { 
-            updatedReviews = [newRev, ...updatedReviews]; 
-          } 
-
-          const scores = updatedReviews 
-            .map((r) => r.score) 
-            .filter((s) => typeof s === "number" && s > 0); 
-          const avg = scores.length > 0 
-            ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)) 
-            : null; 
-
-          return { 
-            ...prev, 
-            communityAverage: avg, 
-            communityVotes: scores.length, 
-            reviews: updatedReviews, 
-          }; 
-        }); 
-      } 
-    } catch (err) { 
-      console.error("Failed to post review:", err); 
-      alert(err.message || "Failed to post review."); 
-    } finally { 
-      setIsPostingReview(false); 
-    } 
-  }; 
-
-  const handleDeleteUserReview = async (reviewId) => { 
-    if (!confirm("Are you sure you want to delete your review?")) return; 
-    try { 
-      const res = await api.delete(`/reviews/${reviewId}`); 
-      if (res?.success) { 
-        setCommunityData((prev) => { 
-          const updated = (prev?.reviews || []).filter((r) => r.id !== reviewId); 
-          const scores = updated 
-            .map((r) => r.score) 
-            .filter((s) => typeof s === "number" && s > 0); 
-          const avg = scores.length > 0 
-            ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)) 
-            : null; 
-          return { 
-            ...prev, 
-            reviews: updated, 
-            communityAverage: avg, 
-            communityVotes: scores.length, 
-          }; 
-        }); 
-      } 
-    } catch (err) { 
-      alert(err.message || "Failed to delete review"); 
-    } 
-  }; 
-
-  const toggleReplies = (reviewId) => { 
-    setExpandedReplies((prev) => ({ 
-      ...prev, 
-      [reviewId]: !prev[reviewId], 
-    })); 
-  }; 
-
-  const handleToggleReplyBox = (reviewId) => { 
-    if (!user) { 
-      navigate("/login"); 
-      return; 
-    } 
-    if (replyingToReviewId === reviewId) { 
-      setReplyingToReviewId(null); 
-      setReplyText(""); 
-    } else { 
-      setReplyingToReviewId(reviewId); 
-      setReplyText(""); 
-      setExpandedReplies((prev) => ({ ...prev, [reviewId]: true })); 
-    } 
-  }; 
-
-  const handlePostReply = async (parentId) => { 
-    if (!user) { 
-      navigate("/login"); 
-      return; 
-    } 
-    if (!replyText.trim() || !movieData) return; 
-    setIsSubmittingReply(true); 
-    try { 
-      const currentProvider = category 
-        ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
-        : "tmdb"; 
-      const currentType = category 
-        ? (category === "manga" ? "MANGA" : category === "manhwa" ? "MANHWA" : category === "manhua" ? "MANHUA" : "BOOK") 
-        : "MOVIE"; 
-
-      const payload = { 
-        external_id: id || (movieData?.id ? String(movieData.id) : "157336"), 
-        provider: currentProvider, 
-        type: currentType, 
-        title: movieData.title, 
-        cover_url: movieData.poster || movieData.backdrop, 
-        parent_id: parentId, 
-        content: replyText.trim(), 
-      }; 
-
-      const res = await api.post("/reviews", payload); 
-      if (res?.success && res.data) { 
-        const createdReply = res.data; 
-        setCommunityData((prev) => ({ 
-          ...prev, 
-          reviews: (prev?.reviews || []).map((r) => { 
-            if (r.id === parentId) { 
-              const existingReplies = Array.isArray(r.replies) ? r.replies : []; 
-              return { 
-                ...r, 
-                repliesCount: (r.repliesCount || 0) + 1, 
-                replies: [...existingReplies, createdReply], 
-              }; 
-            } 
-            return r; 
-          }), 
-        })); 
-        setReplyText(""); 
-        setReplyingToReviewId(null); 
-        setExpandedReplies((prev) => ({ ...prev, [parentId]: true })); 
-      } 
-    } catch (err) { 
-      console.error("Failed to post reply:", err); 
-      alert(err.message || "Failed to post reply."); 
-    } finally { 
-      setIsSubmittingReply(false); 
-    } 
-  }; 
-
-  const handleOpenReport = (reviewId) => { 
-    setActiveMenuReviewId(null); 
-    setReportingReviewId(reviewId); 
-    setReportReason(""); 
-    setReportModalOpen(true); 
-  }; 
-
-  const handleSubmitReport = async () => { 
-    if (!reportReason.trim()) { 
-      alert("Please enter a reason for reporting"); 
-      return; 
-    } 
-    setIsSubmittingReport(true); 
-    try { 
-      const res = await api.post("/reports", { 
-        target_type: "review", 
-        target_id: reportingReviewId, 
-        reason: reportReason.trim(), 
-      }); 
-      if (res?.success) { 
-        alert("Report submitted for moderation. Thank you!"); 
-        setReportModalOpen(false); 
-      } 
-    } catch (err) { 
-      alert(err.message || "Failed to submit report"); 
-    } finally { 
-      setIsSubmittingReport(false); 
-    } 
-  }; 
  
   const providerScore = parseFloat(movieData?.tmdbRating) || 0; 
   const providerVotesCount = 
@@ -510,67 +290,13 @@ export function MovieDetailsPage({
       : `${totalCount} ratings`; 
   } 
  
-  const rawProviderReviews = (movieData?.reviews || []).map((r) => ({ 
-    ...r, 
-    source: "provider", 
-  })); 
-  const userReview = communityData?.reviews?.find((r) => user?.id && r.userId === user.id); 
-  const allReviews = [ 
-    ...(Array.isArray(communityData?.reviews) ? communityData.reviews : []), 
-    ...rawProviderReviews, 
-  ]; 
-  const filteredReviews = allReviews.filter((r) => { 
-    if (reviewFilter === "community") return r.source === "community"; 
-    if (reviewFilter === "provider") return r.source === "provider"; 
-    return true; 
-  }); 
+  const contentRef = useRef(null); 
  
-  const sortedReviews = [...filteredReviews].sort((a, b) => { 
-    switch (sortBy) { 
-      case "Top": 
-        return (b.likes || 0) - (a.likes || 0); 
-      case "Newest": 
-        return new Date(b.time || b.createdAt || 0) - new Date(a.time || a.createdAt || 0); 
-      case "Highest Rated": 
-        return (b.score || 0) - (a.score || 0); 
-      case "Lowest Rated": 
-        return (a.score || 0) - (b.score || 0); 
-      default: 
-        return 0; 
-    } 
-  }); 
-
-  const contentRef = useRef(null);
-
-  const handleTabChange = (tab) => {
-    setSelectedTabOverride(tab);
-    setCropHeroOverride(false);
-  };
-
-  const toggleLike = async (reviewId) => { 
-    const isCurrentlyLiked = Boolean(likedReviews[reviewId]); 
-    setLikedReviews((prev) => ({ 
-      ...prev, 
-      [reviewId]: !isCurrentlyLiked, 
-    })); 
-    setCommunityData((prev) => ({ 
-      ...prev, 
-      reviews: (prev.reviews || []).map((r) => 
-        r.id === reviewId 
-          ? { 
-              ...r, 
-              likes: Math.max(0, (r.likes || 0) + (isCurrentlyLiked ? -1 : 1)), 
-              isLiked: !isCurrentlyLiked, 
-            } 
-          : r 
-      ), 
-    })); 
-    try { 
-      await api.post(`/reviews/${reviewId}/like`); 
-    } catch (err) { 
-      console.warn("Failed to persist like:", err); 
-    } 
+  const handleTabChange = (tab) => { 
+    setSelectedTabOverride(tab); 
+    setCropHeroOverride(false); 
   }; 
+ 
 
   if (isLoading || !movieData) {
     return (
@@ -673,23 +399,12 @@ export function MovieDetailsPage({
               <span>{movieData.certificate}</span>
             </div>
 
-            {/* Row with two circular score rings */}
-            <div className="flex items-center gap-8 mb-8">
-              <ScoreRing 
-                score={blendedScore} 
-                label={totalVotesLabel} 
-                size="lg" 
-              /> 
- 
-              <div className="w-[1px] h-12 bg-[#1C1C1C]" /> 
- 
-              <ScoreRing 
-                score={communityScore !== null ? communityScore : movieData.communityRating} 
-                label={communityVotesCount > 0 ? `${communityVotesCount} Orgi votes` : movieData.communityVotes} 
-                size="sm" 
-                variant="inline" 
-              /> 
-            </div> 
+            <DetailScoreRings 
+              blendedScore={blendedScore} 
+              totalVotesLabel={totalVotesLabel} 
+              communityScore={communityScore !== null ? communityScore : movieData.communityRating} 
+              communityVotesLabel={communityVotesCount > 0 ? `${communityVotesCount} Orgi votes` : movieData.communityVotes} 
+            /> 
  
             <div className="flex items-center gap-3.5 mb-8"> 
               <Button 
@@ -870,405 +585,23 @@ export function MovieDetailsPage({
         )}
 
         {activeTab === "Reviews" && ( 
-          <div className="max-w-[720px] mx-auto animate-in fade-in duration-300"> 
-            {userReview && !isEditingUserReview ? ( 
-              <div className="bg-[#0B0B0B] border border-[#61F1AC]/40 rounded-[16px] p-5 mb-8 shadow-[0_0_20px_rgba(97,241,172,0.06)] animate-in fade-in"> 
-                <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#1C1C1C]"> 
-                  <div className="flex items-center gap-3"> 
-                    <ReviewAvatar 
-                      src={currentUserAvatar} 
-                      alt={userReview.author || user?.user_metadata?.user_name} 
-                      size="w-9 h-9" 
-                    /> 
-                    <div className="flex items-center gap-2 flex-wrap"> 
-                      <span className="font-semibold text-sm text-[#F5F5F5]"> 
-                        {userReview.author || "You"} 
-                      </span> 
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#61F1AC]/15 text-[#61F1AC] border border-[#61F1AC]/40"> 
-                        Your Review 
-                      </span> 
-                      {userReview.is_edited && ( 
-                        <span className="text-[11px] text-[#7A7A7A] italic"> 
-                          (edited) 
-                        </span> 
-                      )} 
-                      <span className="text-xs text-[#7A7A7A]">·</span> 
-                      <span className="text-xs text-[#7A7A7A] font-light"> 
-                        {userReview.time} 
-                      </span> 
-                    </div> 
-                  </div> 
-
-                  <div className="flex items-center gap-2"> 
-                    <div className="flex items-center gap-1 text-xs font-tabular text-[#61F1AC] font-semibold bg-[#141414] px-2.5 py-1 rounded-full border border-[#222222]"> 
-                      <Star size={12} className="fill-[#61F1AC]" /> 
-                      <span>{userReview.score} / 10</span> 
-                    </div> 
-                  </div> 
-                </div> 
-
-                <p className="text-sm leading-relaxed text-[#E0E0E0] mb-4 font-light whitespace-pre-wrap"> 
-                  {userReview.content} 
-                </p> 
-
-                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#1C1C1C]/60"> 
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => { 
-                      setNewThought(userReview.content || ""); 
-                      setSelectedScore(userReview.score || 8); 
-                      setIsEditingUserReview(true); 
-                    }} 
-                    className="px-3 py-1 rounded-lg text-xs cursor-pointer hover:border-[#61F1AC]/50" 
-                  > 
-                    <span>Edit Review</span> 
-                  </Button> 
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleDeleteUserReview(userReview.id)} 
-                    className="px-3 py-1 rounded-lg text-xs text-[#7A7A7A] hover:text-red-400 hover:bg-red-500/10 cursor-pointer" 
-                  > 
-                    <span>Delete</span> 
-                  </Button> 
-                </div> 
-              </div> 
-            ) : ( 
-              <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm"> 
-                <div className="flex items-start gap-3.5 mb-4"> 
-                  <ReviewAvatar 
-                    src={currentUserAvatar} 
-                    alt="User Avatar" 
-                    size="w-9 h-9" 
-                  /> 
-                  <textarea 
-                    value={newThought} 
-                    onChange={(e) => setNewThought(e.target.value)} 
-                    placeholder={isEditingUserReview ? "Update your thought…" : "Add a thought…"} 
-                    rows={3} 
-                    className="w-full bg-transparent text-[#F5F5F5] placeholder-[#7A7A7A] text-sm resize-none focus:outline-none" 
-                  /> 
-                </div> 
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-[#1C1C1C]/60"> 
-                  <ReviewSlider 
-                    value={selectedScore} 
-                    onChange={setSelectedScore} 
-                  /> 
-
-                  <div className="flex items-center gap-2 self-end sm:self-center"> 
-                    {isEditingUserReview && ( 
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => { 
-                          setIsEditingUserReview(false); 
-                          setNewThought(""); 
-                        }} 
-                        className="px-3.5 py-1.5 rounded-lg text-xs cursor-pointer" 
-                      > 
-                        Cancel 
-                      </Button> 
-                    )} 
-                    <Button 
-                      variant="primary" 
-                      size="sm" 
-                      disabled={newThought.trim().length === 0 || isPostingReview} 
-                      onClick={handlePostReview} 
-                      className="px-4 py-1.5 rounded-lg text-xs cursor-pointer" 
-                    > 
-                      {isPostingReview ? "Saving..." : isEditingUserReview ? "Publish" : "Post"} 
-                    </Button> 
-                  </div> 
-                </div> 
-              </div> 
-            )} 
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-[#1C1C1C]"> 
-              <div className="flex items-center gap-1.5 flex-wrap"> 
-                {[ 
-                  { key: "all", label: "All" }, 
-                  { key: "community", label: "Community (Ours)" }, 
-                  { key: "provider", label: category ? "Provider" : "TMDB" }, 
-                ].map((f) => { 
-                  const isActive = reviewFilter === f.key; 
-                  return ( 
-                    <button 
-                      key={f.key} 
-                      type="button" 
-                      onClick={() => setReviewFilter(f.key)} 
-                      className={`px-3 py-1 rounded-full text-xs transition-colors cursor-pointer ${ 
-                        isActive 
-                          ? "bg-[#61F1AC] text-black font-semibold" 
-                          : "bg-[#0B0B0B] border border-[#1C1C1C] text-[#B5B5B5] hover:text-white hover:border-[#61F1AC]/40" 
-                      }`} 
-                    > 
-                      <span>{f.label}</span> 
-                    </button> 
-                  ); 
-                })} 
-              </div> 
-
-              <div className="flex items-center justify-between sm:justify-end gap-3"> 
-                <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]"> 
-                  {sortedReviews.length} {sortedReviews.length === 1 ? "review" : "reviews"} 
-                </span> 
-
-                <div className="relative"> 
-                  <button 
-                    type="button" 
-                    onClick={() => setSortDropdownOpen(!sortDropdownOpen)} 
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/40 hover:text-[#F5F5F5] transition-colors cursor-pointer" 
-                  > 
-                    <span>Sort: {sortBy}</span> 
-                    <ChevronDown size={12} className="text-[#7A7A7A]" /> 
-                  </button> 
-
-                  {sortDropdownOpen && ( 
-                    <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-xl z-20"> 
-                      {["Top", "Newest", "Highest Rated", "Lowest Rated"].map( 
-                        (opt) => ( 
-                          <button 
-                            key={opt} 
-                            type="button" 
-                            onClick={() => { 
-                              setSortBy(opt); 
-                              setSortDropdownOpen(false); 
-                            }} 
-                            className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${ 
-                              sortBy === opt 
-                                ? "text-[#61F1AC] bg-[#141414]" 
-                                : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]" 
-                            }`} 
-                          > 
-                            {opt} 
-                          </button> 
-                        ), 
-                      )} 
-                    </div> 
-                  )} 
-                </div> 
-              </div> 
-            </div> 
-
-            <div className="flex flex-col divide-y divide-[#1C1C1C]"> 
-              {sortedReviews.slice(0, visibleReviews).map((rev) => { 
-                const isLiked = likedReviews[rev.id]; 
-                const likeCount = (rev.likes || 0) + (isLiked && !rev.isLiked ? 1 : !isLiked && rev.isLiked ? -1 : 0); 
-                const isExpanded = Boolean(expandedReviews[rev.id]); 
-                const isLongContent = (rev.content || "").length > 130; 
-
-                return ( 
-                  <article key={rev.id} className="py-6 first:pt-0"> 
-                    <div className="flex items-center justify-between mb-3"> 
-                      <div className="flex items-center gap-3"> 
-                        <ReviewAvatar 
-                          src={rev.avatar} 
-                          alt={rev.author} 
-                          size="w-9 h-9" 
-                        /> 
-                        <div className="flex items-center gap-2 flex-wrap"> 
-                          <span className="font-semibold text-sm text-[#F5F5F5]"> 
-                            {rev.author} 
-                          </span> 
-                          {rev.source === "community" && ( 
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#61F1AC]/10 text-[#61F1AC] border border-[#61F1AC]/30"> 
-                              Orgi 
-                            </span> 
-                          )} 
-                          {rev.is_edited && ( 
-                            <span className="text-[11px] text-[#7A7A7A] italic"> 
-                              (edited) 
-                            </span> 
-                          )} 
-                          <span className="text-xs text-[#7A7A7A]">·</span> 
-                          <span className="text-xs text-[#7A7A7A] font-light"> 
-                            {rev.time} 
-                          </span> 
-                        </div> 
-                      </div> 
-
-                      <div className="flex items-center gap-1 text-xs font-tabular text-[#61F1AC] font-semibold"> 
-                        <Star size={12} className="fill-[#61F1AC]" /> 
-                        <span>{rev.score}</span> 
-                      </div> 
-                    </div> 
-
-                    <div className="mb-4"> 
-                      <p className={`text-sm leading-relaxed text-[#D0D0D0] font-light ${isExpanded ? "" : "line-clamp-2"}`}> 
-                        {rev.content} 
-                      </p> 
-                      {isLongContent && ( 
-                        <button 
-                          type="button" 
-                          onClick={() => setExpandedReviews((prev) => ({ ...prev, [rev.id]: !isExpanded }))} 
-                          className="text-[11px] text-[#61F1AC] hover:underline mt-1 cursor-pointer font-medium" 
-                        > 
-                          {isExpanded ? "Show less" : "Read more"} 
-                        </button> 
-                      )} 
-                    </div> 
-
-                    {rev.source === "community" && ( 
-                      <div className="flex items-center justify-between text-xs text-[#7A7A7A]"> 
-                        <div className="flex items-center gap-5"> 
-                          <button 
-                            type="button" 
-                            onClick={() => toggleLike(rev.id)} 
-                            className={`flex items-center gap-1.5 transition-colors cursor-pointer ${ 
-                              isLiked ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
-                            }`} 
-                          > 
-                            <ThumbsUp 
-                              size={13} 
-                              className={isLiked ? "fill-[#61F1AC]" : ""} 
-                            /> 
-                            <span className="font-tabular">{likeCount}</span> 
-                          </button> 
-
-                          <button 
-                            type="button" 
-                            onClick={() => handleToggleReplyBox(rev.id)} 
-                            className={`flex items-center gap-1 transition-colors cursor-pointer ${ 
-                              replyingToReviewId === rev.id ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
-                            }`} 
-                          > 
-                            <Reply size={13} /> 
-                            <span>Reply</span> 
-                          </button> 
-
-                          <div className="relative"> 
-                            <button 
-                              type="button" 
-                              onClick={() => setActiveMenuReviewId(activeMenuReviewId === rev.id ? null : rev.id)} 
-                              className="hover:text-[#F5F5F5] transition-colors cursor-pointer p-0.5" 
-                            > 
-                              <MoreHorizontal size={14} /> 
-                            </button> 
-
-                            {activeMenuReviewId === rev.id && ( 
-                              <div className="absolute left-0 top-full mt-1 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20"> 
-                                <button 
-                                  type="button" 
-                                  onClick={() => handleOpenReport(rev.id)} 
-                                  className="w-full text-left px-3 py-1.5 text-xs text-[#B5B5B5] hover:text-red-400 hover:bg-[#141414] transition-colors cursor-pointer" 
-                                > 
-                                  Report Review 
-                                </button> 
-                              </div> 
-                            )} 
-                          </div> 
-                        </div> 
-
-                        {rev.repliesCount > 0 && ( 
-                          <button 
-                            type="button" 
-                            onClick={() => toggleReplies(rev.id)} 
-                            className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1" 
-                          > 
-                            <span> 
-                              {expandedReplies[rev.id] 
-                                ? "Hide replies" 
-                                : `View ${rev.repliesCount} ${rev.repliesCount === 1 ? "reply" : "replies"} ⌄`} 
-                            </span> 
-                          </button> 
-                        )} 
-                      </div> 
-                    )} 
-
-                    {replyingToReviewId === rev.id && rev.source === "community" && ( 
-                      <div className="mt-3.5 pl-11"> 
-                        <div className="bg-[#101010] border border-[#222222] focus-within:border-[#61F1AC]/50 rounded-xl p-3 transition-colors"> 
-                          <div className="flex items-start gap-2.5 mb-2.5"> 
-                            <ReviewAvatar 
-                              src={currentUserAvatar} 
-                              alt="Your Avatar" 
-                              size="w-6 h-6" 
-                            /> 
-                            <textarea 
-                              value={replyText} 
-                              onChange={(e) => setReplyText(e.target.value)} 
-                              placeholder={`Reply to ${rev.author}…`} 
-                              rows={2} 
-                              className="w-full bg-transparent text-[#F5F5F5] placeholder-[#666666] text-xs resize-none outline-none leading-relaxed" 
-                              autoFocus 
-                            /> 
-                          </div> 
-                          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1C1C1C]"> 
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => { 
-                                setReplyingToReviewId(null); 
-                                setReplyText(""); 
-                              }} 
-                              className="text-xs px-2.5 py-1 text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer" 
-                            > 
-                              Cancel 
-                            </Button> 
-                            <Button 
-                              variant="primary" 
-                              size="sm" 
-                              disabled={isSubmittingReply || !replyText.trim()} 
-                              onClick={() => handlePostReply(rev.id)} 
-                              className="text-xs font-semibold px-3.5 py-1 cursor-pointer" 
-                            > 
-                              <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
-                            </Button> 
-                          </div> 
-                        </div> 
-                      </div> 
-                    )} 
-
-                    {rev.replies && expandedReplies[rev.id] && rev.source === "community" && ( 
-                      <div className="mt-3.5 pl-11 space-y-2.5 pt-3 border-t border-[#1C1C1C]/40"> 
-                        {rev.replies.map((reply) => ( 
-                          <div key={reply.id} className="text-xs bg-[#0E0E0E] rounded-xl p-3 border border-[#1A1A1A]"> 
-                            <div className="flex items-center gap-2 mb-1"> 
-                              <ReviewAvatar 
-                                src={reply.avatar} 
-                                alt={reply.author} 
-                                size="w-5 h-5" 
-                              /> 
-                              <span className="font-medium text-[#F5F5F5]"> 
-                                {reply.author} 
-                              </span> 
-                              {reply.is_edited && ( 
-                                <span className="text-[10px] text-[#7A7A7A] italic"> 
-                                  (edited) 
-                                </span> 
-                              )} 
-                              <span className="text-[#555555]">·</span> 
-                              <span className="text-[11px] text-[#7A7A7A]"> 
-                                {formatReviewDate(reply.time)} 
-                              </span> 
-                            </div> 
-                            <p className="text-[#B5B5B5] leading-relaxed pl-7 whitespace-pre-wrap"> 
-                              {reply.content} 
-                            </p> 
-                          </div> 
-                        ))} 
-                      </div> 
-                    )} 
-                  </article> 
-                ); 
-              })} 
-            </div> 
-
-            <div className="flex justify-center mt-10"> 
-              {visibleReviews < sortedReviews.length && ( 
-                <Button 
-                  variant="mintGhost" 
-                  size="md" 
-                  className="px-6 py-2 rounded-full text-xs font-medium" 
-                  onClick={() => setVisibleReviews((prev) => prev + 4)} 
-                > 
-                  Load more reviews 
-                </Button> 
-              )} 
-            </div> 
-          </div> 
+          <MediaReviewsTab 
+            mediaId={category ? id : (id || 157336)} 
+            mediaType={category ? category.toUpperCase() : "MOVIE"} 
+            mediaTitle={movieData.title} 
+            coverUrl={movieData.poster || movieData.backdrop} 
+            provider={ 
+              category 
+                ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
+                : "tmdb" 
+            } 
+            category={category} 
+            initialProviderReviews={movieData.reviews} 
+            initialProviderPage={movieData.reviewsPage || 1} 
+            initialTotalPages={movieData.reviewsTotalPages || 1} 
+            communityData={communityData} 
+            onCommunityDataChange={setCommunityData} 
+          /> 
         )} 
 
         {activeTab === "Media" && (
@@ -1335,56 +668,10 @@ export function MovieDetailsPage({
                 </span> 
               </div> 
             </div> 
-          </div>
+          </div> 
         )} 
       </main> 
-
-      {reportModalOpen && ( 
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
-          <div className="w-full max-w-sm bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-6 text-[#F5F5F5]"> 
-            <div className="flex items-center justify-between mb-3"> 
-              <h2 className="text-base font-bold text-[#F5F5F5]">Report Review</h2> 
-              <button 
-                type="button" 
-                onClick={() => setReportModalOpen(false)} 
-                className="text-[#7A7A7A] hover:text-white cursor-pointer" 
-              > 
-                <X size={16} /> 
-              </button> 
-            </div> 
-            <p className="text-xs text-[#B5B5B5] mb-4"> 
-              Help us keep the community safe. Why are you reporting this review? 
-            </p> 
-            <textarea 
-              value={reportReason} 
-              onChange={(e) => setReportReason(e.target.value)} 
-              placeholder="Provide reason (e.g. spam, spoiler, abusive)..." 
-              rows={3} 
-              className="w-full bg-[#141414] border border-[#222222] focus:border-[#61F1AC]/60 rounded-lg p-2.5 text-xs text-[#F5F5F5] placeholder-[#666666] outline-none mb-4 resize-none" 
-            /> 
-            <div className="flex justify-end gap-2"> 
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={isSubmittingReport} 
-                onClick={() => setReportModalOpen(false)} 
-                className="px-3 py-1.5 text-xs cursor-pointer" 
-              > 
-                <span>Cancel</span> 
-              </Button> 
-              <Button 
-                variant="primary" 
-                size="sm" 
-                disabled={isSubmittingReport || !reportReason.trim()} 
-                onClick={handleSubmitReport} 
-                className="px-3.5 py-1.5 text-xs font-semibold cursor-pointer" 
-              > 
-                <span>{isSubmittingReport ? "Submitting..." : "Submit Report"}</span> 
-              </Button> 
-            </div> 
-          </div> 
-        </div> 
-      )} 
     </div> 
   ); 
 } 
+

@@ -132,96 +132,71 @@ export async function fetchTmdbCandidates() {
 
   console.log("🎬 [TMDB] Refreshing candidate pool...");
 
-  const endpoints = [
-    { path: "/trending/movie/week", type: "movie", page: 1 },
-    { path: "/trending/movie/week", type: "movie", page: 2 },
-    { path: "/trending/tv/week", type: "tv", page: 1 },
-    { path: "/trending/tv/week", type: "tv", page: 2 },
-    { path: "/movie/popular", type: "movie", page: 1 },
-    { path: "/movie/popular", type: "movie", page: 2 },
-    { path: "/tv/popular", type: "tv", page: 1 },
-    { path: "/tv/popular", type: "tv", page: 2 },
-    { path: "/movie/top_rated", type: "movie", page: 1 },
-    { path: "/movie/top_rated", type: "movie", page: 2 },
-    { path: "/tv/top_rated", type: "tv", page: 1 },
-    { path: "/tv/top_rated", type: "tv", page: 2 },
-    {
-      path: "/discover/tv",
-      type: "tv",
-      page: 1,
-      params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" },
-    },
-    {
-      path: "/discover/tv",
-      type: "tv",
-      page: 2,
-      params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" },
-    },
-    {
-      path: "/discover/movie",
-      type: "movie",
-      page: 1,
-      params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" },
-    },
-    {
-      path: "/discover/movie",
-      type: "movie",
-      page: 2,
-      params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" },
-    },
-  ];
+  const endpoints = [ 
+    { path: "/trending/movie/week", type: "movie", page: 1 }, 
+    { path: "/trending/tv/week", type: "tv", page: 1 }, 
+    { path: "/movie/popular", type: "movie", page: 1 }, 
+    { path: "/tv/popular", type: "tv", page: 1 }, 
+    { 
+      path: "/discover/tv", 
+      type: "tv", 
+      page: 1, 
+      params: { with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc" }, 
+    }, 
+  ]; 
+ 
+  const fetchPromises = endpoints.map((ep) => 
+    tmdbFetch(ep.path, { page: ep.page, ...(ep.params || {}) }) 
+      .then((data) => (data.results || []).map((item) => ({ ...item, media_type: ep.type }))) 
+      .catch((err) => { 
+        console.warn(`[TMDB] Error fetching ${ep.path}:`, err.message); 
+        return []; 
+      }) 
+  ); 
+ 
+  const resultsNested = await Promise.all(fetchPromises); 
+  const combined = resultsNested.flat(); 
+ 
+  const seen = new Set(); 
+  const deduped = []; 
+  for (const item of combined) { 
+    if (!item || !item.id) continue; 
+    const key = `${item.media_type || "movie"}:${item.id}`; 
+    if (!seen.has(key)) { 
+      seen.add(key); 
+      deduped.push(item); 
+    } 
+  } 
+ 
+  tmdbCandidatesCache = deduped; 
+  tmdbCandidatesExpiry = now + 2 * 60 * 60 * 1000; 
+  return deduped; 
+} 
+ 
+export async function getTmdbReviewCards() { 
+  const now = Date.now(); 
+  if (tmdbReviewCardsCache && now < tmdbReviewCardsExpiry) { 
+    return tmdbReviewCardsCache; 
+  } 
+ 
+  const [candidates, genres] = await Promise.all([ 
+    fetchTmdbCandidates(), 
+    getTmdbGenres(), 
+  ]); 
+ 
+  const topCandidates = candidates 
+    .slice() 
+    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) 
+    .slice(0, 35); 
+ 
+  console.log(`🎬 [TMDB] Evaluating reviews for ${topCandidates.length} top candidates...`); 
+ 
+  const cards = await pMap( 
+    topCandidates, 
+    async (item) => { 
+      const mediaType = item.media_type === "tv" ? "tv" : "movie"; 
+      const isAnime = isAnimeItem(item); 
 
-  const fetchPromises = endpoints.map((ep) =>
-    tmdbFetch(ep.path, { page: ep.page, ...(ep.params || {}) })
-      .then((data) => (data.results || []).map((item) => ({ ...item, media_type: ep.type })))
-      .catch((err) => {
-        console.warn(`[TMDB] Error fetching ${ep.path}:`, err.message);
-        return [];
-      })
-  );
-
-  const resultsNested = await Promise.all(fetchPromises);
-  const combined = resultsNested.flat();
-
-  // Deduplicate by media_type:id
-  const seen = new Set();
-  const deduped = [];
-  for (const item of combined) {
-    if (!item || !item.id) continue;
-    const key = `${item.media_type || "movie"}:${item.id}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      deduped.push(item);
-    }
-  }
-
-  tmdbCandidatesCache = deduped;
-  tmdbCandidatesExpiry = now + 60 * 60 * 1000; // 1 hour
-  return deduped;
-}
-
-/**
- * Builds normalized ReviewCardItems for TMDB candidates.
- * Checks reviews for each candidate using concurrency limiter.
- */
-export async function getTmdbReviewCards() {
-  const now = Date.now();
-  if (tmdbReviewCardsCache && now < tmdbReviewCardsExpiry) {
-    return tmdbReviewCardsCache;
-  }
-
-  const [candidates, genres] = await Promise.all([
-    fetchTmdbCandidates(),
-    getTmdbGenres(),
-  ]);
-
-  console.log(`🎬 [TMDB] Evaluating reviews for ${candidates.length} candidates...`);
-
-  const cards = await pMap(
-    candidates,
-    async (item) => {
-      const mediaType = item.media_type === "tv" ? "tv" : "movie";
-      const isAnime = isAnimeItem(item);
 
       // Fetch reviews for this title
       let reviewsData;
@@ -301,9 +276,10 @@ export async function getTmdbReviewCards() {
   const validCards = cards.filter(Boolean).flat();
   console.log(`🎬 [TMDB] Successfully built ${validCards.length} review cards.`);
 
-  tmdbReviewCardsCache = validCards;
-  tmdbReviewCardsExpiry = now + 30 * 60 * 1000; // 30 minutes
-  return validCards;
+  tmdbReviewCardsCache = validCards; 
+  tmdbReviewCardsExpiry = now + 60 * 60 * 1000; 
+  return validCards; 
+
 }
 
 /**

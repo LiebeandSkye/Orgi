@@ -11,38 +11,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 import api from "../services/api";
-import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb";
-import { ScoreRing } from "../components/ui/ScoreRing";
-import { Button } from "../components/ui/Button";
-import { StarRating } from "../components/ui/StarRating";
-import MediaItems from "../components/ui/MediaItems";
-import { CastCarousel } from "../components/ui/CastCarousel";
-import EpisodesSection from "../components/ui/EpisodeSSection";
+import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb"; 
+import { DetailScoreRings } from "../components/ui/DetailScoreRings"; 
+import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab"; 
+import { Button } from "../components/ui/Button"; 
+import MediaItems from "../components/ui/MediaItems"; 
+import { CastCarousel } from "../components/ui/CastCarousel"; 
+import EpisodesSection from "../components/ui/EpisodeSSection"; 
 
-const NAVBAR_AVATAR =
-  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
-
-function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
-  const [errorSrc, setErrorSrc] = useState(null);
-  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src;
-  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR;
-
-  return (
-    <div
-      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`}
-    >
-      <img
-        key={src}
-        src={effectiveSrc}
-        alt={alt || "Avatar"}
-        onError={() => setErrorSrc(src)}
-        className={`w-full h-full object-cover ${
-          isNavbarAvatar ? "scale-125" : ""
-        }`}
-      />
-    </div>
-  );
-}
 
 export function SeriesDetailsPage({
   initialTab = "Episodes",
@@ -65,65 +41,48 @@ export function SeriesDetailsPage({
   const [contentHeight, setContentHeight] = useState(0);
   const [hasOverflow, setHasOverflow] = useState(false);
 
-  // Reviews state
-  const [newThought, setNewThought] = useState("");
-  const [selectedStars, setSelectedStars] = useState(0);
-  const [repliesExpanded, setRepliesExpanded] = useState(false);
-  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  const [sortBy, setSortBy] = useState("Top");
-  const [likedReviews, setLikedReviews] = useState({});
-  const [visibleReviews, setVisibleReviews] = useState(4);
+  const [communityData, setCommunityData] = useState({ 
+    communityAverage: null, 
+    communityVotes: 0, 
+    reviews: [], 
+  }); 
   const [inCollection, setInCollection] = useState(false); 
   const [collectionLoading, setCollectionLoading] = useState(false); 
-
-  
-
-const reviews = []; // Temporary empty list until review data is connected.
-
-const sortedReviews = [...reviews].sort((a, b) => {
-  if (sortBy === "Top") {
-    return (b.likes || 0) - (a.likes || 0);
-  }
-
-  if (sortBy === "Newest") {
-    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-  }
-
-  if (sortBy === "Oldest") {
-    return new Date(a.created_at || 0) - new Date(b.created_at || 0);
-  }
-
-  if (sortBy === "Highest Rated") {
-    return (b.score || 0) - (a.score || 0);
-  }
-
-  if (sortBy === "Lowest Rated") {
-    return (a.score || 0) - (b.score || 0);
-  }
-
-  return 0;
-});
-
-
-
+ 
   useEffect(() => { 
     if (!seriesData || !id) return; 
     let mounted = true; 
-    async function loadCollectionStatus() { 
+    async function loadCollectionAndReviews() { 
       try { 
-        const colRes = await api.get(`/collections/check/tmdb/${id}`); 
-        if (mounted && colRes?.success) { 
-          setInCollection(!!colRes.data?.inCollection); 
+        const [colRes, revRes] = await Promise.allSettled([ 
+          api.get(`/collections/check/tmdb/${id}`), 
+          api.get(`/reviews/tmdb/${id}`), 
+        ]); 
+ 
+        if (mounted) { 
+          if (colRes.status === "fulfilled" && colRes.value?.success) { 
+            setInCollection(!!colRes.value.data?.inCollection); 
+          } 
+          if (revRes.status === "fulfilled" && revRes.value?.success) { 
+            const revData = revRes.value.data || {}; 
+            setCommunityData({ 
+              communityAverage: typeof revData.communityAverage === "number" ? revData.communityAverage : null, 
+              communityVotes: typeof revData.communityVotes === "number" ? revData.communityVotes : 0, 
+              reviews: Array.isArray(revData.reviews) ? revData.reviews : [], 
+            }); 
+          } 
         } 
       } catch (err) { 
-        console.error("Failed to load series collection status:", err); 
+        console.error("Failed to load series collection or reviews:", err); 
       } 
     } 
-    loadCollectionStatus(); 
+    loadCollectionAndReviews(); 
+ 
     return () => { 
       mounted = false; 
     }; 
   }, [seriesData, id]); 
+ 
 
   const handleToggleCollection = async () => { 
     if (!seriesData) return; 
@@ -349,44 +308,15 @@ const sortedReviews = [...reviews].sort((a, b) => {
             </div>
 
             {/* Row with two circular score rings */}
-            <div className="flex items-center gap-8 mb-8">
-              <ScoreRing
-                  score={parseFloat(seriesData.communityRating) || 9.5}
-                  color="#61F1AC"
-                  size="lg"
-                  strokeWidth={4.5}
-                />
-              {/* Community rating with mint ring */}
-              <div className="flex items-center gap-4">
-                
-                <div className="flex flex-col">
-                  <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A] mb-0.5">
-                    Community Rating
-                  </span>
-                  <span className="text-xs text-[#B5B5B5] font-light">
-                    {seriesData.communityVotes}
-                  </span>
-                </div>
-              </div>
+            <DetailScoreRings 
+              providerRating={seriesData.tmdbRating} 
+              providerVotes={seriesData.tmdbVotes} 
+              communityScore={communityData?.communityAverage ?? null} 
+              communityVotesCount={communityData?.communityVotes || 0} 
+              fallbackCommunityRating={seriesData.communityRating} 
+              fallbackCommunityVotes={seriesData.communityVotes} 
+            /> 
 
-              {/* TMDB score ring */}
-              <div className="flex items-center gap-4 border-l border-[#1C1C1C] pl-8">
-                <ScoreRing
-                  score={parseFloat(seriesData.tmdbRating) || 8.9}
-                  color="#B5B5B5"
-                  size={64}
-                  strokeWidth={4.5}
-                />
-                <div className="flex flex-col">
-                  <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A] mb-0.5">
-                    TMDB Rating
-                  </span>
-                  <span className="text-xs text-[#B5B5B5] font-light">
-                    {seriesData.tmdbVotes}
-                  </span>
-                </div>
-              </div>
-            </div>
 
             {/* Row of actions: Mint primary button "Rate this", secondary "Add to list", round Share button */}
             <div className="flex items-center gap-3 mb-8">
@@ -510,9 +440,10 @@ const sortedReviews = [...reviews].sort((a, b) => {
         {/* ======================================================== */}
         {/* 1. EPISODES TAB CONTENT WITH EPISODE RATING              */}
         {/* ======================================================== */}
-        {activeTab === "Episodes" && (
-          <EpisodesSection seriesId={id}/>
-        )}
+        {activeTab === "Episodes" && ( 
+          <EpisodesSection seriesId={id} seriesData={seriesData} /> 
+        )} 
+
 
         {/* ======================================================== */}
         {/* 2. CAST TAB CONTENT                                      */}
@@ -530,194 +461,21 @@ const sortedReviews = [...reviews].sort((a, b) => {
         {/* ======================================================== */}
         {/* 3. REVIEWS TAB CONTENT                                   */}
         {/* ======================================================== */}
-        {activeTab === "Reviews" && (
-          <div className="max-w-[720px] mx-auto animate-in fade-in duration-300">
-            {/* COMPOSER CARD */}
-            <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm">
-              <div className="flex items-start gap-3.5 mb-4">
-                <ReviewAvatar
-                  src={NAVBAR_AVATAR}
-                  alt="User Avatar"
-                  size="w-9 h-9"
-                />
-                <textarea
-                  value={newThought}
-                  onChange={(e) => setNewThought(e.target.value)}
-                  placeholder="Add a thought…"
-                  rows={3}
-                  className="w-full bg-transparent text-[#F5F5F5] placeholder-[#7A7A7A] text-sm resize-none focus:outline-none"
-                />
-              </div>
+        {activeTab === "Reviews" && ( 
+          <MediaReviewsTab 
+            mediaId={id} 
+            mediaType="SERIES" 
+            mediaTitle={seriesData.title} 
+            coverUrl={seriesData.poster || seriesData.backdrop} 
+            provider="tmdb" 
+            initialProviderReviews={seriesData.reviews} 
+            initialProviderPage={seriesData.reviewsPage || 1} 
+            initialTotalPages={seriesData.reviewsTotalPages || 1} 
+            communityData={communityData} 
+            onCommunityDataChange={setCommunityData} 
+          /> 
+        )} 
 
-              <div className="flex items-center justify-between pt-3 border-t border-[#1C1C1C]/60">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#7A7A7A] mr-1">Your rating:</span>
-                  <StarRating
-                    rating={selectedStars}
-                    onRate={setSelectedStars}
-                    size={16}
-                  />
-                </div>
-
-                <Button
-                  variant="mint"
-                  size="sm"
-                  disabled={!newThought.trim()}
-                  onClick={() => {
-                    alert("Thought posted!");
-                    setNewThought("");
-                    setSelectedStars(0);
-                  }}
-                  className="px-4 py-1.5 rounded-lg text-xs"
-                >
-                  Post
-                </Button>
-              </div>
-            </div>
-
-            {/* THIN ROW: Sort */}
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#1C1C1C]">
-              <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]">
-                {seriesData.communityVotes}
-              </span>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs text-[#B5B5B5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/40 hover:text-[#F5F5F5] transition-colors cursor-pointer"
-                >
-                  <span>Sort: {sortBy}</span>
-                  <ChevronDown size={12} className="text-[#7A7A7A]" />
-                </button>
-
-                {sortDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-xl z-20">
-                    {["Top", "Newest", "Highest Rated", "Lowest Rated"].map(
-                      (opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => {
-                            setSortBy(opt);
-                            setSortDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-3.5 py-1.5 text-xs transition-colors ${
-                            sortBy === opt
-                              ? "text-[#61F1AC] bg-[#141414]"
-                              : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]"
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* REVIEW LIST */}
-            <div className="flex flex-col divide-y divide-[#1C1C1C]">
-              {sortedReviews.slice(0, visibleReviews).map((rev) => {
-                const isLiked = likedReviews[rev.id];
-                const likeCount = rev.likes + (isLiked ? 1 : 0);
-
-                return (
-                  <article key={rev.id} className="py-6 first:pt-0">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <ReviewAvatar
-                          src={rev.avatar}
-                          alt={rev.author}
-                          size="w-8 h-8"
-                        />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-[#F5F5F5]">
-                            {rev.author}
-                          </span>
-                          <span className="text-[11px] text-[#7A7A7A]">
-                            {rev.time}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 text-xs text-[#61F1AC] font-medium font-tabular">
-                        <Star size={12} className="fill-[#61F1AC]" />
-                        <span>{rev.score}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-sm leading-relaxed text-[#D0D0D0] mb-4 font-light">
-                      {rev.content}
-                    </p>
-
-                    <div className="flex items-center justify-between text-xs text-[#7A7A7A]">
-                      <div className="flex items-center gap-5">
-                        <button
-                          type="button"
-                          onClick={() => toggleLike(rev.id)}
-                          className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
-                            isLiked ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]"
-                          }`}
-                        >
-                          <ThumbsUp
-                            size={13}
-                            className={isLiked ? "fill-[#61F1AC]" : ""}
-                          />
-                          <span className="font-tabular">{likeCount}</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="flex items-center gap-1 hover:text-[#F5F5F5] transition-colors cursor-pointer"
-                        >
-                          <Reply size={13} />
-                          <span>Reply</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="hover:text-[#F5F5F5] transition-colors cursor-pointer p-0.5"
-                        >
-                          <MoreHorizontal size={14} />
-                        </button>
-                      </div>
-
-                      {rev.repliesCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setRepliesExpanded(!repliesExpanded)}
-                          className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <span>
-                            {repliesExpanded
-                              ? "Hide replies"
-                              : `View ${rev.repliesCount} replies ⌄`}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-
-            {/* Load more */}
-            <div className="flex justify-center mt-10">
-              {visibleReviews < sortedReviews.length && (
-                <Button
-                  variant="mintGhost"
-                  size="md"
-                  className="px-6 py-2 rounded-full text-xs font-medium"
-                  onClick={() => setVisibleReviews((prev) => prev + 4)}
-                >
-                  Load more reviews
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* ======================================================== */}
         {/* 4. MEDIA TAB CONTENT                                     */}
