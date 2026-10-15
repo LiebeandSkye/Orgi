@@ -6,6 +6,7 @@ const router = express.Router();
 router.get("/ping", mediaController.ping);
 router.get("/manga", mediaController.getManga);
 router.get("/books", mediaController.getBooks);
+router.get("/dashboard-feeds", mediaController.getDashboardFeeds);
 router.get("/detail/:category/:id", mediaController.getDetail);
 
 export default router;

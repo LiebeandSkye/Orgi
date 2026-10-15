@@ -221,62 +221,156 @@ export async function fetchMangaDexByCategory(
     return results;
 }
 
-export async function fetchBooksDashboardFeeds() {
+// Multi-tier client cache (Memory + SessionStorage)
+const MEMORY_FEED_CACHE = new Map();
+const DASHBOARD_CACHE_KEY = "orgi_books_dashboard_feeds_v3";
+const POPULAR_BOOKS_CACHE_KEY = "orgi_popular_books_cache_v3";
+const DASHBOARD_CACHE_TTL = 20 * 60 * 1000; // 20 minutes
+const POPULAR_BOOKS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+export function getCachedBooksDashboardFeeds() {
+    // 1. In-memory check (0ms)
+    const mem = MEMORY_FEED_CACHE.get(DASHBOARD_CACHE_KEY);
+    if (mem && Date.now() - mem.timestamp < DASHBOARD_CACHE_TTL && mem.data) {
+        return mem.data;
+    }
+    // 2. SessionStorage check (0ms)
     try {
-        const [
-            trendingManhwa,
-            trendingManga,
-            trendingManhua,
-            popularBooks,
-            fanFavoritesManhwa,
-            fanFavoritesManga,
-        ] = await Promise.all([
-            fetchMangaDexByCategory("manhwa", 1, "", "All", "All", "Most popular").catch(() => []),
-            fetchMangaDexByCategory("manga", 1, "", "All", "All", "Most popular").catch(() => []),
-            fetchMangaDexByCategory("manhua", 1, "", "All", "All", "Most popular").catch(() => []),
-            fetchBooks(1, "").catch(() => []),
-            fetchMangaDexByCategory("manhwa", 1, "", "All", "All", "Top rated").catch(() => []),
-            fetchMangaDexByCategory("manga", 1, "", "All", "All", "Top rated").catch(() => []),
-        ]);
+        const raw = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Date.now() - parsed.timestamp < DASHBOARD_CACHE_TTL && parsed.data) {
+                MEMORY_FEED_CACHE.set(DASHBOARD_CACHE_KEY, parsed);
+                return parsed.data;
+            }
+        }
+    } catch {}
+    return null;
+}
 
-        const formatRoute = (item, cat) => {
-            const image = item.cover || item.poster || null;
-            return {
-                ...item,
-                cover: image,
-                poster: image,
-                backdrop: item.backdrop || image,
-                route: `/books/${cat}/${item.id}`,
-                score: item.rating || "8.5",
-                type: (item.type || cat).toUpperCase(),
-            };
+export function setCachedBooksDashboardFeeds(data) {
+    if (!data) return;
+    const entry = { data, timestamp: Date.now() };
+    MEMORY_FEED_CACHE.set(DASHBOARD_CACHE_KEY, entry);
+    try {
+        sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(entry));
+    } catch {}
+}
+
+export async function fetchBooksDashboardFeeds(onProgress) {
+    const cached = getCachedBooksDashboardFeeds();
+    if (cached) {
+        if (typeof onProgress === "function") {
+            onProgress(cached);
+        }
+    }
+
+    // 1. Try fast server-aggregated Redis cache endpoint
+    try {
+        const serverRes = await fetch(`${API_BASE_URL}/dashboard-feeds`).catch(() => null);
+        if (serverRes && serverRes.ok) {
+            const serverJson = await serverRes.json();
+            if (serverJson.success && serverJson.data) {
+                setCachedBooksDashboardFeeds(serverJson.data);
+                if (typeof onProgress === "function") {
+                    onProgress(serverJson.data);
+                }
+                return serverJson.data;
+            }
+        }
+    } catch {
+        // Fall back to progressive client-side fetching below
+    }
+
+    const formatRoute = (item, cat) => {
+        const image = item.cover || item.poster || null;
+        return {
+            ...item,
+            cover: image,
+            poster: image,
+            backdrop: item.backdrop || image,
+            route: `/books/${cat}/${item.id}`,
+            score: item.rating || "8.5",
+            type: (item.type || cat).toUpperCase(),
         };
+    };
 
-        // Combined top rated fan favorites alternating Manhwa & Manga
+    let aggregated = cached
+        ? { ...cached }
+        : {
+              trendingManhwa: [],
+              trendingManga: [],
+              trendingManhua: [],
+              trendingBooks: [],
+              fanFavorites: [],
+          };
+
+    // 2. Fast track: MangaDex feeds (Manhwa, Manga, Manhua, Fan Favorites resolve in ~0.8s)
+    const mangaDexPromise = Promise.all([
+        fetchMangaDexByCategory("manhwa", 1, "", "All", "All", "Most popular").catch(() => []),
+        fetchMangaDexByCategory("manga", 1, "", "All", "All", "Most popular").catch(() => []),
+        fetchMangaDexByCategory("manhua", 1, "", "All", "All", "Most popular").catch(() => []),
+        fetchMangaDexByCategory("manhwa", 1, "", "All", "All", "Top rated").catch(() => []),
+        fetchMangaDexByCategory("manga", 1, "", "All", "All", "Top rated").catch(() => []),
+    ]).then(([tManhwa, tManga, tManhua, fvManhwa, fvManga]) => {
         const fanFavorites = [];
-        const maxLen = Math.max(fanFavoritesManhwa.length, fanFavoritesManga.length);
+        const maxLen = Math.max(fvManhwa.length, fvManga.length);
         for (let i = 0; i < maxLen; i++) {
-            if (fanFavoritesManhwa[i]) fanFavorites.push(formatRoute(fanFavoritesManhwa[i], "manhwa"));
-            if (fanFavoritesManga[i]) fanFavorites.push(formatRoute(fanFavoritesManga[i], "manga"));
+            if (fvManhwa[i]) fanFavorites.push(formatRoute(fvManhwa[i], "manhwa"));
+            if (fvManga[i]) fanFavorites.push(formatRoute(fvManga[i], "manga"));
         }
 
-        return {
-            trendingManhwa: (trendingManhwa || []).map((m) => formatRoute(m, "manhwa")),
-            trendingManga: (trendingManga || []).map((m) => formatRoute(m, "manga")),
-            trendingManhua: (trendingManhua || []).map((m) => formatRoute(m, "manhua")),
-            trendingBooks: (popularBooks || []).map((b) => formatRoute(b, "novels")),
+        const mangaUpdate = {
+            trendingManhwa: (tManhwa || []).map((m) => formatRoute(m, "manhwa")),
+            trendingManga: (tManga || []).map((m) => formatRoute(m, "manga")),
+            trendingManhua: (tManhua || []).map((m) => formatRoute(m, "manhua")),
             fanFavorites: fanFavorites.slice(0, 16),
         };
-    } catch (err) {
-        console.error("Failed to fetch books dashboard feeds:", err);
-        return {
-            trendingManhwa: [],
-            trendingManga: [],
-            trendingManhua: [],
-            trendingBooks: [],
-            fanFavorites: [],
-        };
-    }
+
+        aggregated = { ...aggregated, ...mangaUpdate };
+        if (typeof onProgress === "function") {
+            onProgress(aggregated);
+        }
+        return mangaUpdate;
+    });
+
+    // 3. Books track: Check local cache first so Open Library takes 0ms
+    const booksPromise = (async () => {
+        try {
+            const raw = sessionStorage.getItem(POPULAR_BOOKS_CACHE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Date.now() - parsed.timestamp < POPULAR_BOOKS_CACHE_TTL && Array.isArray(parsed.data)) {
+                    const booksUpdate = { trendingBooks: parsed.data.map((b) => formatRoute(b, "novels")) };
+                    aggregated = { ...aggregated, ...booksUpdate };
+                    if (typeof onProgress === "function") {
+                        onProgress(aggregated);
+                    }
+                    return booksUpdate;
+                }
+            }
+        } catch {}
+
+        const popularBooks = await fetchBooks(1, "").catch(() => []);
+        if (Array.isArray(popularBooks) && popularBooks.length > 0) {
+            try {
+                sessionStorage.setItem(
+                    POPULAR_BOOKS_CACHE_KEY,
+                    JSON.stringify({ data: popularBooks, timestamp: Date.now() })
+                );
+            } catch {}
+        }
+        const booksUpdate = { trendingBooks: (popularBooks || []).map((b) => formatRoute(b, "novels")) };
+        aggregated = { ...aggregated, ...booksUpdate };
+        if (typeof onProgress === "function") {
+            onProgress(aggregated);
+        }
+        return booksUpdate;
+    })();
+
+    await Promise.allSettled([mangaDexPromise, booksPromise]);
+    setCachedBooksDashboardFeeds(aggregated);
+    return aggregated;
 }
 
 export async function fetchBooks(page = 1, query = "") {
@@ -459,7 +553,35 @@ function getDefaultCommunityReviews(title, type = "Novel", baseRating = 8.5, aut
     });
 }
 
+const DETAIL_CACHE = new Map();
+const DETAIL_TTL = 30 * 60 * 1000; // 30 mins
+
+function cacheAndReturnDetail(key, data) {
+    if (data) {
+        DETAIL_CACHE.set(key, data);
+        try {
+            sessionStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+        } catch {}
+    }
+    return data;
+}
+
 export async function fetchMediaDetails(category, id) {
+    const cacheKey = `orgi_detail_${category}_${id}`;
+    if (DETAIL_CACHE.has(cacheKey)) {
+        return DETAIL_CACHE.get(cacheKey);
+    }
+    try {
+        const raw = sessionStorage.getItem(cacheKey);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Date.now() - parsed.timestamp < DETAIL_TTL && parsed.data) {
+                DETAIL_CACHE.set(cacheKey, parsed.data);
+                return parsed.data;
+            }
+        }
+    } catch {}
+
     try {
         const proxyRes = await fetch(`${API_BASE_URL}/detail/${encodeURIComponent(category)}/${encodeURIComponent(id)}`);
         if (proxyRes.ok) {
@@ -472,7 +594,7 @@ export async function fetchMediaDetails(category, id) {
                         avatar: c.avatar || getFallbackAuthorAvatar(c.name, ""),
                     }));
                 }
-                return data;
+                return cacheAndReturnDetail(cacheKey, data);
             }
         }
     } catch {
@@ -626,7 +748,7 @@ export async function fetchMediaDetails(category, id) {
             bookReviews = getDefaultCommunityReviews(data.title || "Untitled", "Book / Novel", bookRating, authorName);
         }
 
-        return {
+        return cacheAndReturnDetail(cacheKey, {
             id,
             type: "BOOK / NOVEL",
             title: data.title || "Untitled",
@@ -677,7 +799,7 @@ export async function fetchMediaDetails(category, id) {
                 aspectRatio: "Book",
                 studio: "Open Library",
             },
-        };
+        });
     }
 
     const [res, statRes, aggRes, coversRes] = await Promise.all([
@@ -979,7 +1101,7 @@ export async function fetchMediaDetails(category, id) {
         .filter(Boolean)
         .join(" · ") || (attrs.status || "Ongoing").toUpperCase();
 
-    return {
+    return cacheAndReturnDetail(cacheKey, {
         id: data.id,
         type: (category || "manhwa").toUpperCase(),
         title,
@@ -1020,5 +1142,5 @@ export async function fetchMediaDetails(category, id) {
             aspectRatio: chapterCount ? `${chapterCount} Chapters` : (category || "manhwa").toUpperCase(),
             studio: "MangaDex",
         },
-    };
+    });
 }

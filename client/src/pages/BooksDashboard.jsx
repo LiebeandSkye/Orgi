@@ -16,8 +16,12 @@ import {
 } from "lucide-react";
 import { BorderBeam } from "../components/ui/border-beam";
 import { MediaCarousel } from "../components/ui/MediaCarousel";
-import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
-import { fetchBooksDashboardFeeds, searchMangaDex, searchBooks } from "../services/mediaApi";
+import {
+  fetchBooksDashboardFeeds,
+  getCachedBooksDashboardFeeds,
+  searchMangaDex,
+  searchBooks,
+} from "../services/mediaApi";
 
 const CATEGORY_TABS = [
   { key: "all", label: "All Literature", count: null, sectionId: null, catalogUrl: null },
@@ -128,14 +132,18 @@ export function BooksDashboard() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const searchInputRef = useRef(null);
 
-  const [isLoadingFeeds, setIsLoadingFeeds] = useState(true);
-  const [feeds, setFeeds] = useState({
-    trendingManhwa: [],
-    trendingManga: [],
-    trendingManhua: [],
-    trendingBooks: [],
-    fanFavorites: [],
-  });
+  // Instant 0ms cache hydration
+  const initialCached = useMemo(() => getCachedBooksDashboardFeeds(), []);
+  const [feeds, setFeeds] = useState(
+    initialCached || {
+      trendingManhwa: [],
+      trendingManga: [],
+      trendingManhua: [],
+      trendingBooks: [],
+      fanFavorites: [],
+    }
+  );
+  const [isLoadingFeeds, setIsLoadingFeeds] = useState(!initialCached);
 
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -153,14 +161,24 @@ export function BooksDashboard() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load all carousel feeds on mount
+  // Load all carousel feeds on mount with progressive updates
   useEffect(() => {
     let mounted = true;
-    setIsLoadingFeeds(true);
-    fetchBooksDashboardFeeds()
-      .then((data) => {
-        if (mounted && data) {
-          setFeeds(data);
+    if (!initialCached) {
+      setIsLoadingFeeds(true);
+    }
+
+    fetchBooksDashboardFeeds((progressive) => {
+      if (mounted && progressive) {
+        setFeeds((prev) => ({ ...prev, ...progressive }));
+        if (progressive.trendingManhwa?.length > 0 || progressive.trendingManga?.length > 0) {
+          setIsLoadingFeeds(false);
+        }
+      }
+    })
+      .then((finalData) => {
+        if (mounted && finalData) {
+          setFeeds(finalData);
         }
       })
       .finally(() => {
@@ -170,7 +188,7 @@ export function BooksDashboard() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [initialCached]);
 
   // Keyboard shortcut: "/" to focus search
   useEffect(() => {

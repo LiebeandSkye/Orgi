@@ -319,6 +319,112 @@ export const mediaController = {
     }
   },
 
+  async getDashboardFeeds(req, res, next) {
+    try {
+      const cacheKey = "media:books:dashboard_feeds:v2";
+      const data = await getOrSetCache(cacheKey, 3600, async () => {
+        async function fetchMangaCategory(cat, sortOrder = "desc", sortField = "followedCount") {
+          const params = new URLSearchParams();
+          params.append("limit", "18");
+          params.append("offset", "0");
+          params.append("includes[]", "cover_art");
+          params.append("includes[]", "author");
+          params.append(`order[${sortField}]`, sortOrder);
+          params.append("contentRating[]", "safe");
+          params.append("contentRating[]", "suggestive");
+          if (cat === "manhwa") params.append("originalLanguage[]", "ko");
+          else if (cat === "manga") params.append("originalLanguage[]", "ja");
+          else if (cat === "manhua") {
+            params.append("originalLanguage[]", "zh");
+            params.append("originalLanguage[]", "zh-hk");
+          }
+
+          const resp = await fetch(`${MANGADEX_BASE}/manga?${params.toString()}`);
+          if (!resp.ok) return [];
+          const j = await resp.json();
+          const list = j.data || [];
+          return list.map((item) => {
+            const attrs = item.attributes || {};
+            const title = getEnglishTitle(attrs);
+            const coverRel = item.relationships?.find((r) => r.type === "cover_art");
+            const authorRel = item.relationships?.find((r) => r.type === "author");
+            const fileName = coverRel?.attributes?.fileName;
+            const coverUrl = fileName ? `${MANGADEX_COVERS}/${item.id}/${fileName}.512.jpg` : null;
+            const fullBackdrop = fileName ? `${MANGADEX_COVERS}/${item.id}/${fileName}` : null;
+            return {
+              id: item.id,
+              title,
+              author: authorRel?.attributes?.name || cat.toUpperCase(),
+              cover: coverUrl,
+              poster: coverUrl,
+              backdrop: fullBackdrop || coverUrl,
+              route: `/books/${cat}/${item.id}`,
+              score: "9.1",
+              type: cat.toUpperCase(),
+              chapters: attrs.lastChapter ? `Ch. ${attrs.lastChapter}` : "Ongoing",
+              synopsis: attrs.description?.en || Object.values(attrs.description || {})[0] || "",
+            };
+          });
+        }
+
+        async function fetchPopularBooks() {
+          const url = `${OPEN_LIBRARY_BASE}/search.json?q=subject%3Afiction&limit=18&page=1&fields=key,title,author_name,cover_i,ratings_average,ratings_count,first_publish_year,subject`;
+          const resp = await fetch(url, { headers: { "User-Agent": "Orgi/1.0 (contact@orgi.app)" } });
+          if (!resp.ok) return [];
+          const j = await resp.json();
+          const list = j.docs || [];
+          return list.map((item) => {
+            const coverId = item.cover_i;
+            const authorName = item.author_name?.[0] || "Unknown Author";
+            const rawScore = typeof item.ratings_average === "number" ? item.ratings_average * 2 : null;
+            const rating = rawScore ? rawScore.toFixed(1) : "8.5";
+            const coverUrl = coverId ? `${OPEN_LIBRARY_COVERS}/${coverId}-L.jpg` : null;
+            return {
+              id: (item.key || "").replace("/works/", ""),
+              title: item.title || "Untitled",
+              author: authorName,
+              cover: coverUrl,
+              poster: coverUrl,
+              backdrop: coverUrl,
+              route: `/books/novels/${(item.key || "").replace("/works/", "")}`,
+              score: rating,
+              type: "NOVELS",
+              chapters: item.first_publish_year ? `${item.first_publish_year}` : "Novel",
+            };
+          });
+        }
+
+        const [tManhwa, tManga, tManhua, pBooks, fvManhwa, fvManga] = await Promise.all([
+          fetchMangaCategory("manhwa", "desc", "followedCount").catch(() => []),
+          fetchMangaCategory("manga", "desc", "followedCount").catch(() => []),
+          fetchMangaCategory("manhua", "desc", "followedCount").catch(() => []),
+          fetchPopularBooks().catch(() => []),
+          fetchMangaCategory("manhwa", "desc", "rating").catch(() => []),
+          fetchMangaCategory("manga", "desc", "rating").catch(() => []),
+        ]);
+
+        const fanFavorites = [];
+        const maxLen = Math.max(fvManhwa.length, fvManga.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (fvManhwa[i]) fanFavorites.push(fvManhwa[i]);
+          if (fvManga[i]) fanFavorites.push(fvManga[i]);
+        }
+
+        return {
+          trendingManhwa: tManhwa,
+          trendingManga: tManga,
+          trendingManhua: tManhua,
+          trendingBooks: pBooks,
+          fanFavorites: fanFavorites.slice(0, 16),
+        };
+      });
+
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getDetail(req, res, next) {
     try {
       const { category, id } = req.params;
