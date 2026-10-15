@@ -619,12 +619,26 @@ export const reviewController = {
 
       if (error) throw error; 
 
+      const allReviewIds = (data || []).map((r) => r.id); 
+      const likesCountMap = {}; 
+      if (allReviewIds.length > 0) { 
+        const { data: likesData } = await supabase 
+          .from("review_likes") 
+          .select("review_id") 
+          .in("review_id", allReviewIds); 
+
+        (likesData || []).forEach((lk) => { 
+          likesCountMap[lk.review_id] = (likesCountMap[lk.review_id] || 0) + 1; 
+        }); 
+      } 
+
       const formatted = (data || []).map((rev) => { 
         const parsed = parseReviewMetadata(rev, userId); 
         return { 
           ...rev, 
           content: parsed.content, 
           isAnonymous: parsed.isAnonymous, 
+          likes: likesCountMap[rev.id] || 0,
         }; 
       }); 
 
