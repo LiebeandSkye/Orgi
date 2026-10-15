@@ -144,7 +144,12 @@ export const mediaController = {
         const params = new URLSearchParams();
         params.append("limit", ITEMS_PER_PAGE);
         params.append("offset", offset);
-        params.append("originalLanguage[]", lang);
+        if (category.toLowerCase() === "manhua") {
+          params.append("originalLanguage[]", "zh");
+          params.append("originalLanguage[]", "zh-hk");
+        } else {
+          params.append("originalLanguage[]", lang);
+        }
         params.append("includes[]", "cover_art");
         params.append("includes[]", "author");
 
@@ -783,6 +788,9 @@ export const mediaController = {
           });
         }
 
+        const authorName = authorRel?.attributes?.name || "Unknown Author";
+        const artistName = artistRel?.attributes?.name || authorName;
+
         if (mangaReviews.length === 0) {
           mangaReviews = getDefaultCommunityReviews(title, (category || "manhwa").toUpperCase(), liveRating, authorName);
         }
@@ -792,9 +800,6 @@ export const mediaController = {
           .slice(0, 3)
           .map((t) => t.attributes?.name?.en)
           .join(", ");
-
-        const authorName = authorRel?.attributes?.name || "Unknown Author";
-        const artistName = artistRel?.attributes?.name || authorName;
 
         const isSameCreator =
           authorRel?.id === artistRel?.id ||

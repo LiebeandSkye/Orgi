@@ -105,9 +105,12 @@ export async function fetchMangaDexByCategory(
     const offset = (page - 1) * ITEMS_PER_PAGE;
 
     const params = new URLSearchParams();
-    params.append("limit", ITEMS_PER_PAGE);
-    params.append("offset", offset);
-    params.append("originalLanguage[]", lang);
+    if (category === "manhua") {
+        params.append("originalLanguage[]", "zh");
+        params.append("originalLanguage[]", "zh-hk");
+    } else {
+        params.append("originalLanguage[]", lang);
+    }
     params.append("includes[]", "cover_art");
     params.append("includes[]", "author");
 
@@ -342,7 +345,10 @@ export async function searchMangaDex(query, category = "all", limit = 18) {
 
     if (category === "manhwa") params.append("originalLanguage[]", "ko");
     else if (category === "manga") params.append("originalLanguage[]", "ja");
-    else if (category === "manhua") params.append("originalLanguage[]", "zh");
+    else if (category === "manhua") {
+        params.append("originalLanguage[]", "zh");
+        params.append("originalLanguage[]", "zh-hk");
+    }
 
     const res = await fetch(`${MANGADEX_BASE}/manga?${params.toString()}`);
     if (!res.ok) return [];
@@ -915,6 +921,11 @@ export async function fetchMediaDetails(category, id) {
         });
     }
 
+        const authorName = authorRel?.attributes?.name || "Unknown Author";
+    const artistName = artistRel?.attributes?.name || authorName;
+    const authorBio = authorRel?.attributes?.biography?.en || "";
+    const artistBio = artistRel?.attributes?.biography?.en || "";
+
     if (mangaReviews.length === 0) {
         mangaReviews = getDefaultCommunityReviews(title, (category || "manhwa").toUpperCase(), liveRating, authorName);
     }
@@ -924,11 +935,6 @@ export async function fetchMediaDetails(category, id) {
         .slice(0, 3)
         .map((t) => t.attributes?.name?.en)
         .join(", ");
-
-    const authorName = authorRel?.attributes?.name || "Unknown Author";
-    const artistName = artistRel?.attributes?.name || authorName;
-    const authorBio = authorRel?.attributes?.biography?.en || "";
-    const artistBio = artistRel?.attributes?.biography?.en || "";
 
     const isSameCreator =
         authorRel?.id === artistRel?.id ||
