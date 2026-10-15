@@ -393,7 +393,7 @@ export function MediaReviewsTab({
       }, 400); 
       const clearTimer = setTimeout(() => { 
         setHighlightedReviewId(null); 
-      }, 4500); 
+      }, 1000); 
       return () => { 
         clearTimeout(timer); 
         clearTimeout(clearTimer); 
@@ -992,9 +992,9 @@ export function MediaReviewsTab({
             <article 
               key={rev.id} 
               id={`review-${rev.id}`} 
-              className={`py-6 first:pt-0 transition-all duration-500 rounded-2xl ${ 
+              className={`py-6 first:pt-0 transition-all duration-300 rounded-2xl ${ 
                 highlightedReviewId === rev.id 
-                  ? "ring-2 ring-[#61F1AC] bg-[#61F1AC]/5 p-5 shadow-[0_0_25px_rgba(97,241,172,0.15)]" 
+                  ? "ring-2 ring-[#61F1AC] shadow-[0_0_20px_rgba(97,241,172,0.15)]" 
                   : "" 
               }`} 
             >

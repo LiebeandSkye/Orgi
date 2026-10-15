@@ -23,71 +23,70 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
   
   const source = item?.source || "tmdb"; 
   const titleId = item?.titleId; 
+  const isOrgi = source === "orgi" || item?.id?.startsWith("orgi:"); 
   const reviewId = item?.id?.includes(":") ? item.id.split(":")[2] : item?.id; 
   
   useEffect(() => { 
     if (!isOpen || !item) { 
       setDetailData(null); 
       setReplies([]); 
+      setIsLoading(false); 
+      setLoadingReplies(false); 
       return; 
     } 
     
-    let mounted = true; 
+    let active = true; 
     setIsLoading(true); 
+    setLoadingReplies(isOrgi); 
     
-    const url = `${API_BASE_URL}/reviews/${source}/${titleId}${reviewId ? `/${reviewId}` : ""}`; 
+    const url = item.detailHref 
+      ? `${API_BASE_URL}${item.detailHref}` 
+      : `${API_BASE_URL}/reviews/${source}/${titleId}${reviewId ? `/${reviewId}` : ""}`; 
+    
     safeFetchJson(url) 
-      .then((json) => { 
-        if (mounted && json?.success && json?.data) { 
+      .then(async (json) => { 
+        if (!active) return; 
+        if (json?.success && json?.data) { 
           setDetailData(json.data); 
           if (Array.isArray(json.data.replies)) { 
             setReplies(json.data.replies); 
+            setLoadingReplies(false); 
+            return; 
           } 
-        } else if (mounted) { 
+        } else { 
           setDetailData({ 
             ...item, 
             content: item.rawContent || item.excerpt, 
           }); 
+        } 
+        
+        if (isOrgi && reviewId) { 
+          try { 
+            const repRes = await api.get(`/reviews/${reviewId}/replies`); 
+            if (active && repRes?.success && Array.isArray(repRes.data)) { 
+              setReplies(repRes.data); 
+            } 
+          } catch {} 
         } 
       }) 
       .catch(() => { 
-        if (mounted) { 
-          setDetailData({ 
-            ...item, 
-            content: item.rawContent || item.excerpt, 
-          }); 
-        } 
+        if (!active) return; 
+        setDetailData({ 
+          ...item, 
+          content: item.rawContent || item.excerpt, 
+        }); 
       }) 
       .finally(() => { 
-        if (mounted) setIsLoading(false); 
-      }); 
-    
-    return () => { 
-      mounted = false; 
-    }; 
-  }, [isOpen, item, source, titleId, reviewId]); 
-  
-  useEffect(() => { 
-    if (!isOpen || !reviewId) return; 
-    if (detailData?.replies && detailData.replies.length > 0) return; 
-    
-    let active = true; 
-    setLoadingReplies(true); 
-    api.get(`/reviews/${reviewId}/replies`) 
-      .then((res) => { 
-        if (active && res?.success && Array.isArray(res.data)) { 
-          setReplies(res.data); 
+        if (active) { 
+          setIsLoading(false); 
+          setLoadingReplies(false); 
         } 
-      }) 
-      .catch(() => {}) 
-      .finally(() => { 
-        if (active) setLoadingReplies(false); 
       }); 
     
     return () => { 
       active = false; 
     }; 
-  }, [isOpen, reviewId, detailData]); 
+  }, [isOpen, item, source, titleId, reviewId, isOrgi]); 
   
   useEffect(() => { 
     function handleKeyDown(e) { 
@@ -116,9 +115,16 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
     const targetReviewId = parentId || reviewId; 
     setIsSubmittingReply(true); 
     try { 
+      const defaultProvider = 
+        ["manga", "manhwa", "manhua"].includes((data.category || "").toLowerCase()) 
+          ? "mangadex" 
+          : ["book", "novel"].includes((data.category || "").toLowerCase()) 
+            ? "openlibrary" 
+            : "tmdb"; 
+      
       const res = await api.post("/reviews", { 
         external_id: String(data.titleId), 
-        provider: data.source === "orgi" ? "tmdb" : data.source, 
+        provider: data.source === "orgi" ? defaultProvider : data.source, 
         type: (data.mediaLabel || "MOVIE").toUpperCase(), 
         title: data.title, 
         cover_url: data.posterUrl || data.backdropUrl, 
@@ -183,6 +189,7 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
   if (!isOpen || !item) return null; 
   
   const data = detailData || item; 
+  const isCommunity = data.source === "orgi" || data.source === "community" || (item.id && item.id.startsWith("orgi:")); 
   const isSynopsis = data.excerptKind === "synopsis"; 
   
   let mediaRoute = data.mediaRoute; 
@@ -303,7 +310,7 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
             )} 
           </div> 
           
-          {reviewId && ( 
+          {isCommunity && reviewId && ( 
             <div className="pt-5 border-t border-[#1C1C1C] space-y-4"> 
               <div className="flex items-center justify-between"> 
                 <div className="flex items-center gap-2"> 

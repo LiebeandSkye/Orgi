@@ -768,6 +768,11 @@ export const reviewController = {
       const { id } = req.params; 
       const userId = req.user?.id; 
       
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id); 
+      if (!isUuid) { 
+        return res.json({ success: true, data: [] }); 
+      } 
+      
       const { data: parentReview } = await supabase 
         .from("reviews") 
         .select("id, item_id") 
