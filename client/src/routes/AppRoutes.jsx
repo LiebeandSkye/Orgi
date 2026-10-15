@@ -20,11 +20,9 @@ export function AppRoutes() {
     return (
         <Routes>
             <Route element={<Layout />}>
-                {/* Home & Movies */}
                 <Route path="/" element={<HomePage />} />
                 <Route path="/movies" element={<HomePage />} />
 
-                {/* Movie Detail Pages */}
                 <Route path="/movie/interstellar" element={<MovieDetailsPage initialTab="Cast" />} />
                 <Route
                     path="/movie/interstellar/reviews"
@@ -32,18 +30,15 @@ export function AppRoutes() {
                 />
                 <Route path="/movie/:id" element={<MovieDetailsPage initialTab="Cast" />} />
 
-                {/* Series Detail Pages */}
                 <Route path="/series" element={<Navigate to="/" replace />} />
                 <Route path="/series/breaking-bad" element={<Navigate to="/series/1396" replace />} />
                 <Route path="/series/:id" element={<SeriesDetailsPage />} />
 
-                {/* Feed / Community Reviews */}
                 <Route path="/feed" element={<ReviewsPage />} />
                 <Route path="/reviews" element={<ReviewsPage />} />
                 <Route path="/reviews/:source/:titleId" element={<ReviewsPage />} />
                 <Route path="/reviews/:source/:titleId/:reviewId" element={<ReviewsPage />} />
 
-                {/* Search */}
                 <Route path="/search" element={<SearchPage />} />
 
                 {/* Books: Main Dashboard + Subcategories + Details */}
@@ -59,7 +54,6 @@ export function AppRoutes() {
                 <Route path="/setting" element={<SettingPage />} />
                 <Route path="/settings" element={<SettingPage />} />
 
-                {/* 404 Catch-all */}
                 <Route path="*" element={<NotFoundPage />} />
             </Route>
         </Routes>

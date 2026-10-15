@@ -3,12 +3,14 @@ import { useLocation, useParams } from "react-router-dom";
 import {
   Star,
   Plus,
+  Check,
   Share2,
   ThumbsUp,
   Reply,
   MoreHorizontal,
   ChevronDown,
 } from "lucide-react";
+import api from "../services/api";
 import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb";
 import { ScoreRing } from "../components/ui/ScoreRing";
 import { Button } from "../components/ui/Button";
@@ -76,6 +78,56 @@ export function SeriesDetailsPage({
   const [sortBy, setSortBy] = useState("Top");
   const [likedReviews, setLikedReviews] = useState({});
   const [visibleReviews, setVisibleReviews] = useState(4);
+  const [inCollection, setInCollection] = useState(false); 
+  const [collectionLoading, setCollectionLoading] = useState(false); 
+
+  useEffect(() => { 
+    if (!seriesData || !id) return; 
+    let mounted = true; 
+    async function loadCollectionStatus() { 
+      try { 
+        const colRes = await api.get(`/collections/check/tmdb/${id}`); 
+        if (mounted && colRes?.success) { 
+          setInCollection(!!colRes.data?.inCollection); 
+        } 
+      } catch (err) { 
+        console.error("Failed to load series collection status:", err); 
+      } 
+    } 
+    loadCollectionStatus(); 
+    return () => { 
+      mounted = false; 
+    }; 
+  }, [seriesData, id]); 
+
+  const handleToggleCollection = async () => { 
+    if (!seriesData) return; 
+    const token = localStorage.getItem("orgi_session"); 
+    if (!token) { 
+      alert("Please sign in to add items to your collection."); 
+      return; 
+    } 
+
+    setCollectionLoading(true); 
+    try { 
+      const res = await api.post("/collections/toggle", { 
+        external_id: String(id), 
+        provider: "tmdb", 
+        type: "SERIES", 
+        title: seriesData.title, 
+        cover_url: seriesData.poster || seriesData.backdrop, 
+      }); 
+
+      if (res?.success) { 
+        setInCollection(!!res.data?.inCollection); 
+      } 
+    } catch (err) { 
+      console.error("Failed to toggle series collection:", err); 
+      alert(err.message || "Failed to update collection."); 
+    } finally { 
+      setCollectionLoading(false); 
+    } 
+  };
 
   const contentRef = useRef(null);
 
@@ -376,13 +428,16 @@ export function SeriesDetailsPage({
               </Button>
 
               <Button
-                variant="outline"
+                variant={inCollection ? "mintGhost" : "outline"}
                 size="md"
-                className="px-5 py-2.5 rounded-[10px]"
-                onClick={() => alert("Added to your watchlist")}
+                disabled={collectionLoading}
+                className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${
+                  inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : ""
+                }`}
+                onClick={handleToggleCollection}
               >
-                <Plus size={15} />
-                <span>Add to list</span>
+                {inCollection ? <Check size={15} /> : <Plus size={15} />}
+                <span>{inCollection ? "In collection" : "Add to collection"}</span>
               </Button>
 
               <button

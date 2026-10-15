@@ -4,6 +4,7 @@ import { ArrowRight, RefreshCw, AlertCircle, ArrowUp, Sparkles } from "lucide-re
 import { useReviewFilters, CATEGORIES } from "../hooks/useReviewFilters";
 import { useReviewsFeed } from "../hooks/useReviewsFeed";
 import { useBookmarks } from "../hooks/useBookmarks";
+import { useReviewLikes } from "../hooks/useReviewLikes";
 import { ReviewsHero } from "../components/reviews/ReviewsHero";
 import { BrowseNav } from "../components/reviews/BrowseNav";
 import { ReviewFilters } from "../components/reviews/ReviewFilters";
@@ -50,6 +51,7 @@ export function ReviewsPage() {
   } = useReviewsFeed({ category, sort, rating, type, q, page, limit: 50 });
 
   const { isBookmarked, toggleBookmark, toastMessage } = useBookmarks();
+  const { isLiked, toggleLike } = useReviewLikes();
 
   // Scroll to top button visibility state
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -248,11 +250,6 @@ export function ReviewsPage() {
                 >
                   {sectionHeader}
                 </h2>
-                {totalPages > 1 && (
-                  <span className="text-[11px] text-[#B5B5B5] font-tabular">
-                    (Page {currentPage} of {totalPages})
-                  </span>
-                )}
               </div>
 
               {!isDefaultView && (
@@ -323,6 +320,8 @@ export function ReviewsPage() {
                     item={item}
                     isBookmarked={isBookmarked(item.id)}
                     onToggleBookmark={toggleBookmark}
+                    isLiked={isLiked(item.id)}
+                    onToggleLike={toggleLike}
                     onOpenDetail={handleOpenDetail}
                   />
                 ))

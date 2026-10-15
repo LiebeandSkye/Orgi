@@ -39,6 +39,26 @@ test("scoreReview and selectBestReview identify best candidate", () => {
   assert.equal(best, goodReview);
 });
 
+test("reviewRoutes handles get reviews for unknown item gracefully", async () => {
+  const app = express();
+  app.use(express.json());
+  app.use("/api/reviews", reviewRoutes);
+
+  const server = app.listen(0);
+  const { port } = server.address();
+
+  try {
+    const res = await fetch(`http://localhost:${port}/api/reviews/tmdb/99999999`);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.success, true);
+    assert.equal(json.data.communityVotes, 0);
+    assert.deepEqual(json.data.reviews, []);
+  } finally {
+    server.close();
+  }
+});
+
 test("reviewRoutes /api/reviews endpoints respond with expected structure", async () => {
   const app = express();
   app.use(express.json());
@@ -55,6 +75,8 @@ test("reviewRoutes /api/reviews endpoints respond with expected structure", asyn
     assert.equal(featuredJson.success, true);
     assert.ok(featuredJson.item?.title);
     assert.ok(featuredJson.heroBackdropUrl || featuredJson.item?.backdropUrl);
+    assert.equal(typeof featuredJson.item?.likes, "number");
+    assert.equal(typeof featuredJson.item?.comments, "number");
 
     // 2. Feed query with pagination
     const page1Res = await fetch(`http://localhost:${port}/api/reviews?page=1&limit=25`);
@@ -62,6 +84,9 @@ test("reviewRoutes /api/reviews endpoints respond with expected structure", asyn
     const page1Json = await page1Res.json();
     assert.equal(page1Json.success, true);
     assert.ok(Array.isArray(page1Json.items));
+    assert.equal(page1Json.capabilities?.hasLikes, true);
+    assert.equal(typeof page1Json.items[0]?.likes, "number");
+    assert.equal(typeof page1Json.items[0]?.comments, "number");
     assert.equal(page1Json.page, 1);
     assert.ok(page1Json.total > 0);
     assert.ok(page1Json.totalPages >= 1);
