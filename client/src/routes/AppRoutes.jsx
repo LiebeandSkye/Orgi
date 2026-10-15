@@ -27,7 +27,7 @@ export function AppRoutes() {
                     path="/movie/interstellar/reviews" 
                     element={<MovieDetailsPage initialTab="Reviews" initialCropHero={true} />} 
                 /> 
-                <Route path="/movie/:id" element={<MovieDetailsPage initialTab="Cast" />} /> 
+                <Route path="/movie/:id" element={<MovieDetailsPage initialTab="Overview" />} /> 
 
                 <Route path="/series" element={<Navigate to="/" replace />} /> 
                 <Route path="/series/breaking-bad" element={<Navigate to="/series/1396" replace />} /> 
