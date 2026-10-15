@@ -145,25 +145,37 @@ export const reviewController = {
         } 
       }); 
 
-      function countTotalDescendants(node) { 
+      Object.values(nodeMap).forEach((node) => { 
+        if (node.parentId && nodeMap[node.parentId]) { 
+          node.replyToAuthor = nodeMap[node.parentId].author; 
+        } 
+      }); 
+
+      function countTotalDescendants(node, currentDepth = 0) { 
+        if (currentDepth >= 3) return 0; 
         const directIds = childrenByParent[node.id] || []; 
         return directIds.reduce((acc, cid) => { 
           const child = nodeMap[cid]; 
-          return acc + 1 + (child ? countTotalDescendants(child) : 0); 
+          return acc + 1 + (child ? countTotalDescendants(child, currentDepth + 1) : 0); 
         }, 0); 
       } 
 
-      function attachReplies(node) { 
+      function attachReplies(node, currentDepth = 0) { 
+        if (currentDepth >= 3) { 
+          node.replies = []; 
+          node.repliesCount = 0; 
+          return node; 
+        } 
         const childIds = childrenByParent[node.id] || []; 
         node.replies = childIds 
           .map((cid) => nodeMap[cid]) 
           .filter(Boolean) 
-          .map(attachReplies); 
-        node.repliesCount = countTotalDescendants(node); 
+          .map((child) => attachReplies(child, currentDepth + 1)); 
+        node.repliesCount = countTotalDescendants(node, currentDepth); 
         return node; 
       } 
 
-      const formattedReviews = topLevel.map(attachReplies); 
+      const formattedReviews = topLevel.map((rev) => attachReplies(rev, 0)); 
       const communityAverage = scoreCount > 0 ? Number((scoreSum / scoreCount).toFixed(1)) : null; 
 
       res.json({ 
@@ -228,6 +240,49 @@ export const reviewController = {
       } 
 
       if (parent_id) { 
+        let depthCount = 1; 
+        let parentAuthor = "Member"; 
+
+        const { data: directParent } = await supabaseAdmin 
+          .from("reviews") 
+          .select(` 
+            id, 
+            parent_id, 
+            content, 
+            users ( 
+              user_name, 
+              profile_url 
+            ) 
+          `) 
+          .eq("id", parent_id) 
+          .maybeSingle(); 
+
+        if (directParent) { 
+          const parsedDirect = parseReviewMetadata(directParent, null); 
+          parentAuthor = parsedDirect.author; 
+          let currentParentId = directParent.parent_id; 
+
+          while (currentParentId && depthCount < 10) { 
+            depthCount++; 
+            const { data: anc } = await supabaseAdmin 
+              .from("reviews") 
+              .select("parent_id") 
+              .eq("id", currentParentId) 
+              .maybeSingle(); 
+            if (anc && anc.parent_id) { 
+              currentParentId = anc.parent_id; 
+            } else { 
+              break; 
+            } 
+          } 
+        } 
+
+        if (depthCount > 3) { 
+          return res.status(400).json({ 
+            error: { message: "Maximum reply nesting depth of 3 reached", code: "MAX_DEPTH_REACHED" } 
+          }); 
+        } 
+
         let replyContent = content || ""; 
         if (is_anonymous) { 
           const anonName = "Unnamed Orgi " + helperGenerateRandomId(4); 
@@ -268,6 +323,7 @@ export const reviewController = {
             userId: parsed.userId, 
             parentId: reply.parent_id, 
             author: parsed.author, 
+            replyToAuthor: parentAuthor, 
             avatar: parsed.avatar, 
             content: parsed.content, 
             isAnonymous: parsed.isAnonymous, 

@@ -89,6 +89,12 @@ function CommentThreadItem({
           <span className="font-semibold text-[#F5F5F5]"> 
             {comment.author} 
           </span> 
+          {comment.replyToAuthor && ( 
+            <span className="text-[#61F1AC] font-medium text-[11px] inline-flex items-center gap-0.5"> 
+              <span className="text-[#666666] font-normal">@</span> 
+              <span>{comment.replyToAuthor}</span> 
+            </span> 
+          )} 
           {comment.isAnonymous && ( 
             <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-[#1A1A1A] text-[#888888] border border-[#262626]"> 
               Anon 
@@ -149,24 +155,26 @@ function CommentThreadItem({
           <span className="font-tabular">{likeCount}</span> 
         </button> 
 
-        <button 
-          type="button" 
-          onClick={() => { 
-            if (isReplying) { 
-              setReplyingToId(null); 
-              setReplyText(""); 
-            } else { 
-              setReplyingToId(comment.id); 
-              setReplyText(""); 
-            } 
-          }} 
-          className={`flex items-center gap-1 transition-colors cursor-pointer ${ 
-            isReplying ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
-          }`} 
-        > 
-          <Reply size={12} /> 
-          <span>Reply</span> 
-        </button> 
+        {depth < 3 && ( 
+          <button 
+            type="button" 
+            onClick={() => { 
+              if (isReplying) { 
+                setReplyingToId(null); 
+                setReplyText(""); 
+              } else { 
+                setReplyingToId(comment.id); 
+                setReplyText(""); 
+              } 
+            }} 
+            className={`flex items-center gap-1 transition-colors cursor-pointer ${ 
+              isReplying ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
+            }`} 
+          > 
+            <Reply size={12} /> 
+            <span>Reply</span> 
+          </button> 
+        )} 
 
         {hasReplies && ( 
           <button 
@@ -223,7 +231,7 @@ function CommentThreadItem({
                   variant="primary" 
                   size="sm" 
                   disabled={isSubmittingReply || !replyText.trim()} 
-                  onClick={() => onPostReply(comment.id)} 
+                  onClick={() => onPostReply(comment.id, comment.author)} 
                   className="text-xs font-semibold px-3 py-1 cursor-pointer" 
                 > 
                   <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
@@ -234,7 +242,7 @@ function CommentThreadItem({
         </div> 
       )} 
 
-      {hasReplies && !collapsed && ( 
+      {hasReplies && !collapsed && depth < 3 && ( 
         <div className="pl-3 sm:pl-4 border-l border-[#222222] mt-2 space-y-2.5"> 
           {comment.replies.map((childReply) => ( 
             <CommentThreadItem 
@@ -491,7 +499,7 @@ export function MediaReviewsTab({
     }); 
   } 
 
-  const handlePostReply = async (parentId) => { 
+  const handlePostReply = async (parentId, targetAuthor) => { 
     if (!replyText.trim()) return; 
     const token = localStorage.getItem("orgi_session"); 
     if (!token) { 
@@ -513,7 +521,10 @@ export function MediaReviewsTab({
       }); 
 
       if (res?.success) { 
-        const newReply = res.data; 
+        const newReply = { 
+          ...res.data, 
+          replyToAuthor: res.data.replyToAuthor || targetAuthor || null, 
+        }; 
         updateCommunityData((prev) => ({ 
           ...prev, 
           reviews: insertReplyRecursively(prev?.reviews || [], parentId, newReply), 
@@ -1081,7 +1092,7 @@ export function MediaReviewsTab({
                           variant="primary" 
                           size="sm" 
                           disabled={isSubmittingReply || !replyText.trim()} 
-                          onClick={() => handlePostReply(rev.id)} 
+                          onClick={() => handlePostReply(rev.id, rev.author)} 
                           className="text-xs font-semibold px-3.5 py-1 cursor-pointer" 
                         > 
                           <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
