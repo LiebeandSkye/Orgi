@@ -59,6 +59,8 @@ router.post("/provider/like", requireAuth, reviewController.toggleProviderLike);
 router.post("/:id/like", requireAuth, reviewController.toggleLike); 
 router.delete("/:id", requireAuth, reviewController.deleteReview); 
 
+router.get("/:id/replies", optionalAuth, reviewController.getRepliesForReview); 
+
 router.get("/:provider/:externalId", optionalAuth, async (req, res, next) => { 
   try { 
     return reviewController.getReviews(req, res, next); 

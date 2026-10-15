@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
-import {
-  Star,
-  Heart,
-  Reply,
-  MoreHorizontal,
-  ChevronDown,
-  X,
-  Loader2,
-  Check,
+import React, { useState, useEffect } from "react"; 
+import { useLocation } from "react-router-dom"; 
+import { 
+  Star, 
+  Heart, 
+  Reply, 
+  MoreHorizontal, 
+  ChevronDown, 
+  X, 
+  Loader2, 
+  Check, 
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import { ReviewSlider, AnimatedScore } from "../ui/ReviewSlider";
@@ -18,11 +19,11 @@ import { getMovieReviews, getSeriesReviews } from "../../services/tmdb";
 const NAVBAR_AVATAR =
   "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
 
-function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
+export function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
   const [errorSrc, setErrorSrc] = useState(null);
   const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src;
   const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR;
-
+  
   return (
     <div
       className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`}
@@ -55,108 +56,121 @@ const formatReviewDate = (dateStr) => {
   }
 };
 
-function CommentThreadItem({
-  comment,
-  depth = 1,
-  replyingToId,
-  setReplyingToId,
-  replyText,
-  setReplyText,
-  replyAnon,
-  setReplyAnon,
-  isSubmittingReply,
-  onPostReply,
-  toggleLike,
-  likedReviews,
-  handleOpenReport,
-  currentUserAvatar,
-}) {
-  const isLiked = Boolean(likedReviews[comment.id]);
-  const likeCount = (comment.likes || 0) + (isLiked && !comment.isLiked ? 1 : !isLiked && comment.isLiked ? -1 : 0);
-  const isReplying = replyingToId === comment.id;
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const hasReplies = Array.isArray(comment.replies) && comment.replies.length > 0;
-
+export function CommentThreadItem({ 
+  comment, 
+  depth = 1, 
+  replyingToId, 
+  setReplyingToId, 
+  replyText, 
+  setReplyText, 
+  replyAnon, 
+  setReplyAnon, 
+  isSubmittingReply, 
+  onPostReply, 
+  toggleLike, 
+  likedReviews = {}, 
+  handleOpenReport, 
+  currentUserAvatar, 
+  allowReply = true, 
+  highlightedReviewId, 
+}) { 
+  const isLiked = Boolean(likedReviews[comment.id]); 
+  const likeCount = (comment.likes || 0) + (isLiked && !comment.isLiked ? 1 : !isLiked && comment.isLiked ? -1 : 0); 
+  const isReplying = replyingToId === comment.id; 
+  const [menuOpen, setMenuOpen] = useState(false); 
+  const [collapsed, setCollapsed] = useState(false); 
+  const hasReplies = Array.isArray(comment.replies) && comment.replies.length > 0; 
+  
   return ( 
-    <div className="text-xs bg-[#0E0E0E] rounded-xl p-3 border border-[#1A1A1A] space-y-2.5"> 
-      <div className="flex items-center justify-between gap-2"> 
-        <div className="flex items-center gap-2 flex-wrap"> 
+    <div 
+      id={`review-${comment.id}`} 
+      className={`bg-[#0B0B0B] rounded-2xl p-4 sm:p-4.5 border transition-all duration-500 space-y-3 shadow-sm ${ 
+        highlightedReviewId === comment.id 
+          ? "border-[#61F1AC] ring-2 ring-[#61F1AC] bg-[#61F1AC]/5 shadow-[0_0_20px_rgba(97,241,172,0.15)]" 
+          : "border-[#1C1C1C] hover:border-[#282828]" 
+      }`} 
+    > 
+      <div className="flex items-center justify-between gap-3"> 
+        <div className="flex items-center gap-2.5 flex-wrap"> 
           <ReviewAvatar 
             src={comment.avatar} 
             alt={comment.author} 
-            size="w-5 h-5" 
+            size="w-7 h-7" 
           /> 
-          <span className="font-semibold text-[#F5F5F5]"> 
+          <span className="font-semibold text-sm text-[#F5F5F5]"> 
             {comment.author} 
           </span> 
           {comment.replyToAuthor && ( 
-            <span className="text-[#61F1AC] font-medium text-[11px] inline-flex items-center gap-0.5"> 
+            <span className="text-[#61F1AC] font-medium text-xs inline-flex items-center gap-1 bg-[#61F1AC]/10 border border-[#61F1AC]/20 px-1.5 py-0.5 rounded-full"> 
               <span className="text-[#666666] font-normal">@</span> 
               <span>{comment.replyToAuthor}</span> 
             </span> 
           )} 
           {comment.isAnonymous && ( 
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-[#1A1A1A] text-[#888888] border border-[#262626]"> 
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#141414] text-[#888888] border border-[#262626]"> 
               Anon 
             </span> 
           )} 
           {comment.is_edited && ( 
-            <span className="text-[10px] text-[#7A7A7A] italic"> 
+            <span className="text-[11px] text-[#7A7A7A] italic"> 
               (edited) 
             </span> 
           )} 
           <span className="text-[#555555]">·</span> 
-          <span className="text-[11px] text-[#7A7A7A]"> 
+          <span className="text-xs text-[#7A7A7A] font-light"> 
             {formatReviewDate(comment.time)} 
           </span> 
         </div> 
-
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer p-0.5"
-          >
-            <MoreHorizontal size={12} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-28 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20">
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  handleOpenReport(comment.id);
-                }}
-                className="w-full text-left px-2.5 py-1 text-[11px] text-[#B5B5B5] hover:text-red-400 hover:bg-[#141414] cursor-pointer"
-              >
-                Report
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <p className="text-[#CCCCCC] leading-relaxed pl-7 whitespace-pre-wrap">
-        {comment.content}
-      </p>
-
-      <div className="flex items-center gap-4 pl-7 text-[11px] text-[#7A7A7A]">
-        <button
-          type="button"
-          onClick={() => toggleLike(comment)}
-          className={`flex items-center gap-1 transition-colors cursor-pointer ${
-            isLiked ? "text-rose-500 hover:text-rose-400" : "hover:text-[#F5F5F5]"
-          }`}
-        >
-          <Heart
-            size={12}
-            className={isLiked ? "fill-rose-500 text-rose-500" : ""}
-          />
-          <span className="font-tabular">{likeCount}</span>
-        </button>
-
-        {depth < 3 && ( 
+        
+        {handleOpenReport && ( 
+          <div className="relative"> 
+            <button 
+              type="button" 
+              onClick={() => setMenuOpen(!menuOpen)} 
+              className="text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer p-1 rounded-md transition-colors" 
+            > 
+              <MoreHorizontal size={14} /> 
+            </button> 
+            {menuOpen && ( 
+              <div className="absolute right-0 top-full mt-1 w-28 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20"> 
+                <button 
+                  type="button" 
+                  onClick={() => { 
+                    setMenuOpen(false); 
+                    handleOpenReport(comment.id); 
+                  }} 
+                  className="w-full text-left px-2.5 py-1 text-xs text-[#B5B5B5] hover:text-red-400 hover:bg-[#141414] cursor-pointer" 
+                > 
+                  Report 
+                </button> 
+              </div> 
+            )} 
+          </div> 
+        )} 
+      </div> 
+      
+      <p className="text-sm leading-relaxed text-[#D5D5D5] font-light pl-9.5 whitespace-pre-wrap"> 
+        {comment.content} 
+      </p> 
+      
+      <div className="flex items-center gap-4.5 pl-9.5 text-xs text-[#7A7A7A]"> 
+        {toggleLike && ( 
+          <button 
+            type="button" 
+            onClick={() => toggleLike(comment)} 
+            className={`flex items-center gap-1.5 transition-colors cursor-pointer ${ 
+              isLiked ? "text-rose-500 hover:text-rose-400" : "hover:text-[#F5F5F5]" 
+            }`} 
+          > 
+            <Heart 
+              size={13} 
+              className={isLiked ? "fill-rose-500 text-rose-500" : ""} 
+            /> 
+            <span className="font-tabular text-xs">{likeCount}</span> 
+          </button> 
+        )} 
+        
+        {allowReply && depth < 3 && onPostReply && ( 
           <button 
             type="button" 
             onClick={() => { 
@@ -168,34 +182,34 @@ function CommentThreadItem({
                 setReplyText(""); 
               } 
             }} 
-            className={`flex items-center gap-1 transition-colors cursor-pointer ${ 
+            className={`flex items-center gap-1.5 transition-colors cursor-pointer ${ 
               isReplying ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
             }`} 
           > 
-            <Reply size={12} /> 
+            <Reply size={13} /> 
             <span>Reply</span> 
           </button> 
         )} 
-
-        {hasReplies && (
-          <button
-            type="button"
-            onClick={() => setCollapsed(!collapsed)}
-            className="text-[#61F1AC] hover:underline cursor-pointer"
-          >
-            {collapsed ? `Show ${comment.replies.length} replies` : "Hide replies"}
-          </button>
-        )}
-      </div>
-
-      {isReplying && ( 
-        <div className="pl-7 pt-2"> 
-          <div className="bg-[#121212] border border-[#222222] focus-within:border-[#61F1AC]/50 rounded-xl p-3 transition-colors"> 
-            <div className="flex items-start gap-2.5 mb-2"> 
+        
+        {hasReplies && ( 
+          <button 
+            type="button" 
+            onClick={() => setCollapsed(!collapsed)} 
+            className="text-xs text-[#61F1AC] hover:underline cursor-pointer" 
+          > 
+            {collapsed ? `Show ${comment.replies.length} replies` : "Hide replies"} 
+          </button> 
+        )} 
+      </div> 
+      
+      {isReplying && allowReply && onPostReply && ( 
+        <div className="pl-9.5 pt-2"> 
+          <div className="bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/50 rounded-2xl p-3.5 transition-colors"> 
+            <div className="flex items-start gap-2.5 mb-2.5"> 
               <ReviewAvatar 
                 src={replyAnon ? NAVBAR_AVATAR : currentUserAvatar} 
                 alt="Avatar" 
-                size="w-5 h-5" 
+                size="w-6 h-6" 
               /> 
               <textarea 
                 value={replyText} 
@@ -207,12 +221,12 @@ function CommentThreadItem({
               /> 
             </div> 
             <div className="flex items-center justify-between pt-2 border-t border-[#1C1C1C]"> 
-              <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-[#7A7A7A] hover:text-[#F5F5F5]"> 
+              <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-[#7A7A7A] hover:text-[#F5F5F5]"> 
                 <input 
                   type="checkbox" 
                   checked={replyAnon} 
                   onChange={(e) => setReplyAnon(e.target.checked)} 
-                  className="w-3 h-3 rounded border-[#2C2C2C] bg-[#141414] accent-[#61F1AC] cursor-pointer" 
+                  className="w-3.5 h-3.5 rounded border-[#2C2C2C] bg-[#141414] accent-[#61F1AC] cursor-pointer" 
                 /> 
                 <span>Anonymous</span> 
               </label> 
@@ -242,9 +256,9 @@ function CommentThreadItem({
           </div> 
         </div> 
       )} 
-
+      
       {hasReplies && !collapsed && depth < 3 && ( 
-        <div className="pl-3 sm:pl-4 border-l border-[#222222] mt-2 space-y-2.5"> 
+        <div className="pl-3 sm:pl-5 border-l-2 border-[#1C1C1C] mt-3 space-y-3"> 
           {comment.replies.map((childReply) => ( 
             <CommentThreadItem 
               key={childReply.id} 
@@ -262,6 +276,8 @@ function CommentThreadItem({
               likedReviews={likedReviews} 
               handleOpenReport={handleOpenReport} 
               currentUserAvatar={currentUserAvatar} 
+              allowReply={allowReply} 
+              highlightedReviewId={highlightedReviewId} 
             /> 
           ))} 
         </div> 
@@ -285,15 +301,15 @@ export function MediaReviewsTab({
 }) {
   const { user, userProfile } = useAuth();
   const currentUserAvatar = userProfile?.profile_url || user?.user_metadata?.avatar_url || NAVBAR_AVATAR;
-
+  
   const [internalCommunityData, setInternalCommunityData] = useState({
     communityAverage: null,
     communityVotes: 0,
     reviews: [],
   });
-
+  
   const communityData = externalCommunityData !== undefined ? externalCommunityData : internalCommunityData;
-
+  
   const updateCommunityData = (updater) => {
     if (onCommunityDataChange) {
       onCommunityDataChange((prev) => {
@@ -304,12 +320,12 @@ export function MediaReviewsTab({
       setInternalCommunityData(updater);
     }
   };
-
+  
   const [providerReviews, setProviderReviews] = useState(initialProviderReviews || []);
   const [providerPage, setProviderPage] = useState(initialProviderPage || 1);
   const [totalPages, setTotalPages] = useState(initialTotalPages || 1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-
+  
   useEffect(() => {
     if (Array.isArray(initialProviderReviews) && initialProviderReviews.length > 0) {
       setProviderReviews(initialProviderReviews);
@@ -317,37 +333,78 @@ export function MediaReviewsTab({
     if (initialProviderPage) setProviderPage(initialProviderPage);
     if (initialTotalPages) setTotalPages(initialTotalPages);
   }, [initialProviderReviews, initialProviderPage, initialTotalPages]);
-
+  
   const [newThought, setNewThought] = useState("");
   const [selectedScore, setSelectedScore] = useState(8);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isEditingUserReview, setIsEditingUserReview] = useState(false);
   const [isPostingReview, setIsPostingReview] = useState(false);
-
+  
   const [replyingToReviewId, setReplyingToReviewId] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [replyAnon, setReplyAnon] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState({});
-
+  
   const [likedReviews, setLikedReviews] = useState({});
   const [expandedReviews, setExpandedReviews] = useState({});
   const [activeMenuReviewId, setActiveMenuReviewId] = useState(null);
-
+  
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportingReviewId, setReportingReviewId] = useState(null);
   const [reportReason, setReportReason] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
-
-  const [reviewFilter, setReviewFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("Top");
-  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  const [visibleReviews, setVisibleReviews] = useState(6);
-
+  
+  const location = useLocation(); 
+  const [highlightedReviewId, setHighlightedReviewId] = useState(null); 
+  const [reviewFilter, setReviewFilter] = useState("all"); 
+  const [sortBy, setSortBy] = useState("Top"); 
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false); 
+  const [visibleReviews, setVisibleReviews] = useState(6); 
+  
+  useEffect(() => { 
+    const searchParams = new URLSearchParams(location.search); 
+    const targetId = searchParams.get("reviewId") || (location.hash ? location.hash.replace("#review-", "") : null); 
+    if (targetId) { 
+      setHighlightedReviewId(targetId); 
+      if (Array.isArray(communityData?.reviews)) { 
+        const targetIndex = communityData.reviews.findIndex((r) => r.id === targetId); 
+        if (targetIndex >= visibleReviews) { 
+          setVisibleReviews(targetIndex + 5); 
+        } 
+        communityData.reviews.forEach((r) => { 
+          const hasDescendant = (node) => { 
+            if (!Array.isArray(node.replies)) return false; 
+            for (const ch of node.replies) { 
+              if (ch.id === targetId || hasDescendant(ch)) return true; 
+            } 
+            return false; 
+          }; 
+          if (hasDescendant(r)) { 
+            setExpandedReplies((prev) => ({ ...prev, [r.id]: true })); 
+          } 
+        }); 
+      } 
+      const timer = setTimeout(() => { 
+        const el = document.getElementById(`review-${targetId}`); 
+        if (el) { 
+          el.scrollIntoView({ behavior: "smooth", block: "center" }); 
+        } 
+      }, 400); 
+      const clearTimer = setTimeout(() => { 
+        setHighlightedReviewId(null); 
+      }, 4500); 
+      return () => { 
+        clearTimeout(timer); 
+        clearTimeout(clearTimer); 
+      }; 
+    } 
+  }, [location.search, location.hash, communityData]);
+  
   useEffect(() => {
     if (!mediaId) return;
     let mounted = true;
-
+    
     async function fetchCommunityReviews() {
       try {
         const res = await api.get(`/reviews/${provider}/${mediaId}`);
@@ -374,13 +431,13 @@ export function MediaReviewsTab({
         console.error("Failed to load community reviews:", err);
       }
     }
-
+    
     fetchCommunityReviews();
     return () => {
       mounted = false;
     };
   }, [mediaId, provider]);
-
+  
   const handlePostReview = async () => {
     if (!newThought.trim()) return;
     const token = localStorage.getItem("orgi_session");
@@ -388,7 +445,7 @@ export function MediaReviewsTab({
       alert("Please sign in to rate and review.");
       return;
     }
-
+    
     setIsPostingReview(true);
     try {
       const res = await api.post("/reviews", {
@@ -401,13 +458,13 @@ export function MediaReviewsTab({
         content: newThought.trim(),
         is_anonymous: isAnonymous,
       });
-
+      
       if (res?.success) {
         setNewThought("");
         setIsAnonymous(false);
         setIsEditingUserReview(false);
         const newRev = res.data;
-
+        
         updateCommunityData((prev) => {
           const currentReviews = Array.isArray(prev?.reviews) ? prev.reviews : [];
           const existingIdx = currentReviews.findIndex(
@@ -419,14 +476,14 @@ export function MediaReviewsTab({
           } else {
             updatedReviews = [newRev, ...updatedReviews];
           }
-
+          
           const scores = updatedReviews
             .map((r) => r.score)
             .filter((s) => typeof s === "number" && s > 0);
           const avg = scores.length > 0
             ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
             : null;
-
+          
           return {
             ...prev,
             communityAverage: avg,
@@ -442,7 +499,7 @@ export function MediaReviewsTab({
       setIsPostingReview(false);
     }
   };
-
+  
   const handleDeleteUserReview = async (reviewId) => {
     if (!confirm("Are you sure you want to delete your review?")) return;
     try {
@@ -469,7 +526,7 @@ export function MediaReviewsTab({
       alert(err.message || "Failed to delete review.");
     }
   };
-
+  
   const handleToggleReplyBox = (reviewId) => {
     if (replyingToReviewId === reviewId) {
       setReplyingToReviewId(null);
@@ -479,7 +536,7 @@ export function MediaReviewsTab({
       setReplyText("");
     }
   };
-
+  
   function insertReplyRecursively(list, targetParentId, newReply) {
     return list.map((item) => {
       if (item.id === targetParentId) {
@@ -499,7 +556,7 @@ export function MediaReviewsTab({
       return item;
     });
   }
-
+  
   const handlePostReply = async (parentId, targetAuthor) => { 
     if (!replyText.trim()) return; 
     const token = localStorage.getItem("orgi_session"); 
@@ -507,7 +564,7 @@ export function MediaReviewsTab({
       alert("Please sign in to reply."); 
       return; 
     } 
-
+    
     setIsSubmittingReply(true);
     try {
       const res = await api.post("/reviews", {
@@ -520,7 +577,7 @@ export function MediaReviewsTab({
         parent_id: parentId,
         is_anonymous: replyAnon,
       });
-
+      
       if (res?.success) { 
         const newReply = { 
           ...res.data, 
@@ -542,14 +599,14 @@ export function MediaReviewsTab({
       setIsSubmittingReply(false); 
     } 
   }; 
-
+  
   const toggleReplies = (reviewId) => {
     setExpandedReplies((prev) => ({
       ...prev,
       [reviewId]: !prev[reviewId],
     }));
   };
-
+  
   const toggleLike = async (rev) => {
     const revId = rev.id;
     const isCurrentlyLiked = Boolean(likedReviews[revId]);
@@ -557,7 +614,7 @@ export function MediaReviewsTab({
       ...prev,
       [revId]: !isCurrentlyLiked,
     }));
-
+    
     if (rev.source === "community") {
       function updateLikesRecursively(list) {
         return list.map((item) => {
@@ -577,12 +634,12 @@ export function MediaReviewsTab({
           return item;
         });
       }
-
+      
       updateCommunityData((prev) => ({
         ...prev,
         reviews: updateLikesRecursively(prev?.reviews || []),
       }));
-
+      
       try {
         await api.post(`/reviews/${revId}/like`);
       } catch (err) {
@@ -600,7 +657,7 @@ export function MediaReviewsTab({
             : r
         )
       );
-
+      
       try {
         await api.post("/reviews/provider/like", {
           external_id: String(mediaId),
@@ -619,14 +676,14 @@ export function MediaReviewsTab({
       }
     }
   };
-
+  
   const handleOpenReport = (reviewId) => {
     setReportingReviewId(reviewId);
     setReportReason("");
     setReportModalOpen(true);
     setActiveMenuReviewId(null);
   };
-
+  
   const handleSubmitReport = async () => {
     if (!reportReason.trim()) {
       alert("Please provide a reason for the report.");
@@ -637,7 +694,7 @@ export function MediaReviewsTab({
       alert("Please sign in to submit a report.");
       return;
     }
-
+    
     setIsSubmittingReport(true);
     try {
       const res = await api.post("/reports", {
@@ -655,18 +712,18 @@ export function MediaReviewsTab({
       setIsSubmittingReport(false);
     }
   };
-
+  
   const handleLoadMoreReviews = async () => {
     const nextLimit = visibleReviews + 4;
     setVisibleReviews(nextLimit);
-
+    
     if (provider === "tmdb" && providerPage < totalPages && !isLoadingMore) {
       setIsLoadingMore(true);
       try {
         const nextPage = providerPage + 1;
         const fetchFn = mediaType === "SERIES" ? getSeriesReviews : getMovieReviews;
         const res = await fetchFn(mediaId, nextPage);
-
+        
         if (res && Array.isArray(res.results) && res.results.length > 0) {
           setProviderReviews((prev) => {
             const existingIds = new Set(prev.map((r) => r.id));
@@ -683,25 +740,25 @@ export function MediaReviewsTab({
       }
     }
   };
-
+  
   const userReview = communityData?.reviews?.find((r) => user?.id && r.userId === user.id);
-
+  
   const rawProviderReviews = (providerReviews || []).map((r) => ({
     ...r,
     source: "provider",
   }));
-
+  
   const allReviews = [
     ...(Array.isArray(communityData?.reviews) ? communityData.reviews : []),
     ...rawProviderReviews,
   ];
-
+  
   const filteredReviews = allReviews.filter((r) => {
     if (reviewFilter === "community") return r.source === "community";
     if (reviewFilter === "provider") return r.source === "provider";
     return true;
   });
-
+  
   const sortedReviews = [...filteredReviews].sort((a, b) => {
     switch (sortBy) {
       case "Top":
@@ -716,13 +773,18 @@ export function MediaReviewsTab({
         return 0;
     }
   });
-
+  
   const hasMoreToDisplay = visibleReviews < sortedReviews.length || (provider === "tmdb" && providerPage < totalPages);
-
+  
   return (
     <div className="max-w-[720px] mx-auto animate-in fade-in duration-300">
-      {userReview && !isEditingUserReview ? (
-        <div className="bg-[#0B0B0B] border border-[#61F1AC]/40 rounded-[16px] p-5 mb-8 shadow-[0_0_20px_rgba(97,241,172,0.06)] animate-in fade-in">
+      {userReview && !isEditingUserReview ? ( 
+        <div 
+          id={`review-${userReview.id}`} 
+          className={`bg-[#0B0B0B] border border-[#61F1AC]/40 rounded-[16px] p-5 mb-8 shadow-[0_0_20px_rgba(97,241,172,0.06)] animate-in fade-in transition-all duration-500 ${ 
+            highlightedReviewId === userReview.id ? "ring-2 ring-[#61F1AC] shadow-[0_0_25px_rgba(97,241,172,0.25)]" : "" 
+          }`} 
+        >
           <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#1C1C1C]">
             <div className="flex items-center gap-3">
               <ReviewAvatar
@@ -751,15 +813,15 @@ export function MediaReviewsTab({
                 </span>
               </div>
             </div>
-
+            
             {/* Minimal rating: star + animated number, no pill, no border */}
             <AnimatedScore value={userReview.score} />
           </div>
-
+          
           <p className="text-sm leading-relaxed text-[#E0E0E0] mb-4 font-light whitespace-pre-wrap">
             {userReview.content}
           </p>
-
+          
           <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#1C1C1C]/60">
             <Button
               variant="outline"
@@ -800,7 +862,7 @@ export function MediaReviewsTab({
               className="w-full bg-transparent text-[#F5F5F5] placeholder-[#7A7A7A] text-sm resize-none focus:outline-none"
             />
           </div>
-
+          
           <div className="flex flex-col gap-3 pt-3 border-t border-[#1C1C1C]/60">
             {/* Anonymous toggle: round checkbox, white tick, sits right above the slider */}
             <label className="group flex items-center gap-2 cursor-pointer select-none text-xs text-[#8A8A8A] hover:text-[#F5F5F5] transition-colors w-fit">
@@ -819,10 +881,10 @@ export function MediaReviewsTab({
               </span>
               <span>Post anonymously</span>
             </label>
-
+            
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <ReviewSlider value={selectedScore} onChange={setSelectedScore} />
-
+              
               <div className="flex items-center gap-3 self-end sm:self-center flex-wrap">
                 {isEditingUserReview && (
                   <Button
@@ -876,12 +938,12 @@ export function MediaReviewsTab({
             );
           })}
         </div>
-
+        
         <div className="flex items-center justify-between sm:justify-end gap-3">
           <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A]">
             {sortedReviews.length} {sortedReviews.length === 1 ? "review" : "reviews"}
           </span>
-
+          
           <div className="relative">
             <button
               type="button"
@@ -891,7 +953,7 @@ export function MediaReviewsTab({
               <span>Sort: {sortBy}</span>
               <ChevronDown size={12} className="text-[#7A7A7A]" />
             </button>
-
+            
             {sortDropdownOpen && (
               <div className="absolute right-0 top-full mt-1.5 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-xl z-20">
                 {["Top", "Newest", "Highest Rated", "Lowest Rated"].map(
@@ -918,16 +980,24 @@ export function MediaReviewsTab({
           </div>
         </div>
       </div>
-
+      
       <div className="flex flex-col divide-y divide-[#1C1C1C]">
         {sortedReviews.slice(0, visibleReviews).map((rev) => {
           const isLiked = Boolean(likedReviews[rev.id]);
           const likeCount = (rev.likes || 0) + (isLiked && !rev.isLiked ? 1 : !isLiked && rev.isLiked ? -1 : 0);
           const isExpanded = Boolean(expandedReviews[rev.id]);
           const isLongContent = (rev.content || "").length > 130;
-
-          return (
-            <article key={rev.id} className="py-6 first:pt-0">
+          
+          return ( 
+            <article 
+              key={rev.id} 
+              id={`review-${rev.id}`} 
+              className={`py-6 first:pt-0 transition-all duration-500 rounded-2xl ${ 
+                highlightedReviewId === rev.id 
+                  ? "ring-2 ring-[#61F1AC] bg-[#61F1AC]/5 p-5 shadow-[0_0_25px_rgba(97,241,172,0.15)]" 
+                  : "" 
+              }`} 
+            >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <ReviewAvatar
@@ -960,13 +1030,13 @@ export function MediaReviewsTab({
                     </span>
                   </div>
                 </div>
-
+                
                 <div className="flex items-center gap-1 text-xs font-tabular text-[#61F1AC] font-semibold">
                   <Star size={12} className="fill-[#61F1AC]" />
                   <span>{rev.score}</span>
                 </div>
               </div>
-
+              
               <div className="mb-4">
                 <p className={`text-sm leading-relaxed text-[#D0D0D0] font-light ${isExpanded ? "" : "line-clamp-2"}`}>
                   {rev.content}
@@ -981,7 +1051,7 @@ export function MediaReviewsTab({
                   </button>
                 )}
               </div>
-
+              
               <div className="flex items-center justify-between text-xs text-[#7A7A7A]">
                 <div className="flex items-center gap-5">
                   <button
@@ -997,7 +1067,7 @@ export function MediaReviewsTab({
                     />
                     <span className="font-tabular text-xs">{likeCount}</span>
                   </button>
-
+                  
                   {rev.source === "community" && (
                     <button
                       type="button"
@@ -1010,7 +1080,7 @@ export function MediaReviewsTab({
                       <span>Reply</span>
                     </button>
                   )}
-
+                  
                   <div className="relative">
                     <button
                       type="button"
@@ -1019,7 +1089,7 @@ export function MediaReviewsTab({
                     >
                       <MoreHorizontal size={14} />
                     </button>
-
+                    
                     {activeMenuReviewId === rev.id && (
                       <div className="absolute left-0 top-full mt-1 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20">
                         <button
@@ -1033,7 +1103,7 @@ export function MediaReviewsTab({
                     )}
                   </div>
                 </div>
-
+                
                 {rev.repliesCount > 0 && rev.source === "community" && (
                   <button
                     type="button"
@@ -1048,10 +1118,10 @@ export function MediaReviewsTab({
                   </button>
                 )}
               </div>
-
+              
               {replyingToReviewId === rev.id && rev.source === "community" && ( 
                 <div className="mt-3.5 pl-4 sm:pl-8"> 
-                  <div className="bg-[#101010] border border-[#222222] focus-within:border-[#61F1AC]/50 rounded-xl p-3 transition-colors"> 
+                  <div className="bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/50 rounded-2xl p-4 transition-colors"> 
                     <div className="flex items-start gap-2.5 mb-2.5"> 
                       <ReviewAvatar 
                         src={replyAnon ? NAVBAR_AVATAR : currentUserAvatar} 
@@ -1103,7 +1173,7 @@ export function MediaReviewsTab({
                   </div> 
                 </div> 
               )} 
-
+              
               {rev.replies && expandedReplies[rev.id] && rev.source === "community" && (
                 <div className="mt-3.5 pl-4 sm:pl-8 space-y-3 pt-3 border-t border-[#1C1C1C]/40">
                   {rev.replies.map((reply) => (
@@ -1122,8 +1192,9 @@ export function MediaReviewsTab({
                       toggleLike={toggleLike}
                       likedReviews={likedReviews}
                       handleOpenReport={handleOpenReport}
-                      currentUserAvatar={currentUserAvatar}
-                    />
+                      currentUserAvatar={currentUserAvatar} 
+                      highlightedReviewId={highlightedReviewId} 
+                    /> 
                   ))}
                 </div>
               )}
@@ -1131,7 +1202,7 @@ export function MediaReviewsTab({
           );
         })}
       </div>
-
+      
       {hasMoreToDisplay && (
         <div className="flex justify-center mt-10">
           <Button
@@ -1152,7 +1223,7 @@ export function MediaReviewsTab({
           </Button>
         </div>
       )}
-
+      
       {reportModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"

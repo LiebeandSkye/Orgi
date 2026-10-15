@@ -17,24 +17,29 @@ import {
   XCircle, 
   AlertCircle, 
   RefreshCw, 
-  X 
+  X, 
+  MessageSquare, 
 } from "lucide-react"; 
 import api from "../services/api"; 
 import { useAuth } from "../context/AuthContext"; 
 import { Button } from "../components/ui/Button"; 
 import { ReviewSlider } from "../components/ui/ReviewSlider"; 
+import { CommentThreadItem } from "../components/reviews/MediaReviewsTab"; 
 
 const DEFAULT_AVATAR = "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
 
-const getItemLink = (item) => { 
+const getItemLink = (item, reviewId) => { 
   if (!item) return "#"; 
   const type = (item.type || "").toLowerCase(); 
-  if (type === "movie") return `/movie/${item.external_id}`; 
-  if (type === "series") return `/series/${item.external_id}`; 
-  if (["book", "manga", "manhwa", "manhua"].includes(type)) { 
-    return `/books/${type}/${item.external_id}`; 
+  let base = `/movie/${item.external_id}`; 
+  if (type === "series") base = `/series/${item.external_id}`; 
+  else if (["book", "manga", "manhwa", "manhua"].includes(type)) { 
+    base = `/books/${type}/${item.external_id}`; 
   } 
-  return `/movie/${item.external_id}`; 
+  if (reviewId) { 
+    return `${base}?tab=reviews&reviewId=${reviewId}#review-${reviewId}`; 
+  } 
+  return base; 
 }; 
 
 const getItemIcon = (type) => { 
@@ -87,28 +92,56 @@ export function DashboardPage() {
   const [summary, setSummary] = useState(null); 
   const [loading, setLoading] = useState(true); 
   const [refreshing, setRefreshing] = useState(false); 
-
+  
   const [reviewsList, setReviewsList] = useState([]); 
   const [likesList, setLikesList] = useState([]); 
   const [reportsList, setReportsList] = useState([]); 
   const [modReportsList, setModReportsList] = useState([]); 
   const [modStatusFilter, setModStatusFilter] = useState("all"); 
-
+  
   const [editingReview, setEditingReview] = useState(null); 
   const [editScore, setEditScore] = useState(8); 
   const [editContent, setEditContent] = useState(""); 
   const [savingEdit, setSavingEdit] = useState(false); 
-
+  
   const [deletingReviewId, setDeletingReviewId] = useState(null); 
   const [deleting, setDeleting] = useState(false); 
   const [deletingReportId, setDeletingReportId] = useState(null); 
   const [deletingReport, setDeletingReport] = useState(false); 
-
+  
   const [moderatingReport, setModeratingReport] = useState(null); 
   const [modStatus, setModStatus] = useState("resolved"); 
   const [modNotes, setModNotes] = useState(""); 
   const [savingMod, setSavingMod] = useState(false); 
-
+  const [expandedReviewReplies, setExpandedReviewReplies] = useState({}); 
+  const [reviewRepliesData, setReviewRepliesData] = useState({}); 
+  const [loadingReviewReplies, setLoadingReviewReplies] = useState({}); 
+  
+  const toggleViewReplies = async (reviewId) => { 
+    const isCurrentlyExpanded = Boolean(expandedReviewReplies[reviewId]); 
+    setExpandedReviewReplies((prev) => ({ 
+      ...prev, 
+      [reviewId]: !isCurrentlyExpanded, 
+    })); 
+    
+    if (!isCurrentlyExpanded && !reviewRepliesData[reviewId]) { 
+      setLoadingReviewReplies((prev) => ({ ...prev, [reviewId]: true })); 
+      try { 
+        const res = await api.get(`/reviews/${reviewId}/replies`); 
+        if (res?.success && Array.isArray(res.data)) { 
+          setReviewRepliesData((prev) => ({ 
+            ...prev, 
+            [reviewId]: res.data, 
+          })); 
+        } 
+      } catch (err) { 
+        console.error("Failed to load replies:", err); 
+      } finally { 
+        setLoadingReviewReplies((prev) => ({ ...prev, [reviewId]: false })); 
+      } 
+    } 
+  }; 
+  
   const loadData = useCallback(async (isSilent = false) => { 
     if (!session || !user) { 
       setLoading(false); 
@@ -116,7 +149,7 @@ export function DashboardPage() {
     } 
     if (!isSilent) setLoading(true); 
     else setRefreshing(true); 
-
+    
     try { 
       const res = await api.get("/dashboard/summary"); 
       if (res?.success && res.data) { 
@@ -124,7 +157,7 @@ export function DashboardPage() {
         setReviewsList(res.data.recentReviews || []); 
         setLikesList(res.data.recentLikes || []); 
         setReportsList(res.data.recentReports || []); 
-
+        
         if (["admin", "moderator"].includes(res.data.userRole)) { 
           try { 
             const allRep = await api.get("/reports/all"); 
@@ -140,17 +173,17 @@ export function DashboardPage() {
       setRefreshing(false); 
     } 
   }, [session, user]); 
-
+  
   useEffect(() => { 
     loadData(); 
   }, [loadData]); 
-
+  
   const handleOpenEdit = (review) => { 
     setEditingReview(review); 
     setEditScore(review.score || 8); 
     setEditContent(review.content || ""); 
   }; 
-
+  
   const handleSaveEdit = async () => { 
     if (!editingReview || !editContent.trim()) return; 
     setSavingEdit(true); 
@@ -161,7 +194,7 @@ export function DashboardPage() {
       const type = editingReview.items?.type; 
       const title = editingReview.items?.title; 
       const coverUrl = editingReview.items?.cover_url; 
-
+      
       const payload = { 
         itemId, 
         externalId, 
@@ -172,7 +205,7 @@ export function DashboardPage() {
         score: editScore, 
         content: editContent.trim(), 
       }; 
-
+      
       const res = await api.post("/reviews", payload); 
       if (res?.success) { 
         setReviewsList((prev) => 
@@ -195,7 +228,7 @@ export function DashboardPage() {
       setSavingEdit(false); 
     } 
   }; 
-
+  
   const handleDeleteReview = async () => { 
     if (!deletingReviewId) return; 
     setDeleting(true); 
@@ -221,7 +254,7 @@ export function DashboardPage() {
       setDeleting(false); 
     } 
   }; 
-
+  
   const handleUnlikeReview = async (reviewId) => { 
     try { 
       const res = await api.post(`/reviews/${reviewId}/like`); 
@@ -241,7 +274,7 @@ export function DashboardPage() {
       } 
     } catch {} 
   }; 
-
+  
   const handleDeleteReport = async () => { 
     if (!deletingReportId) return; 
     setDeletingReport(true); 
@@ -267,13 +300,13 @@ export function DashboardPage() {
       setDeletingReport(false); 
     } 
   }; 
-
+  
   const handleOpenModeration = (report) => { 
     setModeratingReport(report); 
     setModStatus(report.status || "resolved"); 
     setModNotes(report.moderator_notes || ""); 
   }; 
-
+  
   const handleSaveModeration = async () => { 
     if (!moderatingReport) return; 
     setSavingMod(true); 
@@ -301,7 +334,7 @@ export function DashboardPage() {
       setSavingMod(false); 
     } 
   }; 
-
+  
   if (!session || !user) { 
     return ( 
       <div className="min-h-[75vh] flex flex-col items-center justify-center px-4 py-16"> 
@@ -325,15 +358,15 @@ export function DashboardPage() {
       </div> 
     ); 
   } 
-
+  
   const isModerator = ["admin", "moderator"].includes(summary?.userRole); 
   const stats = summary?.stats || { reviewCount: 0, likeCount: 0, reportCount: 0 }; 
-
+  
   const filteredModReports = modReportsList.filter((r) => { 
     if (modStatusFilter === "all") return true; 
     return r.status === modStatusFilter; 
   }); 
-
+  
   return ( 
     <div className="min-h-screen pb-24 pt-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"> 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-[#0D0D0D] border border-[#1C1C1C] rounded-2xl p-6 relative overflow-hidden"> 
@@ -366,7 +399,7 @@ export function DashboardPage() {
             </p> 
           </div> 
         </div> 
-
+        
         <div className="flex items-center gap-2"> 
           <Button 
             variant="outline" 
@@ -385,7 +418,7 @@ export function DashboardPage() {
           </Link> 
         </div> 
       </div> 
-
+      
       <div className={`grid grid-cols-1 ${isModerator ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"} gap-4 mb-8`}> 
         <button 
           type="button" 
@@ -409,7 +442,7 @@ export function DashboardPage() {
             Ratings & critiques posted 
           </p> 
         </button> 
-
+        
         <button 
           type="button" 
           onClick={() => setActiveTab("likes")} 
@@ -432,7 +465,7 @@ export function DashboardPage() {
             Community critiques endorsed 
           </p> 
         </button> 
-
+        
         <button 
           type="button" 
           onClick={() => setActiveTab("reports")} 
@@ -455,7 +488,7 @@ export function DashboardPage() {
             Contributions to community safety 
           </p> 
         </button> 
-
+        
         {isModerator && ( 
           <button 
             type="button" 
@@ -481,7 +514,7 @@ export function DashboardPage() {
           </button> 
         )} 
       </div> 
-
+      
       <div className="flex items-center justify-between mb-6 pb-2 border-b border-[#1C1C1C]"> 
         <div className="flex items-center gap-2"> 
           <h2 className="text-base font-bold text-[#F5F5F5]"> 
@@ -498,7 +531,7 @@ export function DashboardPage() {
           </span> 
         </div> 
       </div> 
-
+      
       {loading ? ( 
         <div className="flex flex-col items-center justify-center py-20 text-[#666666]"> 
           <RefreshCw size={24} className="animate-spin mb-3 text-[#61F1AC]" /> 
@@ -530,83 +563,131 @@ export function DashboardPage() {
                     return ( 
                       <article 
                         key={review.id} 
-                        className="bg-[#0D0D0D] border border-[#1C1C1C] hover:border-[#282828] rounded-xl p-5 transition-all flex flex-col sm:flex-row gap-5" 
+                        className="bg-[#0D0D0D] border border-[#1C1C1C] hover:border-[#282828] rounded-xl p-5 transition-all flex flex-col gap-4" 
                       > 
-                        <div className="w-full sm:w-28 h-36 sm:h-auto rounded-lg overflow-hidden bg-[#141414] border border-[#202020] flex-shrink-0 relative group"> 
-                          {item?.cover_url ? ( 
-                            <img 
-                              src={item.cover_url} 
-                              alt={item?.title || "Cover"} 
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                            /> 
-                          ) : ( 
-                            <div className="w-full h-full flex items-center justify-center text-[#444444]"> 
-                              <Film size={24} /> 
-                            </div> 
-                          )} 
-                          {item?.type && ( 
-                            <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-md text-[9px] font-bold uppercase tracking-wider text-[#F5F5F5] flex items-center gap-1"> 
-                              {getItemIcon(item.type)} 
-                              <span>{item.type}</span> 
-                            </div> 
-                          )} 
-                        </div> 
-
-                        <div className="flex-1 flex flex-col justify-between min-w-0"> 
-                          <div> 
-                            <div className="flex items-start justify-between gap-3 mb-2"> 
-                              <div> 
-                                <Link 
-                                  to={getItemLink(item)} 
-                                  className="text-base font-bold text-[#F5F5F5] hover:text-[#61F1AC] transition-colors inline-flex items-center gap-1.5" 
-                                > 
-                                  <span className="truncate">{item?.title || "Untitled Media"}</span> 
-                                  <ExternalLink size={12} className="opacity-50" /> 
-                                </Link> 
-                                <div className="flex items-center gap-2 mt-1 text-[11px] text-[#7A7A7A]"> 
-                                  <span>{formatDate(review.created_at)}</span> 
-                                  {review.is_edited && ( 
-                                    <span className="text-[10px] text-[#61F1AC]/80 font-medium"> 
-                                      (edited) 
-                                    </span> 
-                                  )} 
+                        <div className="flex flex-col sm:flex-row gap-5"> 
+                          <div className="w-full sm:w-28 h-36 sm:h-auto rounded-lg overflow-hidden bg-[#141414] border border-[#202020] flex-shrink-0 relative group"> 
+                            {item?.cover_url ? ( 
+                              <Link to={getItemLink(item, review.id)} className="block w-full h-full"> 
+                                <img 
+                                  src={item.cover_url} 
+                                  alt={item?.title || "Cover"} 
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                                /> 
+                              </Link> 
+                            ) : ( 
+                              <div className="w-full h-full flex items-center justify-center text-[#444444]"> 
+                                <Film size={24} /> 
+                              </div> 
+                            )} 
+                            {item?.type && ( 
+                              <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-md text-[9px] font-bold uppercase tracking-wider text-[#F5F5F5] flex items-center gap-1 pointer-events-none"> 
+                                {getItemIcon(item.type)} 
+                                <span>{item.type}</span> 
+                              </div> 
+                            )} 
+                          </div> 
+                          
+                          <div className="flex-1 flex flex-col justify-between min-w-0"> 
+                            <div> 
+                              <div className="flex items-start justify-between gap-3 mb-2"> 
+                                <div> 
+                                  <Link 
+                                    to={getItemLink(item, review.id)} 
+                                    className="text-base font-bold text-[#F5F5F5] hover:text-[#61F1AC] transition-colors inline-flex items-center gap-1.5" 
+                                  > 
+                                    <span className="truncate">{item?.title || "Untitled Media"}</span> 
+                                    <ExternalLink size={12} className="opacity-50" /> 
+                                  </Link> 
+                                  <div className="flex items-center gap-2 mt-1 text-[11px] text-[#7A7A7A]"> 
+                                    <span>{formatDate(review.created_at)}</span> 
+                                    {review.is_edited && ( 
+                                      <span className="text-[10px] text-[#61F1AC]/80 font-medium"> 
+                                        (edited) 
+                                      </span> 
+                                    )} 
+                                  </div> 
+                                </div> 
+                                
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#141414] border border-[#222222] flex-shrink-0"> 
+                                  <Star size={12} className="fill-[#61F1AC] text-[#61F1AC]" /> 
+                                  <span className="font-bold text-[#61F1AC] text-xs font-tabular"> 
+                                    {review.score} / 10 
+                                  </span> 
                                 </div> 
                               </div> 
-
-                              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#141414] border border-[#222222] flex-shrink-0"> 
-                                <Star size={12} className="fill-[#61F1AC] text-[#61F1AC]" /> 
-                                <span className="font-bold text-[#61F1AC] text-xs font-tabular"> 
-                                  {review.score} / 10 
-                                </span> 
-                              </div> 
+                              
+                              <p className="text-xs text-[#CCCCCC] leading-relaxed whitespace-pre-line"> 
+                                {review.content} 
+                              </p> 
                             </div> 
-
-                            <p className="text-xs text-[#CCCCCC] leading-relaxed whitespace-pre-line"> 
-                              {review.content} 
-                            </p> 
-                          </div> 
-
-                          <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-[#1C1C1C]"> 
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handleOpenEdit(review)} 
-                              className="text-xs gap-1.5 py-1 px-3 cursor-pointer" 
-                            > 
-                              <Edit3 size={12} /> 
-                              <span>Edit</span> 
-                            </Button> 
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => setDeletingReviewId(review.id)} 
-                              className="text-xs gap-1.5 py-1 px-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer" 
-                            > 
-                              <Trash2 size={12} /> 
-                              <span>Delete</span> 
-                            </Button> 
+                            
+                            <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-[#1C1C1C] flex-wrap"> 
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => toggleViewReplies(review.id)} 
+                                className="text-xs gap-1.5 py-1 px-3 text-[#B5B5B5] hover:text-[#61F1AC] hover:bg-[#141414] cursor-pointer" 
+                              > 
+                                <MessageSquare size={13} /> 
+                                <span> 
+                                  {expandedReviewReplies[review.id] 
+                                    ? "Hide Replies" 
+                                    : review.repliesCount > 0 
+                                      ? `View Replies (${review.repliesCount})` 
+                                      : "View Replies"} 
+                                </span> 
+                              </Button> 
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleOpenEdit(review)} 
+                                className="text-xs gap-1.5 py-1 px-3 cursor-pointer" 
+                              > 
+                                <Edit3 size={12} /> 
+                                <span>Edit</span> 
+                              </Button> 
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setDeletingReviewId(review.id)} 
+                                className="text-xs gap-1.5 py-1 px-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer" 
+                              > 
+                                <Trash2 size={12} /> 
+                                <span>Delete</span> 
+                              </Button> 
+                            </div> 
                           </div> 
                         </div> 
+                        
+                        {expandedReviewReplies[review.id] && ( 
+                          <div className="w-full mt-2 pt-3.5 border-t border-[#1C1C1C] space-y-3"> 
+                            <div className="flex items-center gap-2 text-xs font-semibold text-[#888888]"> 
+                              <MessageSquare size={13} className="text-[#61F1AC]" /> 
+                              <span>Replies on your review</span> 
+                            </div> 
+                            {loadingReviewReplies[review.id] ? ( 
+                              <div className="space-y-2 py-2"> 
+                                <div className="h-14 rounded-xl bg-white/[0.03] animate-pulse" /> 
+                              </div> 
+                            ) : (reviewRepliesData[review.id] || []).length > 0 ? ( 
+                              <div className="space-y-2.5"> 
+                                {reviewRepliesData[review.id].map((rep) => ( 
+                                  <CommentThreadItem 
+                                    key={rep.id} 
+                                    comment={rep} 
+                                    depth={1} 
+                                    allowReply={false} 
+                                  /> 
+                                ))} 
+                              </div> 
+                            ) : ( 
+                              <div className="text-xs text-[#666666] py-3 text-center bg-[#090909] rounded-xl border border-[#161616]"> 
+                                No replies have been posted to this review yet. 
+                              </div> 
+                            )} 
+                          </div> 
+                        )} 
                       </article> 
                     ); 
                   })} 
@@ -614,7 +695,7 @@ export function DashboardPage() {
               )} 
             </div> 
           )} 
-
+          
           {activeTab === "likes" && ( 
             <div className="space-y-4"> 
               {likesList.length === 0 ? ( 
@@ -639,84 +720,132 @@ export function DashboardPage() {
                     if (!rev) return null; 
                     const media = rev.items; 
                     const author = rev.users; 
-
+                    
                     return ( 
                       <article 
                         key={item.likeId || rev.id} 
-                        className="bg-[#0D0D0D] border border-[#1C1C1C] hover:border-[#282828] rounded-xl p-5 transition-all flex flex-col sm:flex-row gap-5" 
+                        className="bg-[#0D0D0D] border border-[#1C1C1C] hover:border-[#282828] rounded-xl p-5 transition-all flex flex-col gap-4" 
                       > 
-                        <div className="w-full sm:w-24 h-32 sm:h-auto rounded-lg overflow-hidden bg-[#141414] border border-[#202020] flex-shrink-0"> 
-                          {media?.cover_url ? ( 
-                            <img 
-                              src={media.cover_url} 
-                              alt={media?.title || "Media"} 
-                              className="w-full h-full object-cover" 
-                            /> 
-                          ) : ( 
-                            <div className="w-full h-full flex items-center justify-center text-[#444444]"> 
-                              <Film size={20} /> 
-                            </div> 
-                          )} 
-                        </div> 
-
-                        <div className="flex-1 flex flex-col justify-between min-w-0"> 
-                          <div> 
-                            <div className="flex items-start justify-between gap-3 mb-2"> 
-                              <div> 
-                                <Link 
-                                  to={getItemLink(media)} 
-                                  className="text-sm font-bold text-[#F5F5F5] hover:text-[#61F1AC] transition-colors inline-flex items-center gap-1.5" 
-                                > 
-                                  <span className="truncate">{media?.title || "Untitled Media"}</span> 
-                                  <ExternalLink size={11} className="opacity-50" /> 
-                                </Link> 
-
-                                <div className="flex items-center gap-2 mt-1.5"> 
-                                  <img 
-                                    src={author?.profile_url || DEFAULT_AVATAR} 
-                                    alt={author?.user_name || "Author"} 
-                                    onError={(e) => { 
-                                      if (e.currentTarget.src !== DEFAULT_AVATAR) { 
-                                        e.currentTarget.src = DEFAULT_AVATAR; 
-                                      } 
-                                    }} 
-                                    className="w-5 h-5 rounded-full object-cover bg-[#222222]" 
-                                  /> 
-                                  <span className="text-xs font-semibold text-[#E0E0E0]"> 
-                                    {author?.user_name || "Anonymous Member"} 
-                                  </span> 
-                                  <span className="text-[#555555]">·</span> 
-                                  <span className="text-[11px] text-[#7A7A7A]"> 
-                                    {formatDate(rev.created_at)} 
+                        <div className="flex flex-col sm:flex-row gap-5"> 
+                          <div className="w-full sm:w-24 h-32 sm:h-auto rounded-lg overflow-hidden bg-[#141414] border border-[#202020] flex-shrink-0"> 
+                            {media?.cover_url ? ( 
+                              <Link to={getItemLink(media, rev.id)} className="block w-full h-full"> 
+                                <img 
+                                  src={media.cover_url} 
+                                  alt={media?.title || "Media"} 
+                                  className="w-full h-full object-cover" 
+                                /> 
+                              </Link> 
+                            ) : ( 
+                              <div className="w-full h-full flex items-center justify-center text-[#444444]"> 
+                                <Film size={20} /> 
+                              </div> 
+                            )} 
+                          </div> 
+                          
+                          <div className="flex-1 flex flex-col justify-between min-w-0"> 
+                            <div> 
+                              <div className="flex items-start justify-between gap-3 mb-2"> 
+                                <div> 
+                                  <Link 
+                                    to={getItemLink(media, rev.id)} 
+                                    className="text-sm font-bold text-[#F5F5F5] hover:text-[#61F1AC] transition-colors inline-flex items-center gap-1.5" 
+                                  > 
+                                    <span className="truncate">{media?.title || "Untitled Media"}</span> 
+                                    <ExternalLink size={11} className="opacity-50" /> 
+                                  </Link> 
+                                  
+                                  <div className="flex items-center gap-2 mt-1.5"> 
+                                    <img 
+                                      src={author?.profile_url || DEFAULT_AVATAR} 
+                                      alt={author?.user_name || "Author"} 
+                                      onError={(e) => { 
+                                        if (e.currentTarget.src !== DEFAULT_AVATAR) { 
+                                          e.currentTarget.src = DEFAULT_AVATAR; 
+                                        } 
+                                      }} 
+                                      className="w-5 h-5 rounded-full object-cover bg-[#222222]" 
+                                    /> 
+                                    <span className="text-xs font-semibold text-[#E0E0E0]"> 
+                                      {author?.user_name || "Anonymous Member"} 
+                                    </span> 
+                                    <span className="text-[#555555]">·</span> 
+                                    <span className="text-[11px] text-[#7A7A7A]"> 
+                                      {formatDate(rev.created_at)} 
+                                    </span> 
+                                  </div> 
+                                </div> 
+                                
+                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#141414] border border-[#222222] flex-shrink-0"> 
+                                  <Star size={11} className="fill-[#61F1AC] text-[#61F1AC]" /> 
+                                  <span className="font-bold text-[#61F1AC] text-xs font-tabular"> 
+                                    {rev.score} / 10 
                                   </span> 
                                 </div> 
                               </div> 
-
-                              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#141414] border border-[#222222] flex-shrink-0"> 
-                                <Star size={11} className="fill-[#61F1AC] text-[#61F1AC]" /> 
-                                <span className="font-bold text-[#61F1AC] text-xs font-tabular"> 
-                                  {rev.score} / 10 
-                                </span> 
-                              </div> 
+                              
+                              <p className="text-xs text-[#CCCCCC] leading-relaxed line-clamp-3"> 
+                                {rev.content} 
+                              </p> 
                             </div> 
-
-                            <p className="text-xs text-[#CCCCCC] leading-relaxed line-clamp-3"> 
-                              {rev.content} 
-                            </p> 
-                          </div> 
-
-                          <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-[#1C1C1C]"> 
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handleUnlikeReview(rev.id)} 
-                              className="text-xs gap-1.5 py-1 px-3 text-rose-400 border-rose-500/30 hover:border-rose-400 cursor-pointer" 
-                            > 
-                              <Heart size={12} className="fill-rose-500 text-rose-500" /> 
-                              <span>Liked</span> 
-                            </Button> 
+                            
+                            <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-[#1C1C1C] flex-wrap"> 
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => toggleViewReplies(rev.id)} 
+                                className="text-xs gap-1.5 py-1 px-3 text-[#B5B5B5] hover:text-[#61F1AC] hover:bg-[#141414] cursor-pointer" 
+                              > 
+                                <MessageSquare size={13} /> 
+                                <span> 
+                                  {expandedReviewReplies[rev.id] 
+                                    ? "Hide Replies" 
+                                    : rev.repliesCount > 0 
+                                      ? `View Replies (${rev.repliesCount})` 
+                                      : "View Replies"} 
+                                </span> 
+                              </Button> 
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleUnlikeReview(rev.id)} 
+                                className="text-xs gap-1.5 py-1 px-3 text-rose-400 border-rose-500/30 hover:border-rose-400 cursor-pointer" 
+                              > 
+                                <Heart size={12} className="fill-rose-500 text-rose-500" /> 
+                                <span>Liked</span> 
+                              </Button> 
+                            </div> 
                           </div> 
                         </div> 
+                        
+                        {expandedReviewReplies[rev.id] && ( 
+                          <div className="w-full mt-2 pt-3.5 border-t border-[#1C1C1C] space-y-3"> 
+                            <div className="flex items-center gap-2 text-xs font-semibold text-[#888888]"> 
+                              <MessageSquare size={13} className="text-[#61F1AC]" /> 
+                              <span>Replies on this review</span> 
+                            </div> 
+                            {loadingReviewReplies[rev.id] ? ( 
+                              <div className="space-y-2 py-2"> 
+                                <div className="h-14 rounded-xl bg-white/[0.03] animate-pulse" /> 
+                              </div> 
+                            ) : (reviewRepliesData[rev.id] || []).length > 0 ? ( 
+                              <div className="space-y-2.5"> 
+                                {reviewRepliesData[rev.id].map((rep) => ( 
+                                  <CommentThreadItem 
+                                    key={rep.id} 
+                                    comment={rep} 
+                                    depth={1} 
+                                    allowReply={false} 
+                                  /> 
+                                ))} 
+                              </div> 
+                            ) : ( 
+                              <div className="text-xs text-[#666666] py-3 text-center bg-[#090909] rounded-xl border border-[#161616]"> 
+                                No replies have been posted to this review yet. 
+                              </div> 
+                            )} 
+                          </div> 
+                        )} 
                       </article> 
                     ); 
                   })} 
@@ -724,7 +853,7 @@ export function DashboardPage() {
               )} 
             </div> 
           )} 
-
+          
           {activeTab === "reports" && ( 
             <div className="space-y-4"> 
               {reportsList.length === 0 ? ( 
@@ -742,45 +871,93 @@ export function DashboardPage() {
                   {reportsList.map((report) => { 
                     const badge = STATUS_BADGES[report.status] || STATUS_BADGES.pending; 
                     const StatusIcon = badge.icon; 
-
+                    const target = report.targetDetails; 
+                    
                     return ( 
                       <article 
                         key={report.id} 
-                        className="bg-[#0D0D0D] border border-[#1C1C1C] rounded-xl p-5 flex flex-col gap-3" 
+                        className="bg-[#0D0D0D] border border-[#1C1C1C] hover:border-[#262626] rounded-2xl p-5 flex flex-col gap-4 transition-all shadow-sm" 
                       > 
-                        <div className="flex items-start justify-between gap-3"> 
-                          <div> 
-                            <div className="flex items-center gap-2"> 
-                              <span className="text-xs font-bold text-[#F5F5F5] capitalize"> 
-                                Reported {report.target_type} 
-                              </span> 
-                              <span className="text-[10px] text-[#666666] font-mono"> 
-                                #{report.target_id?.slice(0, 8)} 
-                              </span> 
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3"> 
+                          <div className="flex items-start gap-3.5"> 
+                            {target?.mediaCover ? ( 
+                              <div className="w-12 h-16 rounded-lg overflow-hidden bg-[#141414] border border-[#202020] shrink-0"> 
+                                <img 
+                                  src={target.mediaCover} 
+                                  alt={target.mediaTitle} 
+                                  className="w-full h-full object-cover" 
+                                /> 
+                              </div> 
+                            ) : ( 
+                              <div className="w-10 h-10 rounded-xl bg-[#141414] border border-[#222222] flex items-center justify-center text-[#FBBF24] shrink-0"> 
+                                <Flag size={18} /> 
+                              </div> 
+                            )} 
+                            
+                            <div> 
+                              <div className="flex items-center gap-2 flex-wrap"> 
+                                {target?.mediaTitle ? ( 
+                                  <Link 
+                                    to={getItemLink({ type: target.mediaType, external_id: target.externalId }, report.target_id)} 
+                                    className="text-sm font-bold text-[#F5F5F5] hover:text-[#61F1AC] transition-colors inline-flex items-center gap-1" 
+                                  > 
+                                    <span>{target.mediaTitle}</span> 
+                                    <ExternalLink size={11} className="opacity-50" /> 
+                                  </Link> 
+                                ) : ( 
+                                  <span className="text-sm font-bold text-[#F5F5F5] capitalize"> 
+                                    Reported {report.target_type} 
+                                  </span> 
+                                )} 
+                                
+                                {target?.mediaType && ( 
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-black/60 border border-white/10 text-[#61F1AC]"> 
+                                    {target.mediaType} 
+                                  </span> 
+                                )} 
+                              </div> 
+                              
+                              <div className="flex items-center gap-2 mt-1 flex-wrap text-xs text-[#7A7A7A]"> 
+                                {target?.authorName && ( 
+                                  <span className="text-[#D0D0D0] font-medium"> 
+                                    Reported user: <span className="text-[#F5F5F5]">@{target.authorName}</span> 
+                                  </span> 
+                                )} 
+                                {target?.authorName && <span>·</span>} 
+                                <span>Submitted {formatDate(report.created_at)}</span> 
+                              </div> 
                             </div> 
-                            <span className="text-[11px] text-[#7A7A7A]"> 
-                              Submitted {formatDate(report.created_at)} 
-                            </span> 
                           </div> 
-
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 ${badge.color}`}> 
+                          
+                          <span className={`self-start px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 shrink-0 ${badge.color}`}> 
                             <StatusIcon size={11} /> 
                             <span>{badge.label}</span> 
                           </span> 
                         </div> 
-
-                        <div className="bg-[#121212] border border-[#1E1E1E] rounded-lg p-3"> 
-                          <span className="text-[10px] uppercase font-bold text-[#666666] block mb-1"> 
-                            Reason 
+                        
+                        {target?.content && ( 
+                          <div className="bg-[#080808] border border-[#1A1A1A] rounded-xl p-3.5 space-y-1"> 
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-[#7A7A7A] block"> 
+                              Reported Comment 
+                            </span> 
+                            <p className="text-xs text-[#D5D5D5] font-light leading-relaxed whitespace-pre-wrap"> 
+                              "{target.content}" 
+                            </p> 
+                          </div> 
+                        )} 
+                        
+                        <div className="bg-[#121212] border border-[#1E1E1E] rounded-xl p-3.5 space-y-1"> 
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-[#888888] block"> 
+                            Your Reason For Reporting 
                           </span> 
                           <p className="text-xs text-[#D5D5D5] leading-relaxed"> 
                             {report.reason} 
                           </p> 
                         </div> 
-
+                        
                         {report.moderator_notes && ( 
-                          <div className="bg-[#101915] border border-[#1E3A2B] rounded-lg p-3"> 
-                            <span className="text-[10px] uppercase font-bold text-[#61F1AC] block mb-1"> 
+                          <div className="bg-[#101915] border border-[#1E3A2B] rounded-xl p-3.5 space-y-1"> 
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-[#61F1AC] block"> 
                               Moderator Response 
                             </span> 
                             <p className="text-xs text-[#BFE8D6] leading-relaxed"> 
@@ -788,8 +965,20 @@ export function DashboardPage() {
                             </p> 
                           </div> 
                         )} 
-
-                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1C1C1C]"> 
+                        
+                        <div className="flex items-center justify-between pt-2 border-t border-[#1C1C1C]"> 
+                          {target?.externalId ? ( 
+                            <Link 
+                              to={getItemLink({ type: target.mediaType, external_id: target.externalId }, report.target_id)} 
+                              className="text-xs text-[#61F1AC] hover:underline inline-flex items-center gap-1.5" 
+                            > 
+                              <ExternalLink size={12} /> 
+                              <span>View Comment in Context</span> 
+                            </Link> 
+                          ) : ( 
+                            <div /> 
+                          )} 
+                          
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -807,7 +996,7 @@ export function DashboardPage() {
               )} 
             </div> 
           )} 
-
+          
           {activeTab === "moderation" && isModerator && ( 
             <div className="space-y-4"> 
               <div className="flex items-center gap-2 overflow-x-auto pb-1"> 
@@ -826,7 +1015,7 @@ export function DashboardPage() {
                   </button> 
                 ))} 
               </div> 
-
+              
               {filteredModReports.length === 0 ? ( 
                 <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-2xl p-12 text-center"> 
                   <ShieldCheck size={32} className="mx-auto mb-3 text-[#333333]" /> 
@@ -843,7 +1032,7 @@ export function DashboardPage() {
                     const badge = STATUS_BADGES[report.status] || STATUS_BADGES.pending; 
                     const StatusIcon = badge.icon; 
                     const reporter = report.users; 
-
+                    
                     return ( 
                       <article 
                         key={report.id} 
@@ -865,7 +1054,7 @@ export function DashboardPage() {
                               <span>{formatDate(report.created_at)}</span> 
                             </div> 
                           </div> 
-
+                          
                           <div className="flex items-center gap-2"> 
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 ${badge.color}`}> 
                               <StatusIcon size={11} /> 
@@ -881,7 +1070,7 @@ export function DashboardPage() {
                             </Button> 
                           </div> 
                         </div> 
-
+                        
                         <div className="bg-[#121212] border border-[#1E1E1E] rounded-lg p-3"> 
                           <span className="text-[10px] uppercase font-bold text-[#666666] block mb-1"> 
                             Report Reason 
@@ -890,7 +1079,7 @@ export function DashboardPage() {
                             {report.reason} 
                           </p> 
                         </div> 
-
+                        
                         {report.moderator_notes && ( 
                           <div className="bg-[#101915] border border-[#1E3A2B] rounded-lg p-3"> 
                             <span className="text-[10px] uppercase font-bold text-[#61F1AC] block mb-1"> 
@@ -910,7 +1099,7 @@ export function DashboardPage() {
           )} 
         </> 
       )} 
-
+      
       {editingReview && ( 
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
           <div className="w-full max-w-lg bg-[#0B0B0B] border border-[#1C1C1C] rounded-2xl p-6 text-[#F5F5F5]"> 
@@ -929,7 +1118,7 @@ export function DashboardPage() {
                 <X size={16} /> 
               </button> 
             </div> 
-
+            
             <div className="mb-5"> 
               <ReviewSlider 
                 value={editScore} 
@@ -937,7 +1126,7 @@ export function DashboardPage() {
                 disabled={savingEdit} 
               /> 
             </div> 
-
+            
             <div className="mb-5"> 
               <label className="block text-xs font-medium text-[#7A7A7A] mb-1.5 uppercase tracking-wide"> 
                 Review Content 
@@ -951,7 +1140,7 @@ export function DashboardPage() {
                 placeholder="Share your detailed analysis..." 
               /> 
             </div> 
-
+            
             <div className="flex justify-end gap-2.5"> 
               <Button 
                 variant="outline" 
@@ -975,7 +1164,7 @@ export function DashboardPage() {
           </div> 
         </div> 
       )} 
-
+      
       {deletingReviewId && ( 
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
           <div className="w-full max-w-sm bg-[#0B0B0B] border border-[#1C1C1C] rounded-2xl p-6 text-[#F5F5F5] text-center"> 
@@ -1009,7 +1198,7 @@ export function DashboardPage() {
           </div> 
         </div> 
       )} 
-
+      
       {deletingReportId && ( 
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
           <div className="w-full max-w-sm bg-[#0B0B0B] border border-[#1C1C1C] rounded-2xl p-6 text-[#F5F5F5] text-center"> 
@@ -1043,7 +1232,7 @@ export function DashboardPage() {
           </div> 
         </div> 
       )} 
-
+      
       {moderatingReport && ( 
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
           <div className="w-full max-w-md bg-[#0B0B0B] border border-[#1C1C1C] rounded-2xl p-6 text-[#F5F5F5]"> 
@@ -1062,7 +1251,7 @@ export function DashboardPage() {
                 <X size={16} /> 
               </button> 
             </div> 
-
+            
             <div className="mb-4"> 
               <label className="block text-xs font-medium text-[#7A7A7A] mb-1.5 uppercase tracking-wide"> 
                 Action Status 
@@ -1084,7 +1273,7 @@ export function DashboardPage() {
                 ))} 
               </div> 
             </div> 
-
+            
             <div className="mb-5"> 
               <label className="block text-xs font-medium text-[#7A7A7A] mb-1.5 uppercase tracking-wide"> 
                 Moderator Notes 
@@ -1098,7 +1287,7 @@ export function DashboardPage() {
                 placeholder="Explain the moderation action or findings..." 
               /> 
             </div> 
-
+            
             <div className="flex justify-end gap-2.5"> 
               <Button 
                 variant="outline" 
