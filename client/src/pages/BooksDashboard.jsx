@@ -272,6 +272,8 @@ export function BooksDashboard() {
   }, [feeds]);
 
   const currentHero = spotlightPool[heroIndex % spotlightPool.length] || spotlightPool[0];
+  const prevHero = spotlightPool[(heroIndex - 1 + spotlightPool.length) % spotlightPool.length] || currentHero;
+  const nextHero = spotlightPool[(heroIndex + 1) % spotlightPool.length] || currentHero;
 
   useEffect(() => {
     if (spotlightPool.length <= 1) return;
@@ -438,91 +440,174 @@ export function BooksDashboard() {
           </section>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-300">
-            {/* HERO SPOTLIGHT BANNER */}
-            <section className="relative w-full rounded-[16px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500">
-              <div className="absolute inset-0 z-0">
+            {/* OPTION 3 BOOK SHOWCASE BANNER STAGE */}
+            <section className="relative w-full rounded-[20px] overflow-hidden border border-[#1C1C1C] bg-gradient-to-b from-[#0D0D0D] via-[#080808] to-[#040404] shadow-2xl transition-all duration-500 p-4 sm:p-6 lg:p-8">
+              {/* Atmospheric Background glow & blurred backdrop */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <img
                   key={currentHero.id}
                   src={currentHero.backdrop || currentHero.cover || currentHero.poster}
-                  alt={currentHero.title}
+                  alt=""
+                  aria-hidden="true"
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-top opacity-30 scale-105 blur-sm sm:blur-none transition-opacity duration-700"
+                  className="w-full h-full object-cover opacity-15 blur-2xl scale-110 transition-opacity duration-700"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#070707] via-[#070707]/90 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#070707] via-transparent to-transparent" />
-                <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[300px] bg-[#61F1AC] opacity-[0.04] blur-[120px] pointer-events-none rounded-full" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#040404] via-[#080808]/85 to-[#0D0D0D]/90" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#61F1AC]/[0.05] blur-[140px] rounded-full pointer-events-none" />
               </div>
 
-              <div className="relative z-10 p-6 sm:p-10 lg:p-12 pb-14 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-                <div className="max-w-2xl flex flex-col">
-                  <div className="mb-3">
-                    <span className="text-[11px] font-semibold text-[#7A7A7A] uppercase tracking-[0.2em]">
-                      {currentHero.type}
-                    </span>
-                  </div>
-
-                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-[#F5F5F5] mb-3">
-                    {currentHero.title}
-                  </h2>
-
-                  <div className="flex items-center gap-3 text-xs text-[#7A7A7A] mb-4">
-                    <div className="flex items-center gap-1 font-semibold text-[#61F1AC]">
-                      <Star size={13} className="fill-[#61F1AC]" />
-                      <span>{currentHero.score || currentHero.rating || "9.0"} Rating</span>
+              {/* 3-Part Showcase Stage (Flanking Books + Center Spotlight) */}
+              <div className="relative z-10 flex items-center justify-center gap-6 lg:gap-8 max-w-7xl mx-auto py-2 sm:py-4">
+                {/* Previous Book Preview Card (Flanking Left, xl+ screens) */}
+                {spotlightPool.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
+                    aria-label={`Previous: ${prevHero.title}`}
+                    className="hidden xl:flex flex-col items-center w-[160px] shrink-0 opacity-40 hover:opacity-85 hover:scale-[1.02] transition-all duration-300 cursor-pointer text-left group"
+                  >
+                    <div className="relative w-full aspect-[2/3] rounded-[14px] overflow-hidden border border-[#222222] bg-[#0F0F0F] shadow-lg group-hover:border-[#61F1AC]/40 transition-colors">
+                      <img
+                        src={prevHero.cover || prevHero.poster}
+                        alt={prevHero.title}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/75 backdrop-blur-md text-[#61F1AC] border border-[#61F1AC]/30 flex items-center gap-1 shadow-sm">
+                        <Star size={10} className="fill-[#61F1AC]" />
+                        <span>{prevHero.score || prevHero.rating || "9.0"}</span>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                     </div>
-                    <span>·</span>
-                    <span>{currentHero.chapters || currentHero.author || "Serialized"}</span>
-                    <span>·</span>
-                    <span className="text-[#B5B5B5]">Editor's Recommendation</span>
+                    <span className="mt-2 text-xs text-[#8A8A8A] group-hover:text-[#F5F5F5] font-medium line-clamp-1 transition-colors text-center w-full">
+                      {prevHero.title}
+                    </span>
+                    <span className="text-[10px] text-[#555555] uppercase tracking-wider">
+                      {prevHero.type || "Book"}
+                    </span>
+                  </button>
+                )}
+
+                {/* Center Featured Spotlight Book Card */}
+                <div className="relative flex-1 max-w-3xl rounded-[16px] bg-[#0B0B0B]/90 border border-[#242424] p-6 sm:p-8 lg:p-10 shadow-2xl backdrop-blur-md flex flex-col md:flex-row items-center gap-6 sm:gap-8">
+                  <div className="flex-1 flex flex-col min-w-0">
+                    {/* Header Tags & Score */}
+                    <div className="flex flex-wrap items-center gap-2.5 mb-3.5">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.15em] bg-[#0E1E14] text-[#61F1AC] border border-[#61F1AC]/35 shadow-[0_0_12px_rgba(97,241,172,0.15)]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] animate-pulse" />
+                        Featured Spotlight
+                      </span>
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#141414] text-[#61F1AC] border border-[#1C1C1C]">
+                        <Star size={11} className="fill-[#61F1AC]" />
+                        <span>{currentHero.score || currentHero.rating || "9.0"}</span>
+                      </div>
+                      <span className="text-xs text-[#666666] font-light hidden sm:inline">·</span>
+                      <span className="text-xs text-[#8A8A8A] font-light hidden sm:inline">
+                        {currentHero.type || "Literature"}
+                      </span>
+                    </div>
+
+                    {/* Book Title */}
+                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-medium tracking-tight text-[#F5F5F5] mb-2.5 line-clamp-2">
+                      {currentHero.title}
+                    </h2>
+
+                    {/* Author & Chapters Metadata */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#888888] mb-3 font-light">
+                      <span>Author: <strong className="text-[#D4D4D4] font-medium">{currentHero.author || "Editorial Pick"}</strong></span>
+                      {currentHero.chapters && (
+                        <>
+                          <span>·</span>
+                          <span className="text-[#61F1AC] font-medium">{currentHero.chapters}</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Book Synopsis */}
+                    <p className="text-xs sm:text-sm text-[#A3A3A3] leading-relaxed line-clamp-3 mb-6 font-light">
+                      <span className="text-[#E5E5E5] font-normal">Synopsis: </span>
+                      {currentHero.synopsis || currentHero.overview || "Dokja was an average office worker whose sole interest was reading his favorite web novel. But when the novel suddenly becomes reality..."}
+                    </p>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap items-center gap-3 mt-auto">
+                      <Link
+                        to={currentHero.route}
+                        className="px-5 py-2.5 rounded-full text-xs font-semibold inline-flex items-center gap-2 bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_16px_rgba(97,241,172,0.25)] transition-all cursor-pointer group"
+                      >
+                        <BookOpen size={14} className="group-hover:scale-110 transition-transform" />
+                        <span>Start Reading</span>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleReadingList(currentHero.id)}
+                        className={`px-4 py-2.5 rounded-full text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all ${
+                          inListMap[currentHero.id]
+                            ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/60"
+                            : "bg-[#141414] hover:bg-[#1A1A1A] text-[#E5E5E5] border border-[#242424] hover:border-[#61F1AC]/40"
+                        }`}
+                      >
+                        {inListMap[currentHero.id] ? <Check size={13} /> : <Plus size={13} />}
+                        <span>{inListMap[currentHero.id] ? "In Reading List" : "Add to List"}</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <p className="text-sm text-[#B5B5B5] leading-relaxed line-clamp-3 mb-6 font-light max-w-xl">
-                    {currentHero.overview || currentHero.synopsis || "Explore one of the highest-rated titles across the community reading list."}
-                  </p>
-
-                  <div className="flex items-center gap-3.5">
-                    <button
-                      type="button"
-                      onClick={() => toggleReadingList(currentHero.id)}
-                      className={`px-5 py-2.5 rounded-[10px] text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition-all ${
-                        inListMap[currentHero.id]
-                          ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/60"
-                          : "bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_16px_rgba(97,241,172,0.25)]"
-                      }`}
-                    >
-                      {inListMap[currentHero.id] ? <Check size={14} /> : <Plus size={14} />}
-                      <span>{inListMap[currentHero.id] ? "In Reading List" : "Add to List"}</span>
-                    </button>
-
-                    <Link
-                      to={currentHero.route}
-                      className="px-5 py-2.5 rounded-[10px] text-xs font-medium text-[#F5F5F5] bg-[#141414] border border-[#1C1C1C] hover:border-[#61F1AC]/50 hover:text-white transition-colors"
-                    >
-                      Read Details →
-                    </Link>
-                  </div>
+                  {/* Book 3D-Style Portrait Cover */}
+                  <Link
+                    to={currentHero.route}
+                    className="shrink-0 w-[150px] sm:w-[180px] lg:w-[200px] aspect-[2/3] rounded-[14px] overflow-hidden border border-[#2A2A2A] hover:border-[#61F1AC]/70 shadow-[0_12px_32px_rgba(0,0,0,0.8)] transition-all group bg-[#0A0A0A] relative"
+                  >
+                    <img
+                      src={currentHero.cover || currentHero.poster}
+                      alt={currentHero.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
                 </div>
 
-                <Link
-                  to={currentHero.route}
-                  className="hidden md:block shrink-0 w-[190px] aspect-[2/3] rounded-[12px] overflow-hidden border border-[#1C1C1C] hover:border-[#61F1AC]/60 shadow-2xl transition-all group bg-[#0B0B0B]"
-                >
-                  <img
-                    src={currentHero.cover || currentHero.poster}
-                    alt={currentHero.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                </Link>
+                {/* Next Book Preview Card (Flanking Right, xl+ screens) */}
+                {spotlightPool.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
+                    aria-label={`Next: ${nextHero.title}`}
+                    className="hidden xl:flex flex-col items-center w-[160px] shrink-0 opacity-40 hover:opacity-85 hover:scale-[1.02] transition-all duration-300 cursor-pointer text-left group"
+                  >
+                    <div className="relative w-full aspect-[2/3] rounded-[14px] overflow-hidden border border-[#222222] bg-[#0F0F0F] shadow-lg group-hover:border-[#61F1AC]/40 transition-colors">
+                      <img
+                        src={nextHero.cover || nextHero.poster}
+                        alt={nextHero.title}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/75 backdrop-blur-md text-[#61F1AC] border border-[#61F1AC]/30 flex items-center gap-1 shadow-sm">
+                        <Star size={10} className="fill-[#61F1AC]" />
+                        <span>{nextHero.score || nextHero.rating || "9.0"}</span>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    </div>
+                    <span className="mt-2 text-xs text-[#8A8A8A] group-hover:text-[#F5F5F5] font-medium line-clamp-1 transition-colors text-center w-full">
+                      {nextHero.title}
+                    </span>
+                    <span className="text-[10px] text-[#555555] uppercase tracking-wider">
+                      {nextHero.type || "Book"}
+                    </span>
+                  </button>
+                )}
               </div>
 
+              {/* Slider Controls / Pagination Dots */}
               {spotlightPool.length > 1 && (
-                <div className="absolute bottom-4 left-6 sm:left-10 lg:left-12 z-20 flex items-center gap-2.5">
+                <div className="relative z-20 flex items-center justify-center gap-3 pt-3">
                   <button
                     type="button"
                     aria-label="Previous recommendation"
                     onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
-                    className="w-7 h-7 rounded-full border border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                    className="w-7 h-7 rounded-full border border-[#222222] bg-black/70 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
                   >
                     <ChevronLeft size={13} />
                   </button>
@@ -536,7 +621,7 @@ export function BooksDashboard() {
                         onClick={() => setHeroIndex(dotIdx)}
                         className={`h-1.5 rounded-full transition-all cursor-pointer ${
                           dotIdx === heroIndex % spotlightPool.length
-                            ? "w-5 bg-[#61F1AC]"
+                            ? "w-6 bg-[#61F1AC]"
                             : "w-1.5 bg-white/20 hover:bg-white/40"
                         }`}
                       />
@@ -547,7 +632,7 @@ export function BooksDashboard() {
                     type="button"
                     aria-label="Next recommendation"
                     onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
-                    className="w-7 h-7 rounded-full border border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                    className="w-7 h-7 rounded-full border border-[#222222] bg-black/70 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
                   >
                     <ChevronRight size={13} />
                   </button>
@@ -660,25 +745,6 @@ export function BooksDashboard() {
 
             {/* DASHBOARD SHELVES (CAROUSEL OR GRID VIEW) */}
             <div className="space-y-8 pb-12">
-              {/* Category Filter Banner (When viewing a single filtered category) */}
-              {activeTab !== "all" && (
-                <div className="flex items-center justify-between px-4 py-2.5 rounded-[10px] bg-[#0E0E0E] border border-[#1C1C1C]">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#61F1AC] animate-pulse" />
-                    <span className="text-xs text-[#B5B5B5]">
-                      Filtering by <strong className="text-[#F5F5F5] font-semibold">{CATEGORY_TABS.find((t) => t.key === activeTab)?.label}</strong>
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("all")}
-                    className="text-xs text-[#61F1AC] hover:underline cursor-pointer font-medium"
-                  >
-                    Reset to All Literature
-                  </button>
-                </div>
-              )}
-
               {/* 1. MANHWA SHELF */}
               {(activeTab === "all" || activeTab === "manhwa") && (
                 viewMode === "carousel" ? (
