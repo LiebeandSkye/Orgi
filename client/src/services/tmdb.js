@@ -438,19 +438,27 @@ export async function getSeriesDetails(seriesId) {
  * Get Episodes for a Specific Season of a Series
  */
 export async function getSeasonEpisodes(seriesId, seasonNumber = 1) {
-  if (!seriesId) return [];
-  const resolvedId = seriesId;
+  if (!seriesId) {
+    throw new Error("Series ID is missing.");
+  }
+
   const data = await fetchFromApi(
-    `/tv/${resolvedId}/season/${seasonNumber}`,
-    `/tv/${resolvedId}/season/${seasonNumber}`
+    `/tv/${seriesId}/season/${seasonNumber}`,
+    `/tv/${seriesId}/season/${seasonNumber}`,
+    { language: "en-US" }
   );
 
   return (data.episodes || []).map((ep, idx) => ({
+    id: ep.id,
     number: String(ep.episode_number).padStart(2, "0"),
+    episodeNumber: ep.episode_number,
     title: ep.name || `Episode ${ep.episode_number}`,
-    description: ep.overview || "No overview provided for this episode.",
-    runtime: ep.runtime ? `${ep.runtime}m` : "48m",
-    score: ep.vote_average ? ep.vote_average.toFixed(1) : "—",
+    description:
+      ep.overview || "No overview provided for this episode.",
+    runtime: ep.runtime ? `${ep.runtime}m` : "Runtime unavailable",
+    score: ep.vote_average
+      ? ep.vote_average.toFixed(1)
+      : "—",
     thumbnail: getTmdbImageUrl(ep.still_path, "w342"),
     isHovered: idx === 0
   }));
