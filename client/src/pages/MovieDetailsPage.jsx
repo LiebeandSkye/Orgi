@@ -619,7 +619,7 @@ export function MovieDetailsPage({
         <div
           className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-10 pb-8 flex items-start gap-12 transition-transform duration-500 ${
             cropHero
-              ? "-translate-y-48 opacity-40 pointer-events-none"
+              ? "-translate-y-48 opacity-100 pointer-events-none"
               : "translate-y-0 opacity-100"
           }`}
         >
