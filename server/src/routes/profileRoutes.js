@@ -23,15 +23,16 @@ router.get("/:id", async(req, res, next) => {
 router.put("/", requireAuth, async (req, res, next) => { 
     try { 
         const userId = req.user.id; 
-        const { user_name, profile_url, banner_url, current_status } = req.body; 
+        const { user_name, profile_url, banner_url, current_status, bio } = req.body; 
         const { data: existingUser } = await supabase 
             .from("users") 
-            .select("id") 
+            .select("id, setting_preference") 
             .eq("id", userId) 
             .maybeSingle(); 
 
         let query; 
         if (!existingUser) { 
+            const initialPrefs = bio !== undefined ? { bio } : {};
             query = supabase 
                 .from("users") 
                 .insert({ 
@@ -42,10 +43,15 @@ router.put("/", requireAuth, async (req, res, next) => {
                     profile_url, 
                     banner_url, 
                     current_status: current_status || 'Online', 
+                    setting_preference: initialPrefs,
                 }) 
                 .select() 
                 .single(); 
         } else { 
+            const updatedPrefs = {
+                ...(existingUser.setting_preference || {}),
+                ...(bio !== undefined ? { bio } : {}),
+            };
             query = supabase 
                 .from("users") 
                 .update({ 
@@ -53,6 +59,7 @@ router.put("/", requireAuth, async (req, res, next) => {
                     profile_url, 
                     banner_url, 
                     current_status, 
+                    setting_preference: updatedPrefs,
                 }) 
                 .eq("id", userId) 
                 .select() 

@@ -5,6 +5,7 @@ export function EditProfileModal({ profile, onClose, onSave }) {
     const [profileUrl, setProfileUrl] = useState(profile?.profile_url || ""); 
     const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || ""); 
     const [status, setStatus] = useState(profile?.current_status || "Online"); 
+    const [bio, setBio] = useState(profile?.setting_preference?.bio || profile?.bio || ""); 
 
     const handleSubmit = (e) => { 
         e.preventDefault(); 
@@ -13,6 +14,7 @@ export function EditProfileModal({ profile, onClose, onSave }) {
             profile_url: profileUrl, 
             banner_url: bannerUrl, 
             current_status: status, 
+            bio: bio,
         }); 
     }; 
 
@@ -55,6 +57,16 @@ export function EditProfileModal({ profile, onClose, onSave }) {
                             value={status} 
                             onChange={(e) => setStatus(e.target.value)} 
                             className="w-full mt-1 px-3 py-2 text-sm bg-[#141414] border border-[#1C1C1C] rounded text-[#F5F5F5] outline-none" 
+                        /> 
+                    </label> 
+                    <label className="text-xs text-[#B5B5B5]"> 
+                        Bio / Tagline 
+                        <input 
+                            type="text" 
+                            value={bio} 
+                            placeholder="Collecting stories, one frame at a time." 
+                            onChange={(e) => setBio(e.target.value)} 
+                            className="w-full mt-1 px-3 py-2 text-sm bg-[#141414] border border-[#1C1C1C] rounded text-[#F5F5F5] outline-none placeholder:text-[#555555]" 
                         /> 
                     </label> 
                     <div className="flex justify-end gap-2 mt-4"> 
