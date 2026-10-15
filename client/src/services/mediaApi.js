@@ -1,11 +1,12 @@
 import authorMale from "../assets/author-male.png";
 import authorFemale from "../assets/author-female.png";
+import { API_BASE_URL as ROOT_API_BASE_URL } from "./api";
 
 const MANGADEX_BASE = "https://api.mangadex.org";
 const MANGADEX_COVERS = "https://uploads.mangadex.org/covers";
 const OPEN_LIBRARY_BASE = "https://openlibrary.org";
 const OPEN_LIBRARY_COVERS = "https://covers.openlibrary.org/b/id";
-const API_BASE_URL = "/api/media";
+const API_BASE_URL = `${ROOT_API_BASE_URL}/media`;
 
 const ITEMS_PER_PAGE = 18;
 

@@ -55,6 +55,7 @@ router.get("/user/my", requireAuth, reviewController.getMyReviews);
 router.get("/user/likes", requireAuth, reviewController.getMyLikes); 
 
 router.post("/", requireAuth, reviewController.createReview); 
+router.post("/provider/like", requireAuth, reviewController.toggleProviderLike); 
 router.post("/:id/like", requireAuth, reviewController.toggleLike); 
 router.delete("/:id", requireAuth, reviewController.deleteReview); 
 

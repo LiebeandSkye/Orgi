@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { X, Star, ExternalLink, Calendar, Film } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Avatar } from "./Avatar";
+import { API_BASE_URL, safeFetchJson } from "../../services/api";
 
 export function ReviewDetailModal({ item, isOpen, onClose }) {
   const [detailData, setDetailData] = useState(null);
@@ -20,9 +21,8 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
     const titleId = item.titleId;
     const reviewId = item.id?.split(":")?.[2];
 
-    const url = `/api/reviews/${source}/${titleId}${reviewId ? `/${reviewId}` : ""}`;
-    fetch(url)
-      .then((res) => (res.ok ? res.json() : null))
+    const url = `${API_BASE_URL}/reviews/${source}/${titleId}${reviewId ? `/${reviewId}` : ""}`;
+    safeFetchJson(url)
       .then((json) => {
         if (mounted && json?.success && json?.data) {
           setDetailData(json.data);
@@ -76,9 +76,10 @@ export function ReviewDetailModal({ item, isOpen, onClose }) {
   // Determine media link
   let mediaRoute = data.mediaRoute;
   if (!mediaRoute) {
-    if (data.source === "tmdb") {
-      mediaRoute = data.category === "series" ? `/series/${data.titleId}` : `/movie/${data.titleId}`;
-    } else if (data.source === "mangadex") {
+    if (data.source === "tmdb" || data.source === "orgi") { 
+      mediaRoute = data.category === "series" ? `/series/${data.titleId}` : `/movie/${data.titleId}`; 
+    } else if (data.source === "mangadex") { 
+
       mediaRoute = `/books/${data.category || "manga"}/${data.titleId}`;
     } else {
       mediaRoute = `/books/novels/${data.titleId}`;

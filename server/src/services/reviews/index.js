@@ -1,91 +1,94 @@
-import {
-  getTmdbReviewCards,
-  searchTmdbReviews,
-  getTmdbFeaturedReview,
-  getTmdbReviewDetail,
-} from "./tmdbReviewService.js";
-import { getMangaDexCards, getMangaDexDetail } from "./mangadexReviewService.js";
-import { getOpenLibraryCards, getOpenLibraryDetail } from "./openLibraryReviewService.js";
+import { 
+  getTmdbReviewCards, 
+  searchTmdbReviews, 
+  getTmdbFeaturedReview, 
+  getTmdbReviewDetail, 
+} from "./tmdbReviewService.js"; 
+import { getMangaDexCards, getMangaDexDetail } from "./mangadexReviewService.js"; 
+import { getOpenLibraryCards, getOpenLibraryDetail } from "./openLibraryReviewService.js"; 
+import { getOrgiReviewCards, getOrgiReviewDetail } from "./orgiReviewService.js"; 
 
-/**
- * Returns capabilities object for a given category and item pool
- */
-export function getCapabilitiesForCategory(category, items = []) {
-  const hasRatingData = items.some((it) => it.rating !== undefined && it.rating !== null);
+export function getCapabilitiesForCategory(category, items = []) { 
+  const hasRatingData = items.some((it) => it.rating !== undefined && it.rating !== null); 
 
-  switch (category) {
-    case "all":
-    case "movie":
-    case "series":
-    case "anime":
-      return {
-        hasRating: true,
-        hasReviewText: true,
-        hasLikes: true,
-        hasSocial: false,
-      };
-    case "manga":
-    case "manhwa":
-      return {
-        hasRating: hasRatingData,
-        hasReviewText: false,
-        hasLikes: false,
-        hasSocial: false,
-      };
-    case "book":
-    case "novel":
-    case "light-novel":
-      return {
-        hasRating: hasRatingData,
-        hasReviewText: false,
-        hasLikes: false,
-        hasSocial: false,
-      };
-    default:
-      return {
-        hasRating: true,
-        hasReviewText: true,
-        hasLikes: false,
-        hasSocial: false,
-      };
-  }
-}
+  switch (category) { 
+    case "all": 
+    case "movie": 
+    case "series": 
+    case "anime": 
+      return { 
+        hasRating: true, 
+        hasReviewText: true, 
+        hasLikes: true, 
+        hasSocial: false, 
+      }; 
+    case "manga": 
+    case "manhwa": 
+      return { 
+        hasRating: hasRatingData, 
+        hasReviewText: false, 
+        hasLikes: false, 
+        hasSocial: false, 
+      }; 
+    case "book": 
+    case "novel": 
+    case "light-novel": 
+      return { 
+        hasRating: hasRatingData, 
+        hasReviewText: false, 
+        hasLikes: false, 
+        hasSocial: false, 
+      }; 
+    default: 
+      return { 
+        hasRating: true, 
+        hasReviewText: true, 
+        hasLikes: false, 
+        hasSocial: false, 
+      }; 
+  } 
+} 
 
-/**
- * Get all candidate items for a category
- */
-async function getItemsForCategory(category) {
-  switch (category) {
-    case "all": {
-      const tmdbCards = await getTmdbReviewCards();
-      return tmdbCards; // Only items with real review text (movies, series, anime)
-    }
-    case "movie": {
-      const tmdbCards = await getTmdbReviewCards();
-      return tmdbCards.filter((c) => c.category === "movie");
-    }
-    case "series": {
-      const tmdbCards = await getTmdbReviewCards();
-      return tmdbCards.filter((c) => c.category === "series");
-    }
-    case "anime": {
-      const tmdbCards = await getTmdbReviewCards();
-      return tmdbCards.filter((c) => c.category === "anime");
-    }
-    case "manga":
-      return await getMangaDexCards("manga", 100);
-    case "manhwa":
-      return await getMangaDexCards("manhwa", 100);
-    case "book":
-      return await getOpenLibraryCards("book", 100);
-    case "novel":
-      return await getOpenLibraryCards("novel", 100);
-    case "light-novel":
-      return await getOpenLibraryCards("light-novel", 100);
-    default:
-      return await getTmdbReviewCards();
-  }
-}
+async function getItemsForCategory(category) { 
+  const [orgiCards, providerCards] = await Promise.all([ 
+    getOrgiReviewCards({ category }), 
+    (async () => { 
+      switch (category) { 
+        case "all": { 
+          const tmdbCards = await getTmdbReviewCards(); 
+          return tmdbCards; 
+        } 
+        case "movie": { 
+          const tmdbCards = await getTmdbReviewCards(); 
+          return tmdbCards.filter((c) => c.category === "movie"); 
+        } 
+        case "series": { 
+          const tmdbCards = await getTmdbReviewCards(); 
+          return tmdbCards.filter((c) => c.category === "series"); 
+        } 
+        case "anime": { 
+          const tmdbCards = await getTmdbReviewCards(); 
+          return tmdbCards.filter((c) => c.category === "anime"); 
+        } 
+        case "manga": 
+          return await getMangaDexCards("manga", 100); 
+        case "manhwa": 
+          return await getMangaDexCards("manhwa", 100); 
+        case "book": 
+          return await getOpenLibraryCards("book", 100); 
+        case "novel": 
+          return await getOpenLibraryCards("novel", 100); 
+        case "light-novel": 
+          return await getOpenLibraryCards("light-novel", 100); 
+        default: 
+          return await getTmdbReviewCards(); 
+      } 
+    })(), 
+  ]); 
+
+  return [...orgiCards, ...(providerCards || [])]; 
+} 
+
 
 /**
  * Core aggregator function for feed
@@ -243,12 +246,16 @@ export async function getFeaturedReview() {
 /**
  * Detailed review for modal / full review page
  */
-export async function getReviewDetail(source, titleId, reviewId) {
-  if (source === "mangadex") {
-    return await getMangaDexDetail(titleId);
-  }
-  if (source === "openlibrary") {
-    return await getOpenLibraryDetail(titleId);
-  }
-  return await getTmdbReviewDetail(titleId, reviewId);
-}
+export async function getReviewDetail(source, titleId, reviewId) { 
+  if (source === "orgi") { 
+    return await getOrgiReviewDetail(titleId, reviewId); 
+  } 
+  if (source === "mangadex") { 
+    return await getMangaDexDetail(titleId); 
+  } 
+  if (source === "openlibrary") { 
+    return await getOpenLibraryDetail(titleId); 
+  } 
+  return await getTmdbReviewDetail(titleId, reviewId); 
+} 
+

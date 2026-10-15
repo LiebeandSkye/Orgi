@@ -1,7 +1,9 @@
 // tmdb.js — Real TMDB API Service
 // Connects to the Express backend proxy (/api/tmdb) with fallback to direct TMDB API
 
-const API_BASE_URL = "/api/tmdb";
+import { API_BASE_URL as ROOT_API_BASE_URL } from "./api";
+
+const API_BASE_URL = `${ROOT_API_BASE_URL}/tmdb`;
 const TMDB_DIRECT_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY  ; 
@@ -35,7 +37,8 @@ async function fetchFromApi(endpoint, directFallbackEndpoint, params = {}) {
     const query = new URLSearchParams(params).toString();
     const url = `${API_BASE_URL}${endpoint}${query ? `?${query}` : ""}`;
     const res = await fetch(url);
-    if (res.ok) {
+    const contentType = res.headers.get("content-type") || "";
+    if (res.ok && contentType.includes("application/json")) {
       const json = await res.json();
       if (json.success && json.data) {
         return json.data;
@@ -292,18 +295,22 @@ export async function getMovieDetails(movieId = 157336) {
       character: c.character || "Actor",
       avatar: getTmdbImageUrl(c.profile_path, "w185")
     })),
-    reviews: (data.reviews?.results || []).slice(0, 6).map((r, i) => ({
-      id: `rev-${r.id}`,
-      author: r.author || `reviewer_${i + 1}`,
-      avatar: r.author_details?.avatar_path
-        ? getTmdbImageUrl(r.author_details.avatar_path, "w185")
-        : "",
-      time: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recent",
-      score: r.author_details?.rating || 8,
-      content: r.content || "",
-      likes: 12 + i * 9,
-      repliesCount: 0
-    })),
+    reviews: (data.reviews?.results || []).map((r, i) => ({ 
+      id: `rev-${r.id}`, 
+      author: r.author || r.author_details?.username || `reviewer_${i + 1}`, 
+      avatar: r.author_details?.avatar_path 
+        ? getTmdbImageUrl(r.author_details.avatar_path, "w185") 
+        : "", 
+      time: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recent", 
+      score: r.author_details?.rating || 8, 
+      content: r.content || "", 
+      likes: 12 + i * 9, 
+      repliesCount: 0, 
+      source: "provider", 
+    })), 
+    reviewsPage: data.reviews?.page || 1, 
+    reviewsTotalPages: data.reviews?.total_pages || 1, 
+    reviewsTotalResults: data.reviews?.total_results || 0, 
     images: {
       backdrops: (data.images?.backdrops || []).map((img) => ({
         file_path: img.file_path,
@@ -395,21 +402,25 @@ export async function getSeriesDetails(seriesId) {
       network: data.networks?.map((n) => n.name).join(" · ") || "—",
       originalAirDates: `${data.first_air_date || ""} – ${data.last_air_date || ""}`,
       studio: data.production_companies?.map((p) => p.name).slice(0, 3).join(" · ") || "—",
-      awards: "High-acclaim global television series",
-      cinematography: "—"
-    },
-    reviews: (data.reviews?.results || []).slice(0, 6).map((r, i) => ({
-      id: `rev-${r.id}`,
-      author: r.author || `user_${i + 1}`,
-      avatar: r.author_details?.avatar_path
-        ? getTmdbImageUrl(r.author_details.avatar_path, "w185")
-        : "",
-      time: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recent",
-      score: r.author_details?.rating || 9,
-      content: r.content || "",
-      likes: 20 + i * 8,
-      repliesCount: 0
-    })),
+      awards: "High-acclaim global television series", 
+      cinematography: "—", 
+    }, 
+    reviews: (data.reviews?.results || []).map((r, i) => ({ 
+      id: `rev-${r.id}`, 
+      author: r.author || r.author_details?.username || `user_${i + 1}`, 
+      avatar: r.author_details?.avatar_path 
+        ? getTmdbImageUrl(r.author_details.avatar_path, "w185") 
+        : "", 
+      time: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recent", 
+      score: r.author_details?.rating || 9, 
+      content: r.content || "", 
+      likes: 20 + i * 8, 
+      repliesCount: 0, 
+      source: "provider", 
+    })), 
+    reviewsPage: data.reviews?.page || 1, 
+    reviewsTotalPages: data.reviews?.total_pages || 1, 
+    reviewsTotalResults: data.reviews?.total_results || 0, 
     images: {
       backdrops: (data.images?.backdrops || []).map((img) => ({
         file_path: img.file_path,
@@ -434,29 +445,92 @@ export async function getSeriesDetails(seriesId) {
   };
 }
 
-/**
- * Get Episodes for a Specific Season of a Series
- */
-export async function getSeasonEpisodes(seriesId, seasonNumber = 1) {
-  if (!seriesId) return [];
-  const resolvedId = seriesId;
-  const data = await fetchFromApi(
-    `/tv/${resolvedId}/season/${seasonNumber}`,
-    `/tv/${resolvedId}/season/${seasonNumber}`
-  );
+export async function getSeasonEpisodes(seriesId, seasonNumber = 1) { 
+  if (!seriesId) { 
+    throw new Error("Series ID is missing."); 
+  } 
 
-  return (data.episodes || []).map((ep, idx) => ({
-    number: String(ep.episode_number).padStart(2, "0"),
-    title: ep.name || `Episode ${ep.episode_number}`,
-    description: ep.overview || "No overview provided for this episode.",
-    runtime: ep.runtime ? `${ep.runtime}m` : "48m",
-    score: ep.vote_average ? ep.vote_average.toFixed(1) : "—",
-    thumbnail: getTmdbImageUrl(ep.still_path, "w342"),
-    isHovered: idx === 0
-  }));
-}
+  const data = await fetchFromApi( 
+    `/tv/${seriesId}/season/${seasonNumber}`, 
+    `/tv/${seriesId}/season/${seasonNumber}`, 
+    { language: "en-US" } 
+  ); 
 
-// get Media detials for every MovieDetailsPage, Manga and etc
+  return (data.episodes || []).map((ep, idx) => ({ 
+    id: ep.id, 
+    number: String(ep.episode_number).padStart(2, "0"), 
+    episodeNumber: ep.episode_number, 
+    episode_number: ep.episode_number, 
+    title: ep.name || `Episode ${ep.episode_number}`, 
+    name: ep.name || `Episode ${ep.episode_number}`, 
+    description: 
+      ep.overview || "No overview provided for this episode.", 
+    overview: ep.overview || "No overview provided for this episode.", 
+    runtime: ep.runtime ?? null, 
+    score: ep.vote_average 
+      ? ep.vote_average.toFixed(1) 
+      : "—", 
+    vote_average: ep.vote_average ?? 0, 
+    vote_count: ep.vote_count ?? 0, 
+    air_date: ep.air_date ?? "", 
+    still_path: ep.still_path ?? null, 
+    thumbnail: getTmdbImageUrl(ep.still_path, "w342"), 
+    isHovered: idx === 0, 
+  })); 
+} 
+
+export async function getMovieReviews(movieId, page = 1) { 
+  const resolvedId = movieId === "interstellar" ? 157336 : (movieId || 157336); 
+  const data = await fetchFromApi( 
+    `/movie/${resolvedId}/reviews`, 
+    `/movie/${resolvedId}/reviews`, 
+    { page } 
+  ); 
+  return { 
+    page: data?.page || page, 
+    totalPages: data?.total_pages || 1, 
+    totalResults: data?.total_results || 0, 
+    results: (data?.results || []).map((r, i) => ({ 
+      id: `rev-${r.id}`, 
+      author: r.author || r.author_details?.username || `reviewer_${i + 1}`, 
+      avatar: r.author_details?.avatar_path 
+        ? getTmdbImageUrl(r.author_details.avatar_path, "w185") 
+        : "", 
+      time: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recent", 
+      score: r.author_details?.rating || 8, 
+      content: r.content || "", 
+      likes: 12 + i * 5, 
+      repliesCount: 0, 
+      source: "provider", 
+    })), 
+  }; 
+} 
+
+export async function getSeriesReviews(seriesId, page = 1) { 
+  const data = await fetchFromApi( 
+    `/tv/${seriesId}/reviews`, 
+    `/tv/${seriesId}/reviews`, 
+    { page } 
+  ); 
+  return { 
+    page: data?.page || page, 
+    totalPages: data?.total_pages || 1, 
+    totalResults: data?.total_results || 0, 
+    results: (data?.results || []).map((r, i) => ({ 
+      id: `rev-${r.id}`, 
+      author: r.author || r.author_details?.username || `user_${i + 1}`, 
+      avatar: r.author_details?.avatar_path 
+        ? getTmdbImageUrl(r.author_details.avatar_path, "w185") 
+        : "", 
+      time: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recent", 
+      score: r.author_details?.rating || 9, 
+      content: r.content || "", 
+      likes: 20 + i * 8, 
+      repliesCount: 0, 
+      source: "provider", 
+    })), 
+  }; 
+} 
 
 export async function getMovieMedia(movieId) { 
   const resolvedId = movieId === "interstellar" ? 157336 : (movieId || 157336); 
@@ -486,4 +560,5 @@ export async function getMovieMedia(movieId) {
       }, 
     }; 
   } 
-}
+} 
+

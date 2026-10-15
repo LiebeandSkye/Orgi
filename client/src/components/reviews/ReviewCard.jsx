@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Star, Bookmark, MoreHorizontal, Heart, MessageSquare, Copy, AlertCircle, Check } from "lucide-react";
-import { Avatar } from "./Avatar";
+import React, { useState, useRef, useEffect } from "react"; 
+import { Star, MoreHorizontal, Heart, MessageSquare, Copy, AlertCircle, Check } from "lucide-react"; 
+import { Avatar } from "./Avatar"; 
 
 function formatRelativeTime(dateString) {
   if (!dateString) return "";
@@ -111,18 +111,24 @@ export function ReviewCard({
               </span>
             ) : (
               <>
-                <Avatar src={item.author?.avatarUrl} name={item.author?.name} size="w-6 h-6" />
-                <span className="text-[13px] sm:text-[14px] font-medium text-[#F5F5F5] truncate max-w-[140px] sm:max-w-[200px]">
-                  {item.author?.name || "Anonymous"}
-                </span>
-                {relativeTime && (
-                  <span
-                    className="text-[12px] text-[#7A7A7A] shrink-0"
-                    title={new Date(item.createdAt).toLocaleString()}
-                  >
-                    · {relativeTime}
-                  </span>
-                )}
+                <Avatar src={item.author?.avatarUrl} name={item.author?.name} size="w-6 h-6" /> 
+                <span className="text-[13px] sm:text-[14px] font-medium text-[#F5F5F5] truncate max-w-[140px] sm:max-w-[200px]"> 
+                  {item.author?.name || "Anonymous"} 
+                </span> 
+                {item.source === "orgi" && ( 
+                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold text-[#61F1AC] bg-[#61F1AC]/10 border border-[#61F1AC]/20 shrink-0"> 
+                    Orgi 
+                  </span> 
+                )} 
+                {relativeTime && ( 
+                  <span 
+                    className="text-[12px] text-[#7A7A7A] shrink-0" 
+                    title={new Date(item.createdAt).toLocaleString()} 
+                  > 
+                    · {relativeTime} 
+                  </span> 
+                )} 
+
               </>
             )}
           </div>
@@ -292,29 +298,8 @@ export function ReviewCard({
               className="w-full h-full object-cover"
             />
           </div>
-        )}
-
-        {/* Bookmark Button (relative z-10, pinned to bottom-right) */}
-        <button
-          type="button"
-          aria-pressed={isBookmarked}
-          aria-label={isBookmarked ? "Remove bookmark" : "Bookmark review"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleBookmark(item);
-          }}
-          className={`relative z-10 mt-auto p-1.5 -mr-1 -mb-1 rounded-md cursor-pointer transition-colors ${
-            isBookmarked
-              ? "text-[#61F1AC] hover:text-[#61F1AC]/80"
-              : "text-[#7A7A7A] hover:text-[#F5F5F5]"
-          }`}
-        >
-          <Bookmark
-            size={17}
-            className={isBookmarked ? "fill-[#61F1AC]" : ""}
-          />
-        </button>
-      </div>
-    </article>
-  );
+        )} 
+      </div> 
+    </article> 
+  ); 
 }
