@@ -11,17 +11,17 @@ import {
   ChevronDown,
 } from "lucide-react";
 import api from "../services/api";
-import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb"; 
-import { DetailScoreRings } from "../components/ui/DetailScoreRings"; 
-import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab"; 
-import { Button } from "../components/ui/Button"; 
-import MediaItems from "../components/ui/MediaItems"; 
-import { CastCarousel } from "../components/ui/CastCarousel"; 
-import EpisodesSection from "../components/ui/EpisodeSSection"; 
-
+import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb";
+import { DetailScoreRings } from "../components/ui/DetailScoreRings";
+import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab";
+import { Button } from "../components/ui/Button";
+import MediaItems from "../components/ui/MediaItems";
+import { CastCarousel } from "../components/ui/CastCarousel";
+import EpisodesSection from "../components/ui/EpisodeSSection";
+import OverviewTab from "../components/ui/OverviewTab";
 
 export function SeriesDetailsPage({
-  initialTab = "Episodes",
+  initialTab = "Overview",
   initialCropHero = false,
 }) {
   const location = useLocation();
@@ -34,83 +34,87 @@ export function SeriesDetailsPage({
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
 
-
   // Synopsis expansion state
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
   const synopsisRef = useRef(null);
   const [contentHeight, setContentHeight] = useState(0);
   const [hasOverflow, setHasOverflow] = useState(false);
 
-  const [communityData, setCommunityData] = useState({ 
-    communityAverage: null, 
-    communityVotes: 0, 
-    reviews: [], 
-  }); 
-  const [inCollection, setInCollection] = useState(false); 
-  const [collectionLoading, setCollectionLoading] = useState(false); 
- 
-  useEffect(() => { 
-    if (!seriesData || !id) return; 
-    let mounted = true; 
-    async function loadCollectionAndReviews() { 
-      try { 
-        const [colRes, revRes] = await Promise.allSettled([ 
-          api.get(`/collections/check/tmdb/${id}`), 
-          api.get(`/reviews/tmdb/${id}`), 
-        ]); 
- 
-        if (mounted) { 
-          if (colRes.status === "fulfilled" && colRes.value?.success) { 
-            setInCollection(!!colRes.value.data?.inCollection); 
-          } 
-          if (revRes.status === "fulfilled" && revRes.value?.success) { 
-            const revData = revRes.value.data || {}; 
-            setCommunityData({ 
-              communityAverage: typeof revData.communityAverage === "number" ? revData.communityAverage : null, 
-              communityVotes: typeof revData.communityVotes === "number" ? revData.communityVotes : 0, 
-              reviews: Array.isArray(revData.reviews) ? revData.reviews : [], 
-            }); 
-          } 
-        } 
-      } catch (err) { 
-        console.error("Failed to load series collection or reviews:", err); 
-      } 
-    } 
-    loadCollectionAndReviews(); 
- 
-    return () => { 
-      mounted = false; 
-    }; 
-  }, [seriesData, id]); 
- 
+  const [communityData, setCommunityData] = useState({
+    communityAverage: null,
+    communityVotes: 0,
+    reviews: [],
+  });
+  const [inCollection, setInCollection] = useState(false);
+  const [collectionLoading, setCollectionLoading] = useState(false);
 
-  const handleToggleCollection = async () => { 
-    if (!seriesData) return; 
-    const token = localStorage.getItem("orgi_session"); 
-    if (!token) { 
-      alert("Please sign in to add items to your collection."); 
-      return; 
-    } 
+  useEffect(() => {
+    if (!seriesData || !id) return;
+    let mounted = true;
+    async function loadCollectionAndReviews() {
+      try {
+        const [colRes, revRes] = await Promise.allSettled([
+          api.get(`/collections/check/tmdb/${id}`),
+          api.get(`/reviews/tmdb/${id}`),
+        ]);
 
-    setCollectionLoading(true); 
-    try { 
-      const res = await api.post("/collections/toggle", { 
-        external_id: String(id), 
-        provider: "tmdb", 
-        type: "SERIES", 
-        title: seriesData.title, 
-        cover_url: seriesData.poster || seriesData.backdrop, 
-      }); 
+        if (mounted) {
+          if (colRes.status === "fulfilled" && colRes.value?.success) {
+            setInCollection(!!colRes.value.data?.inCollection);
+          }
+          if (revRes.status === "fulfilled" && revRes.value?.success) {
+            const revData = revRes.value.data || {};
+            setCommunityData({
+              communityAverage:
+                typeof revData.communityAverage === "number"
+                  ? revData.communityAverage
+                  : null,
+              communityVotes:
+                typeof revData.communityVotes === "number"
+                  ? revData.communityVotes
+                  : 0,
+              reviews: Array.isArray(revData.reviews) ? revData.reviews : [],
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load series collection or reviews:", err);
+      }
+    }
+    loadCollectionAndReviews();
 
-      if (res?.success) { 
-        setInCollection(!!res.data?.inCollection); 
-      } 
-    } catch (err) { 
-      console.error("Failed to toggle series collection:", err); 
-      alert(err.message || "Failed to update collection."); 
-    } finally { 
-      setCollectionLoading(false); 
-    } 
+    return () => {
+      mounted = false;
+    };
+  }, [seriesData, id]);
+
+  const handleToggleCollection = async () => {
+    if (!seriesData) return;
+    const token = localStorage.getItem("orgi_session");
+    if (!token) {
+      alert("Please sign in to add items to your collection.");
+      return;
+    }
+
+    setCollectionLoading(true);
+    try {
+      const res = await api.post("/collections/toggle", {
+        external_id: String(id),
+        provider: "tmdb",
+        type: "SERIES",
+        title: seriesData.title,
+        cover_url: seriesData.poster || seriesData.backdrop,
+      });
+
+      if (res?.success) {
+        setInCollection(!!res.data?.inCollection);
+      }
+    } catch (err) {
+      console.error("Failed to toggle series collection:", err);
+      alert(err.message || "Failed to update collection.");
+    } finally {
+      setCollectionLoading(false);
+    }
   };
 
   const contentRef = useRef(null);
@@ -147,7 +151,6 @@ export function SeriesDetailsPage({
       mounted = false;
     };
   }, [id]);
-
 
   const activeTab =
     selectedTabOverride !== null
@@ -191,12 +194,15 @@ export function SeriesDetailsPage({
     }));
   };
 
-
   if (error && !seriesData) {
     return (
       <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-xl font-medium mb-2 text-[#F5F5F5]">Series Not Found</h2>
-        <p className="text-sm text-[#7A7A7A] max-w-md mb-6">{error || "Could not find the requested TV series."}</p>
+        <h2 className="text-xl font-medium mb-2 text-[#F5F5F5]">
+          Series Not Found
+        </h2>
+        <p className="text-sm text-[#7A7A7A] max-w-md mb-6">
+          {error || "Could not find the requested TV series."}
+        </p>
         <button
           type="button"
           onClick={() => window.history.back()}
@@ -308,15 +314,14 @@ export function SeriesDetailsPage({
             </div>
 
             {/* Row with two circular score rings */}
-            <DetailScoreRings 
-              providerRating={seriesData.tmdbRating} 
-              providerVotes={seriesData.tmdbVotes} 
-              communityScore={communityData?.communityAverage ?? null} 
-              communityVotesCount={communityData?.communityVotes || 0} 
-              fallbackCommunityRating={seriesData.communityRating} 
-              fallbackCommunityVotes={seriesData.communityVotes} 
-            /> 
-
+            <DetailScoreRings
+              providerRating={seriesData.tmdbRating}
+              providerVotes={seriesData.tmdbVotes}
+              communityScore={communityData?.communityAverage ?? null}
+              communityVotesCount={communityData?.communityVotes || 0}
+              fallbackCommunityRating={seriesData.communityRating}
+              fallbackCommunityVotes={seriesData.communityVotes}
+            />
 
             {/* Row of actions: Mint primary button "Rate this", secondary "Add to list", round Share button */}
             <div className="flex items-center gap-3 mb-8">
@@ -337,12 +342,16 @@ export function SeriesDetailsPage({
                 size="md"
                 disabled={collectionLoading}
                 className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${
-                  inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : ""
+                  inCollection
+                    ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10"
+                    : ""
                 }`}
                 onClick={handleToggleCollection}
               >
                 {inCollection ? <Check size={15} /> : <Plus size={15} />}
-                <span>{inCollection ? "In collection" : "Add to collection"}</span>
+                <span>
+                  {inCollection ? "In collection" : "Add to collection"}
+                </span>
               </Button>
 
               <button
@@ -362,9 +371,10 @@ export function SeriesDetailsPage({
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
                 style={{
-                  maxHeight: !hasOverflow || synopsisExpanded
-                    ? `${contentHeight > 0 ? contentHeight + 4 : 400}px`
-                    : "5rem",
+                  maxHeight:
+                    !hasOverflow || synopsisExpanded
+                      ? `${contentHeight > 0 ? contentHeight + 4 : 400}px`
+                      : "5rem",
                 }}
                 className="relative overflow-hidden transition-[max-height] duration-500 ease-in-out"
               >
@@ -411,7 +421,7 @@ export function SeriesDetailsPage({
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
           <div className="flex items-center gap-8 h-12">
-            {["Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
+            {["Overview","Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
@@ -436,14 +446,31 @@ export function SeriesDetailsPage({
       </div>
 
       {/* TAB CONTENT */}
+      
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
+        {/* ======================================================== */}
+        {/* Overview tab              */}
+        {/* ======================================================== */}
+
+        {activeTab === "Overview" && (
+          <OverviewTab
+            id={id}
+            category="tv"
+            mediaType="TV"
+            movieData={seriesData}
+            seriesData={seriesData}
+            communityData={communityData}
+            onCommunityDataChange={setCommunityData}
+            onOpenReviews={() => handleTabChange("Reviews")}
+          />
+        )}
+
         {/* ======================================================== */}
         {/* 1. EPISODES TAB CONTENT WITH EPISODE RATING              */}
         {/* ======================================================== */}
-        {activeTab === "Episodes" && ( 
-          <EpisodesSection seriesId={id} seriesData={seriesData} /> 
-        )} 
-
+        {activeTab === "Episodes" && (
+          <EpisodesSection seriesId={id} seriesData={seriesData} />
+        )}
 
         {/* ======================================================== */}
         {/* 2. CAST TAB CONTENT                                      */}
@@ -461,21 +488,20 @@ export function SeriesDetailsPage({
         {/* ======================================================== */}
         {/* 3. REVIEWS TAB CONTENT                                   */}
         {/* ======================================================== */}
-        {activeTab === "Reviews" && ( 
-          <MediaReviewsTab 
-            mediaId={id} 
-            mediaType="SERIES" 
-            mediaTitle={seriesData.title} 
-            coverUrl={seriesData.poster || seriesData.backdrop} 
-            provider="tmdb" 
-            initialProviderReviews={seriesData.reviews} 
-            initialProviderPage={seriesData.reviewsPage || 1} 
-            initialTotalPages={seriesData.reviewsTotalPages || 1} 
-            communityData={communityData} 
-            onCommunityDataChange={setCommunityData} 
-          /> 
-        )} 
-
+        {activeTab === "Reviews" && (
+          <MediaReviewsTab
+            mediaId={id}
+            mediaType="SERIES"
+            mediaTitle={seriesData.title}
+            coverUrl={seriesData.poster || seriesData.backdrop}
+            provider="tmdb"
+            initialProviderReviews={seriesData.reviews}
+            initialProviderPage={seriesData.reviewsPage || 1}
+            initialTotalPages={seriesData.reviewsTotalPages || 1}
+            communityData={communityData}
+            onCommunityDataChange={setCommunityData}
+          />
+        )}
 
         {/* ======================================================== */}
         {/* 4. MEDIA TAB CONTENT                                     */}
