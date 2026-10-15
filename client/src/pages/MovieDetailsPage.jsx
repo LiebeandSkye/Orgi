@@ -8,72 +8,75 @@ import {
   ThumbsUp,
   Reply,
   MoreHorizontal,
-  ChevronDown, 
-  X, 
-} from "lucide-react"; 
-import { getMovieDetails, getMovieMedia } from "../services/tmdb"; 
-import { DetailScoreRings } from "../components/ui/DetailScoreRings"; 
-import { Button } from "../components/ui/Button"; 
-import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab"; 
-import MediaItems from "../components/ui/MediaItems"; 
-import { fetchMediaDetails } from "../services/mediaApi"; 
-import { CastCarousel } from "../components/ui/CastCarousel"; 
-import { useAuth } from "../context/AuthContext"; 
-import api from "../services/api"; 
+  ChevronDown,
+  X,
+} from "lucide-react";
+import { getMovieDetails, getMovieMedia } from "../services/tmdb";
+import { DetailScoreRings } from "../components/ui/DetailScoreRings";
+import { Button } from "../components/ui/Button";
+import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab";
+import MediaItems from "../components/ui/MediaItems";
+import { fetchMediaDetails } from "../services/mediaApi";
+import { CastCarousel } from "../components/ui/CastCarousel";
+import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
+import OverviewTab from "../components/ui/OverviewTab";
 
+const formatReviewDate = (dateStr) => {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+};
 
-const formatReviewDate = (dateStr) => { 
-  if (!dateStr) return ""; 
-  try { 
-    const d = new Date(dateStr); 
-    if (isNaN(d.getTime())) return dateStr; 
-    return d.toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      year: "numeric", 
-    }); 
-  } catch { 
-    return dateStr; 
-  } 
-}; 
+const NAVBAR_AVATAR =
+  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
 
-const NAVBAR_AVATAR = 
-  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
+function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
+  const [errorSrc, setErrorSrc] = useState(null);
+  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src;
+  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR;
 
-function ReviewAvatar({ src, alt, size = "w-9 h-9" }) { 
-  const [errorSrc, setErrorSrc] = useState(null); 
-  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src; 
-  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR; 
-
-  return ( 
-    <div 
-      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`} 
-    > 
-      <img 
-        key={src} 
-        src={effectiveSrc} 
-        alt={alt || "Avatar"} 
-        onError={() => setErrorSrc(src)} 
-        className={`w-full h-full object-cover ${ 
-          isNavbarAvatar ? "scale-125" : "" 
-        }`} 
-      /> 
-    </div> 
-  ); 
-} 
+  return (
+    <div
+      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`}
+    >
+      <img
+        key={src}
+        src={effectiveSrc}
+        alt={alt || "Avatar"}
+        onError={() => setErrorSrc(src)}
+        className={`w-full h-full object-cover ${
+          isNavbarAvatar ? "scale-125" : ""
+        }`}
+      />
+    </div>
+  );
+}
 
 export function MovieDetailsPage({
-  initialTab = "Cast",
+  initialTab = "Overview",
   initialCropHero = false,
 }) {
-  const location = useLocation(); 
-  const navigate = useNavigate(); 
-  const { category, id } = useParams(); 
-  const { user, userProfile } = useAuth(); 
-  const isReviewsUrl = location.pathname.includes("/reviews"); 
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { category, id } = useParams();
+  const { user, userProfile } = useAuth();
+  const isReviewsUrl = location.pathname.includes("/reviews");
 
-  const currentUserAvatar = userProfile?.profile_url || user?.user_metadata?.avatar_url || NAVBAR_AVATAR; 
-  const [movieData, setMovieData] = useState(null); 
+  const currentUserAvatar =
+    userProfile?.profile_url ||
+    user?.user_metadata?.avatar_url ||
+    NAVBAR_AVATAR;
+  const [movieData, setMovieData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
@@ -103,41 +106,40 @@ export function MovieDetailsPage({
     };
   }, [category, id]);
 
-  const [mediaData, setMediaData] = useState({ 
-    images: { 
-      backdrops: [], 
-      posters: [], 
-    }, 
-    videos: { 
-      results: [], 
-    }, 
-  }); 
+  const [mediaData, setMediaData] = useState({
+    images: {
+      backdrops: [],
+      posters: [],
+    },
+    videos: {
+      results: [],
+    },
+  });
 
-  useEffect(() => { 
-    if (category) return; 
-    const targetMovieId = id || 157336; 
+  useEffect(() => {
+    if (category) return;
+    const targetMovieId = id || 157336;
 
-    let cancelled = false; 
+    let cancelled = false;
 
-    async function fetchMedia() { 
-      try { 
-        const data = await getMovieMedia(targetMovieId); 
+    async function fetchMedia() {
+      try {
+        const data = await getMovieMedia(targetMovieId);
 
-        if (!cancelled) { 
-          setMediaData(data); 
-        } 
-      } catch (error) { 
-        console.error("Failed to load movie media:", error); 
-      } 
-    } 
+        if (!cancelled) {
+          setMediaData(data);
+        }
+      } catch (error) {
+        console.error("Failed to load movie media:", error);
+      }
+    }
 
-    fetchMedia(); 
+    fetchMedia();
 
-    return () => { 
-      cancelled = true; 
-    }; 
-  }, [category, id]); 
-
+    return () => {
+      cancelled = true;
+    };
+  }, [category, id]);
 
   const activeTab =
     selectedTabOverride !== null
@@ -160,143 +162,157 @@ export function MovieDetailsPage({
 
   const displaySynopsis =
     (movieData?.synopsis || "") +
-    ((movieData?.id === 157336 || movieData?.title?.toLowerCase() === "interstellar") &&
+    ((movieData?.id === 157336 ||
+      movieData?.title?.toLowerCase() === "interstellar") &&
     movieData?.synopsis &&
     movieData.synopsis.length < 260 &&
     !movieData.synopsis.includes("dust storms")
       ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
       : "");
 
-  useEffect(() => { 
-    const checkOverflow = () => { 
-      if (synopsisRef.current) { 
-        const height = synopsisRef.current.scrollHeight; 
-        setContentHeight(height); 
-        setHasOverflow(height > 80); 
-      } 
-    }; 
-    checkOverflow(); 
-    window.addEventListener("resize", checkOverflow); 
-    return () => window.removeEventListener("resize", checkOverflow); 
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (synopsisRef.current) {
+        const height = synopsisRef.current.scrollHeight;
+        setContentHeight(height);
+        setHasOverflow(height > 80);
+      }
+    };
+    checkOverflow();
+    window.addEventListener("resize", checkOverflow);
+    return () => window.removeEventListener("resize", checkOverflow);
   }, [displaySynopsis]);
 
-  const isLongSynopsis = contentHeight === 0 || contentHeight > 82; 
-  const [inCollection, setInCollection] = useState(false); 
-  const [collectionLoading, setCollectionLoading] = useState(false); 
-  const [communityData, setCommunityData] = useState({ 
-    communityAverage: null, 
-    communityVotes: 0, 
-    reviews: [], 
-  }); 
- 
-  useEffect(() => { 
-    if (!movieData) return; 
-    const currentProvider = category 
-      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
-      : "tmdb"; 
-    const currentExternalId = String(category ? id : (id || 157336)); 
- 
-    let mounted = true; 
-    async function loadCollectionAndReviews() { 
-      try { 
-        const [colRes, revRes] = await Promise.allSettled([ 
-          api.get(`/collections/check/${currentProvider}/${currentExternalId}`), 
-          api.get(`/reviews/${currentProvider}/${currentExternalId}`), 
-        ]); 
- 
-        if (mounted) { 
-          if (colRes.status === "fulfilled" && colRes.value?.success) { 
-            setInCollection(!!colRes.value.data?.inCollection); 
-          } 
-          if (revRes.status === "fulfilled" && revRes.value?.success) { 
-            const revData = revRes.value.data || {}; 
-            const reviewsList = Array.isArray(revData.reviews) ? revData.reviews : []; 
-            setCommunityData({ 
-              communityAverage: typeof revData.communityAverage === "number" ? revData.communityAverage : null, 
-              communityVotes: typeof revData.communityVotes === "number" ? revData.communityVotes : 0, 
-              reviews: reviewsList, 
-            }); 
-          } 
-        } 
-      } catch (err) { 
-        console.error("Failed to load collection or review status:", err); 
-      } 
-    } 
-    loadCollectionAndReviews(); 
- 
-    return () => { 
-      mounted = false; 
-    }; 
-  }, [movieData, category, id]); 
- 
-  const handleToggleCollection = async () => { 
-    if (!movieData) return; 
-    const token = localStorage.getItem("orgi_session"); 
-    if (!token) { 
-      alert("Please sign in to add items to your collection."); 
-      return; 
-    } 
- 
-    const currentProvider = category 
-      ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
-      : "tmdb"; 
-    const currentExternalId = String(category ? id : (id || 157336)); 
-    const currentType = category ? category.toUpperCase() : "MOVIE"; 
- 
-    setCollectionLoading(true); 
-    try { 
-      const res = await api.post("/collections/toggle", { 
-        external_id: currentExternalId, 
-        provider: currentProvider, 
-        type: currentType, 
-        title: movieData.title, 
-        cover_url: movieData.poster || movieData.backdrop, 
-      }); 
- 
-      if (res?.success) { 
-        setInCollection(!!res.data?.inCollection); 
-      } 
-    } catch (err) { 
-      console.error("Failed to toggle collection:", err); 
-      alert(err.message || "Failed to update collection."); 
-    } finally { 
-      setCollectionLoading(false); 
-    } 
-  }; 
- 
- 
-  const providerScore = parseFloat(movieData?.tmdbRating) || 0; 
-  const providerVotesCount = 
-    typeof movieData?.tmdbVotes === "string" && (movieData.tmdbVotes.includes("K") || movieData.tmdbVotes.includes("k")) 
-      ? parseFloat(movieData.tmdbVotes) * 1000 
-      : parseInt(movieData?.tmdbVotes, 10) || 100; 
- 
-  const communityScore = communityData?.communityAverage ?? null; 
-  const communityVotesCount = communityData?.communityVotes || 0; 
- 
-  let blendedScore = providerScore; 
-  let totalVotesLabel = movieData?.tmdbVotes; 
- 
-  if (communityScore !== null && communityVotesCount > 0) { 
-    blendedScore = Number( 
-      ( 
-        (providerScore * providerVotesCount + communityScore * communityVotesCount) / 
-        (providerVotesCount + communityVotesCount) 
-      ).toFixed(1) 
-    ); 
-    const totalCount = providerVotesCount + communityVotesCount; 
-    totalVotesLabel = totalCount >= 1000 
-      ? `${(totalCount / 1000).toFixed(1)}k ratings` 
-      : `${totalCount} ratings`; 
-  } 
- 
-  const contentRef = useRef(null); 
- 
-  const handleTabChange = (tab) => { 
-    setSelectedTabOverride(tab); 
-    setCropHeroOverride(false); 
-  }; 
- 
+  const isLongSynopsis = contentHeight === 0 || contentHeight > 82;
+  const [inCollection, setInCollection] = useState(false);
+  const [collectionLoading, setCollectionLoading] = useState(false);
+  const [communityData, setCommunityData] = useState({
+    communityAverage: null,
+    communityVotes: 0,
+    reviews: [],
+  });
+
+  useEffect(() => {
+    if (!movieData) return;
+    const currentProvider = category
+      ? category === "manga" || category === "manhwa" || category === "manhua"
+        ? "mangadex"
+        : "openlibrary"
+      : "tmdb";
+    const currentExternalId = String(category ? id : id || 157336);
+
+    let mounted = true;
+    async function loadCollectionAndReviews() {
+      try {
+        const [colRes, revRes] = await Promise.allSettled([
+          api.get(`/collections/check/${currentProvider}/${currentExternalId}`),
+          api.get(`/reviews/${currentProvider}/${currentExternalId}`),
+        ]);
+
+        if (mounted) {
+          if (colRes.status === "fulfilled" && colRes.value?.success) {
+            setInCollection(!!colRes.value.data?.inCollection);
+          }
+          if (revRes.status === "fulfilled" && revRes.value?.success) {
+            const revData = revRes.value.data || {};
+            const reviewsList = Array.isArray(revData.reviews)
+              ? revData.reviews
+              : [];
+            setCommunityData({
+              communityAverage:
+                typeof revData.communityAverage === "number"
+                  ? revData.communityAverage
+                  : null,
+              communityVotes:
+                typeof revData.communityVotes === "number"
+                  ? revData.communityVotes
+                  : 0,
+              reviews: reviewsList,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load collection or review status:", err);
+      }
+    }
+    loadCollectionAndReviews();
+
+    return () => {
+      mounted = false;
+    };
+  }, [movieData, category, id]);
+
+  const handleToggleCollection = async () => {
+    if (!movieData) return;
+    const token = localStorage.getItem("orgi_session");
+    if (!token) {
+      alert("Please sign in to add items to your collection.");
+      return;
+    }
+
+    const currentProvider = category
+      ? category === "manga" || category === "manhwa" || category === "manhua"
+        ? "mangadex"
+        : "openlibrary"
+      : "tmdb";
+    const currentExternalId = String(category ? id : id || 157336);
+    const currentType = category ? category.toUpperCase() : "MOVIE";
+
+    setCollectionLoading(true);
+    try {
+      const res = await api.post("/collections/toggle", {
+        external_id: currentExternalId,
+        provider: currentProvider,
+        type: currentType,
+        title: movieData.title,
+        cover_url: movieData.poster || movieData.backdrop,
+      });
+
+      if (res?.success) {
+        setInCollection(!!res.data?.inCollection);
+      }
+    } catch (err) {
+      console.error("Failed to toggle collection:", err);
+      alert(err.message || "Failed to update collection.");
+    } finally {
+      setCollectionLoading(false);
+    }
+  };
+
+  const providerScore = parseFloat(movieData?.tmdbRating) || 0;
+  const providerVotesCount =
+    typeof movieData?.tmdbVotes === "string" &&
+    (movieData.tmdbVotes.includes("K") || movieData.tmdbVotes.includes("k"))
+      ? parseFloat(movieData.tmdbVotes) * 1000
+      : parseInt(movieData?.tmdbVotes, 10) || 100;
+
+  const communityScore = communityData?.communityAverage ?? null;
+  const communityVotesCount = communityData?.communityVotes || 0;
+
+  let blendedScore = providerScore;
+  let totalVotesLabel = movieData?.tmdbVotes;
+
+  if (communityScore !== null && communityVotesCount > 0) {
+    blendedScore = Number(
+      (
+        (providerScore * providerVotesCount +
+          communityScore * communityVotesCount) /
+        (providerVotesCount + communityVotesCount)
+      ).toFixed(1),
+    );
+    const totalCount = providerVotesCount + communityVotesCount;
+    totalVotesLabel =
+      totalCount >= 1000
+        ? `${(totalCount / 1000).toFixed(1)}k ratings`
+        : `${totalCount} ratings`;
+  }
+
+  const contentRef = useRef(null);
+
+  const handleTabChange = (tab) => {
+    setSelectedTabOverride(tab);
+    setCropHeroOverride(false);
+  };
 
   if (isLoading || !movieData) {
     return (
@@ -399,37 +415,49 @@ export function MovieDetailsPage({
               <span>{movieData.certificate}</span>
             </div>
 
-            <DetailScoreRings 
-              blendedScore={blendedScore} 
-              totalVotesLabel={totalVotesLabel} 
-              communityScore={communityScore !== null ? communityScore : movieData.communityRating} 
-              communityVotesLabel={communityVotesCount > 0 ? `${communityVotesCount} Orgi votes` : movieData.communityVotes} 
-            /> 
- 
-            <div className="flex items-center gap-3.5 mb-8"> 
-              <Button 
-                variant="primary" 
-                size="md" 
-                className="px-5 py-2.5 rounded-[10px]" 
-                onClick={() => { 
-                  handleTabChange("Reviews"); 
-                }} 
-              > 
-                <Star size={15} className="fill-black text-black" /> 
-                <span>Rate this</span> 
-              </Button> 
- 
-              <Button 
-                variant={inCollection ? "mintGhost" : "outline"} 
-                size="md" 
-                disabled={collectionLoading} 
-                className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${ 
-                  inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : "" 
-                }`} 
-                onClick={handleToggleCollection} 
-              > 
-                {inCollection ? <Check size={15} /> : <Plus size={15} />} 
-                <span>{inCollection ? "In collection" : "Add to collection"}</span> 
+            <DetailScoreRings
+              blendedScore={blendedScore}
+              totalVotesLabel={totalVotesLabel}
+              communityScore={
+                communityScore !== null
+                  ? communityScore
+                  : movieData.communityRating
+              }
+              communityVotesLabel={
+                communityVotesCount > 0
+                  ? `${communityVotesCount} Orgi votes`
+                  : movieData.communityVotes
+              }
+            />
+
+            <div className="flex items-center gap-3.5 mb-8">
+              <Button
+                variant="primary"
+                size="md"
+                className="px-5 py-2.5 rounded-[10px]"
+                onClick={() => {
+                  handleTabChange("Reviews");
+                }}
+              >
+                <Star size={15} className="fill-black text-black" />
+                <span>Rate this</span>
+              </Button>
+
+              <Button
+                variant={inCollection ? "mintGhost" : "outline"}
+                size="md"
+                disabled={collectionLoading}
+                className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${
+                  inCollection
+                    ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10"
+                    : ""
+                }`}
+                onClick={handleToggleCollection}
+              >
+                {inCollection ? <Check size={15} /> : <Plus size={15} />}
+                <span>
+                  {inCollection ? "In collection" : "Add to collection"}
+                </span>
               </Button>
 
               <button
@@ -450,9 +478,10 @@ export function MovieDetailsPage({
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
                 style={{
-                  maxHeight: !hasOverflow || synopsisExpanded
-                    ? `${contentHeight > 0 ? contentHeight + 4 : 400}px`
-                    : "5rem",
+                  maxHeight:
+                    !hasOverflow || synopsisExpanded
+                      ? `${contentHeight > 0 ? contentHeight + 4 : 400}px`
+                      : "5rem",
                 }}
                 className="relative overflow-hidden transition-[max-height] duration-500 ease-in-out"
               >
@@ -499,7 +528,7 @@ export function MovieDetailsPage({
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
           <div className="flex items-center gap-8 h-12">
-            {["Cast", "Reviews", "Media", "Details"].map((tab) => {
+            {["Overview", "Cast", "Reviews", "Media", "Details"].map((tab) => {
               const isActive = activeTab === tab;
               const tabLabel = tab === "Cast" && category ? "Author" : tab;
               return (
@@ -527,18 +556,34 @@ export function MovieDetailsPage({
       {/* TAB CONTENT (Only the active tab's content is shown, never all at once) */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
         {/* ======================================================== */}
+        {/* Overview Tab Content                            */}
+        {/* ======================================================== */}
+        {activeTab === "Overview" && (
+          <div className="animate-in fade-in duration-300">
+            <OverviewTab
+              id={category ? id : id || 157336}
+              category={category}
+              mediaType={movieData.type}
+              movieData={movieData}
+              communityData={communityData}
+              onCommunityDataChange={setCommunityData}
+              onOpenReviews={() => handleTabChange("Reviews")}
+            />
+          </div>
+        )}
+
+        {/* ======================================================== */}
         {/* 1. CAST / AUTHOR TAB CONTENT                             */}
         {/* ======================================================== */}
         {activeTab === "Cast" && (
           <div className="animate-in fade-in duration-300">
-            {category && ( 
-              <div className="flex items-center justify-between mb-8"> 
-                <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight"> 
-                  Author 
-                </h2> 
-              </div> 
-            )} 
-
+            {category && (
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight">
+                  Author
+                </h2>
+              </div>
+            )}
 
             {category ? (
               /* Vertical Portrait Author Cards for Book, Manga, Manhwa, and Manhua */
@@ -584,33 +629,43 @@ export function MovieDetailsPage({
           </div>
         )}
 
-        {activeTab === "Reviews" && ( 
-          <MediaReviewsTab 
-            mediaId={category ? id : (id || 157336)} 
-            mediaType={category ? category.toUpperCase() : "MOVIE"} 
-            mediaTitle={movieData.title} 
-            coverUrl={movieData.poster || movieData.backdrop} 
-            provider={ 
-              category 
-                ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
-                : "tmdb" 
-            } 
-            category={category} 
-            initialProviderReviews={movieData.reviews} 
-            initialProviderPage={movieData.reviewsPage || 1} 
-            initialTotalPages={movieData.reviewsTotalPages || 1} 
-            communityData={communityData} 
-            onCommunityDataChange={setCommunityData} 
-          /> 
-        )} 
+        {activeTab === "Reviews" && (
+          <MediaReviewsTab
+            mediaId={category ? id : id || 157336}
+            mediaType={category ? category.toUpperCase() : "MOVIE"}
+            mediaTitle={movieData.title}
+            coverUrl={movieData.poster || movieData.backdrop}
+            provider={
+              category
+                ? category === "manga" ||
+                  category === "manhwa" ||
+                  category === "manhua"
+                  ? "mangadex"
+                  : "openlibrary"
+                : "tmdb"
+            }
+            category={category}
+            initialProviderReviews={movieData.reviews}
+            initialProviderPage={movieData.reviewsPage || 1}
+            initialTotalPages={movieData.reviewsTotalPages || 1}
+            communityData={communityData}
+            onCommunityDataChange={setCommunityData}
+          />
+        )}
 
         {activeTab === "Media" && (
           <div className="animate-in fade-in duration-300">
             <MediaItems
               movieData={{
                 ...movieData,
-                images: mediaData.images?.backdrops?.length || mediaData.images?.posters?.length ? mediaData.images : movieData.images,
-                videos: mediaData.videos?.results?.length ? mediaData.videos : movieData.videos,
+                images:
+                  mediaData.images?.backdrops?.length ||
+                  mediaData.images?.posters?.length
+                    ? mediaData.images
+                    : movieData.images,
+                videos: mediaData.videos?.results?.length
+                  ? mediaData.videos
+                  : movieData.videos,
               }}
             />
           </div>
@@ -624,54 +679,55 @@ export function MovieDetailsPage({
             <h2 className="text-xl font-light text-[#F5F5F5] tracking-tight mb-6">
               Production &amp; Technical Specifications
             </h2>
-            <div className="divide-y divide-[#1C1C1C] text-sm"> 
-              <div className="py-3 flex justify-between"> 
-                <span className="text-[#7A7A7A]">Director</span> 
-                <span className="text-[#F5F5F5]"> 
-                  {movieData.details?.director || "Christopher Nolan"} 
-                </span> 
-              </div> 
-              <div className="py-3 flex justify-between"> 
-                <span className="text-[#7A7A7A]">Writers</span> 
-                <span className="text-[#F5F5F5]"> 
-                  {movieData.details?.writers || "Jonathan Nolan, Christopher Nolan"} 
-                </span> 
-              </div> 
-              <div className="py-3 flex justify-between"> 
-                <span className="text-[#7A7A7A]">Original Score</span> 
-                <span className="text-[#F5F5F5]"> 
-                  {movieData.details?.music || "Hans Zimmer"} 
-                </span> 
-              </div> 
-              <div className="py-3 flex justify-between"> 
-                <span className="text-[#7A7A7A]">Cinematography</span> 
-                <span className="text-[#F5F5F5]"> 
-                  {movieData.details?.cinematography || "Hoyte van Hoytema"} 
-                </span> 
-              </div> 
-              <div className="py-3 flex justify-between"> 
-                <span className="text-[#7A7A7A]">Box Office</span> 
-                <span className="text-[#F5F5F5] font-tabular"> 
-                  {movieData.details?.boxOffice || "$701.7M USD"} 
-                </span> 
-              </div> 
-              <div className="py-3 flex justify-between"> 
-                <span className="text-[#7A7A7A]">Aspect Ratio</span> 
-                <span className="text-[#F5F5F5] font-tabular"> 
-                  {movieData.details?.aspectRatio || "2.39:1 (Widescreen)"} 
-                </span> 
-              </div> 
-              <div className="py-3 flex justify-between"> 
-                <span className="text-[#7A7A7A]">Studio</span> 
-                <span className="text-[#F5F5F5]"> 
-                  {movieData.details?.studio || "Syncopy, Lynda Obst Productions"} 
-                </span> 
-              </div> 
-            </div> 
-          </div> 
-        )} 
-      </main> 
-    </div> 
-  ); 
-} 
-
+            <div className="divide-y divide-[#1C1C1C] text-sm">
+              <div className="py-3 flex justify-between">
+                <span className="text-[#7A7A7A]">Director</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.director || "Christopher Nolan"}
+                </span>
+              </div>
+              <div className="py-3 flex justify-between">
+                <span className="text-[#7A7A7A]">Writers</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.writers ||
+                    "Jonathan Nolan, Christopher Nolan"}
+                </span>
+              </div>
+              <div className="py-3 flex justify-between">
+                <span className="text-[#7A7A7A]">Original Score</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.music || "Hans Zimmer"}
+                </span>
+              </div>
+              <div className="py-3 flex justify-between">
+                <span className="text-[#7A7A7A]">Cinematography</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.cinematography || "Hoyte van Hoytema"}
+                </span>
+              </div>
+              <div className="py-3 flex justify-between">
+                <span className="text-[#7A7A7A]">Box Office</span>
+                <span className="text-[#F5F5F5] font-tabular">
+                  {movieData.details?.boxOffice || "$701.7M USD"}
+                </span>
+              </div>
+              <div className="py-3 flex justify-between">
+                <span className="text-[#7A7A7A]">Aspect Ratio</span>
+                <span className="text-[#F5F5F5] font-tabular">
+                  {movieData.details?.aspectRatio || "2.39:1 (Widescreen)"}
+                </span>
+              </div>
+              <div className="py-3 flex justify-between">
+                <span className="text-[#7A7A7A]">Studio</span>
+                <span className="text-[#F5F5F5]">
+                  {movieData.details?.studio ||
+                    "Syncopy, Lynda Obst Productions"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
