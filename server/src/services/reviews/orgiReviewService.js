@@ -64,8 +64,21 @@ export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) 
 
     const cards = []; 
     for (const rev of rawReviews) { 
+      if (rev.content?.startsWith("<!--prov:")) continue; 
+
       const item = rev.items; 
       if (!item) continue; 
+
+      let contentText = rev.content || ""; 
+      let authorName = rev.users?.user_name || "Community Member"; 
+      let avatarUrl = rev.users?.profile_url || undefined; 
+      const anonMatch = contentText.match(/^<!--anon:([^>]+)-->/); 
+      if (anonMatch) { 
+        authorName = anonMatch[1]; 
+        avatarUrl = undefined; 
+        contentText = contentText.replace(/^<!--anon:[^>]+-->\s*/, ""); 
+      } 
+      contentText = contentText.replace(/^<!--prov:[^>]+-->\s*/, ""); 
 
       const itemType = (item.type || "MOVIE").toUpperCase(); 
       let mappedCategory = "movie"; 
@@ -107,18 +120,19 @@ export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) 
         backdropUrl: item.cover_url, 
         genres: [], 
         rating: typeof rev.score === "number" && rev.score > 0 ? rev.score : undefined, 
-        excerpt: createExcerpt(rev.content || "", 260), 
+        excerpt: createExcerpt(contentText, 260), 
         excerptKind: "review", 
         author: { 
-          name: rev.users?.user_name || "Community Member", 
-          avatarUrl: rev.users?.profile_url || undefined, 
+          name: authorName, 
+          avatarUrl: avatarUrl, 
         }, 
         likes: likesMap[rev.id] || 0, 
+        comments: repliesMap[rev.id] || 0, 
         commentsCount: repliesMap[rev.id] || 0, 
         createdAt: rev.created_at, 
         detailHref: `/reviews/orgi/${item.external_id}/${rev.id}`, 
         mediaRoute, 
-        rawContent: rev.content, 
+        rawContent: contentText, 
       }); 
     } 
 
@@ -197,6 +211,17 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
         .eq("is_deleted", false), 
     ]); 
 
+    let detailContent = rev.content || ""; 
+    let detailAuthor = rev.users?.user_name || "Community Member"; 
+    let detailAvatar = rev.users?.profile_url || undefined; 
+    const detailAnonMatch = detailContent.match(/^<!--anon:([^>]+)-->/); 
+    if (detailAnonMatch) { 
+      detailAuthor = detailAnonMatch[1]; 
+      detailAvatar = undefined; 
+      detailContent = detailContent.replace(/^<!--anon:[^>]+-->\s*/, ""); 
+    } 
+    detailContent = detailContent.replace(/^<!--prov:[^>]+-->\s*/, ""); 
+
     return { 
       id: `orgi:${item.id}:${rev.id}`, 
       source: "orgi", 
@@ -208,13 +233,14 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
       backdropUrl: item.cover_url, 
       genres: [], 
       rating: typeof rev.score === "number" && rev.score > 0 ? rev.score : undefined, 
-      excerpt: createExcerpt(rev.content || "", 260), 
-      content: rev.content, 
+      excerpt: createExcerpt(detailContent, 260), 
+      content: detailContent, 
       author: { 
-        name: rev.users?.user_name || "Community Member", 
-        avatarUrl: rev.users?.profile_url || undefined, 
+        name: detailAuthor, 
+        avatarUrl: detailAvatar, 
       }, 
       likes: likesCount || 0, 
+      comments: repliesCount || 0, 
       commentsCount: repliesCount || 0, 
       createdAt: rev.created_at, 
       detailHref: `/reviews/orgi/${item.external_id}/${rev.id}`, 

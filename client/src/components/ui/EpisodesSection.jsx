@@ -15,6 +15,7 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { getSeasonEpisodes } from "../../services/tmdb";
+import { API_BASE_URL, safeFetchJson } from "../../services/api";
 
 
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p";
@@ -46,17 +47,9 @@ function getRating(score) {
 }
 
 async function tmdbFetch(endpoint, signal) {
-   const response = await fetch(`/api/tmdb${endpoint}`, {
+  const result = await safeFetchJson(`${API_BASE_URL}/tmdb${endpoint}`, {
     signal,
   });
-
-  if (!response.ok) {
-    throw new Error(
-      `TMDB request failed (${response.status}). Please check your TMDB API configuration.`
-    );
-  }
-
-  const result = await response.json();
 
   if (result.success === false) {
     throw new Error(result.message || "Could not load TV series.");

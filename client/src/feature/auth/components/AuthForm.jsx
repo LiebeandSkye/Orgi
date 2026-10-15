@@ -233,11 +233,11 @@ export function AuthForm() {
                             <div className="pt-2 pb-5">
                                 <FloatingInput
                                     id="auth-username"
-                                    label="Username"
+                                    label="Username (optional)"
                                     value={userName}
                                     onChange={(e) => setUserName(e.target.value)}
                                     disabled={!isSignUp}
-                                    required={isSignUp}
+                                    required={false}
                                     autoComplete="username"
                                 />
                             </div>

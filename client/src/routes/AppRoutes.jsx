@@ -32,6 +32,7 @@ export function AppRoutes() {
                 <Route path="/series" element={<Navigate to="/" replace />} /> 
                 <Route path="/series/breaking-bad" element={<Navigate to="/series/1396" replace />} /> 
                 <Route path="/series/:id" element={<SeriesDetailsPage />} /> 
+                
 
                 <Route path="/feed" element={<ReviewsPage />} /> 
                 <Route path="/reviews" element={<ReviewsPage />} /> 

@@ -1,4 +1,7 @@
-import { supabase } from "../services/supabase.js"; 
+import crypto from "crypto"; 
+import { supabase, supabaseAdmin } from "../services/supabase.js"; 
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; 
 
 export const reportController = { 
   async createReport(req, res, next) { 
@@ -19,13 +22,25 @@ export const reportController = {
         }); 
       } 
 
-      const { data, error } = await supabase 
+      let finalTargetId = String(target_id).trim(); 
+      let finalReason = String(reason).trim(); 
+
+      if (!UUID_REGEX.test(finalTargetId)) { 
+        const hash = crypto.createHash("md5").update(finalTargetId).digest("hex"); 
+        finalTargetId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`; 
+        if (!finalReason.includes(String(target_id))) { 
+          finalReason = `[Reported Target ID: ${target_id}] ${finalReason}`; 
+        } 
+      } 
+
+      const client = supabaseAdmin || supabase; 
+      const { data, error } = await client 
         .from("reports") 
         .insert({ 
           reporter_id: reporterId, 
           target_type, 
-          target_id, 
-          reason: String(reason).trim(), 
+          target_id: finalTargetId, 
+          reason: finalReason, 
           status: "pending", 
         }) 
         .select() 
@@ -42,8 +57,9 @@ export const reportController = {
   async getMyReports(req, res, next) { 
     try { 
       const reporterId = req.user.id; 
+      const client = supabaseAdmin || supabase; 
 
-      const { data, error } = await supabase 
+      const { data, error } = await client 
         .from("reports") 
         .select("*") 
         .eq("reporter_id", reporterId) 
@@ -60,7 +76,9 @@ export const reportController = {
   async getAllReports(req, res, next) { 
     try { 
       const userId = req.user.id; 
-      const { data: userRecord } = await supabase 
+      const client = supabaseAdmin || supabase; 
+
+      const { data: userRecord } = await client 
         .from("users") 
         .select("role") 
         .eq("id", userId) 
@@ -72,7 +90,7 @@ export const reportController = {
         }); 
       } 
 
-      const { data, error } = await supabase 
+      const { data, error } = await client 
         .from("reports") 
         .select(` 
           id, 
@@ -105,8 +123,9 @@ export const reportController = {
       const userId = req.user.id; 
       const { id } = req.params; 
       const { status, moderator_notes } = req.body; 
+      const client = supabaseAdmin || supabase; 
 
-      const { data: userRecord } = await supabase 
+      const { data: userRecord } = await client 
         .from("users") 
         .select("role") 
         .eq("id", userId) 
@@ -136,7 +155,7 @@ export const reportController = {
         updatePayload.moderator_notes = moderator_notes; 
       } 
 
-      const { data, error } = await supabase 
+      const { data, error } = await client 
         .from("reports") 
         .update(updatePayload) 
         .eq("id", id) 
@@ -155,8 +174,9 @@ export const reportController = {
     try { 
       const userId = req.user.id; 
       const { id } = req.params; 
+      const client = supabaseAdmin || supabase; 
 
-      const { error } = await supabase 
+      const { error } = await client 
         .from("reports") 
         .delete() 
         .eq("id", id) 

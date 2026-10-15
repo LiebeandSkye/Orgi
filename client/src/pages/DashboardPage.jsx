@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom"; 
 import { 
   Star, 
-  ThumbsUp, 
+  Heart, 
   Flag, 
   ShieldCheck, 
   Trash2, 
@@ -423,7 +423,7 @@ export function DashboardPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-[#7A7A7A]"> 
               Liked Reviews 
             </span> 
-            <ThumbsUp size={16} className="text-[#60A5FA]" /> 
+            <Heart size={16} className="text-rose-500 fill-rose-500/20" /> 
           </div> 
           <div className="text-2xl sm:text-3xl font-extrabold text-[#F5F5F5] font-tabular"> 
             {stats.likeCount} 
@@ -619,12 +619,12 @@ export function DashboardPage() {
             <div className="space-y-4"> 
               {likesList.length === 0 ? ( 
                 <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-2xl p-12 text-center"> 
-                  <ThumbsUp size={32} className="mx-auto mb-3 text-[#333333]" /> 
+                  <Heart size={32} className="mx-auto mb-3 text-[#333333]" /> 
                   <h3 className="text-sm font-bold text-[#F5F5F5] mb-1"> 
                     No Liked Reviews Yet 
                   </h3> 
                   <p className="text-xs text-[#7A7A7A] max-w-sm mx-auto mb-5"> 
-                    When you find insightful reviews from fellow members, give them a thumbs up to save them here. 
+                    When you find insightful reviews from fellow members, give them a heart to save them here. 
                   </p> 
                   <Link to="/feed"> 
                     <Button variant="primary" size="sm" className="font-semibold"> 
@@ -710,9 +710,9 @@ export function DashboardPage() {
                               variant="outline" 
                               size="sm" 
                               onClick={() => handleUnlikeReview(rev.id)} 
-                              className="text-xs gap-1.5 py-1 px-3 text-[#61F1AC] border-[#61F1AC]/30 hover:border-[#61F1AC] cursor-pointer" 
+                              className="text-xs gap-1.5 py-1 px-3 text-rose-400 border-rose-500/30 hover:border-rose-400 cursor-pointer" 
                             > 
-                              <ThumbsUp size={12} className="fill-[#61F1AC]" /> 
+                              <Heart size={12} className="fill-rose-500 text-rose-500" /> 
                               <span>Liked</span> 
                             </Button> 
                           </div> 
