@@ -17,6 +17,7 @@ import { Button } from "../components/ui/Button";
 import { StarRating } from "../components/ui/StarRating";
 import MediaItems from "../components/ui/MediaItems";
 import { CastCarousel } from "../components/ui/CastCarousel";
+import EpisodesSection from "../components/ui/EpisodeSSection";
 
 const NAVBAR_AVATAR =
   "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
@@ -57,12 +58,6 @@ export function SeriesDetailsPage({
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
 
-  // Episodes & Seasons state
-  const [selectedSeason, setSelectedSeason] = useState("Season 1");
-  const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false);
-  const [episodesList, setEpisodesList] = useState([]);
-  const [hoveredEpisodeIndex, setHoveredEpisodeIndex] = useState(0);
-  const [episodeRatings, setEpisodeRatings] = useState({});
 
   // Synopsis expansion state
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
@@ -80,6 +75,36 @@ export function SeriesDetailsPage({
   const [visibleReviews, setVisibleReviews] = useState(4);
   const [inCollection, setInCollection] = useState(false); 
   const [collectionLoading, setCollectionLoading] = useState(false); 
+
+  
+
+const reviews = []; // Temporary empty list until review data is connected.
+
+const sortedReviews = [...reviews].sort((a, b) => {
+  if (sortBy === "Top") {
+    return (b.likes || 0) - (a.likes || 0);
+  }
+
+  if (sortBy === "Newest") {
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  }
+
+  if (sortBy === "Oldest") {
+    return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+  }
+
+  if (sortBy === "Highest Rated") {
+    return (b.score || 0) - (a.score || 0);
+  }
+
+  if (sortBy === "Lowest Rated") {
+    return (a.score || 0) - (b.score || 0);
+  }
+
+  return 0;
+});
+
+
 
   useEffect(() => { 
     if (!seriesData || !id) return; 
@@ -146,12 +171,6 @@ export function SeriesDetailsPage({
 
         if (mounted && data) {
           setSeriesData(data);
-          if (data.episodes && data.episodes.length > 0) {
-            setEpisodesList(data.episodes);
-          }
-          if (data.seasons && data.seasons.length > 0) {
-            setSelectedSeason(data.seasons[0]);
-          }
         }
       } catch (err) {
         console.error("Failed to load series details:", err);
@@ -170,22 +189,6 @@ export function SeriesDetailsPage({
     };
   }, [id]);
 
-  const handleSeasonChange = async (season) => {
-    setSelectedSeason(season);
-    setSeasonDropdownOpen(false);
-
-    const seasonNum = parseInt(season.replace("Season ", ""), 10) || 1;
-    const seriesTmdbId = seriesData?.tmdbId || id;
-
-    try {
-      const liveEps = await getSeasonEpisodes(seriesTmdbId, seasonNum);
-      if (liveEps && liveEps.length > 0) {
-        setEpisodesList(liveEps);
-      }
-    } catch (err) {
-      console.warn("Could not load season episodes:", err);
-    }
-  };
 
   const activeTab =
     selectedTabOverride !== null
@@ -229,32 +232,6 @@ export function SeriesDetailsPage({
     }));
   };
 
-  const handleRateEpisode = (epNumber, rating) => {
-    setEpisodeRatings((prev) => ({
-      ...prev,
-      [epNumber]: prev[epNumber] === rating ? 0 : rating,
-    }));
-  };
-
-  const sortedReviews = [...(seriesData?.reviews || [])].sort((a, b) => {
-    switch (sortBy) {
-      case "Top":
-        return (b.likes || 0) - (a.likes || 0);
-      case "Newest":
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      case "Highest Rated":
-        return (b.score || 0) - (a.score || 0);
-      case "Lowest Rated":
-        return (a.score || 0) - (b.score || 0);
-      default:
-        return 0;
-    }
-  });
-
-  const seasonsList =
-    seriesData?.seasons && seriesData.seasons.length > 0
-      ? seriesData.seasons
-      : ["Season 1", "Season 2", "Season 3", "Season 4", "Season 5"];
 
   if (error && !seriesData) {
     return (
@@ -356,11 +333,15 @@ export function SeriesDetailsPage({
               {seriesData.title}
             </h1>
 
+            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-4 flex items-center gap-2">
+              <span className="shrink-0 rounded-full border border-white/30 px-4 py-2 font-medium leading-6 text-white transition-all duration-200 hover:border-[#61F1AC]/40 hover:bg-white/10">
+                {seriesData.genres}
+              </span>
+            </div>
+
             {/* Muted meta line "2008–2013 · Crime, Drama · 5 seasons · 62 episodes" */}
-            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-8 flex flex-wrap items-center gap-2">
+            <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-8 mx-2 flex flex-wrap items-center gap-2">
               <span>{seriesData.year}</span>
-              <span>·</span>
-              <span>{seriesData.genres}</span>
               <span>·</span>
               <span>{seriesData.seasonsCount}</span>
               <span>·</span>
@@ -368,15 +349,16 @@ export function SeriesDetailsPage({
             </div>
 
             {/* Row with two circular score rings */}
-            <div className="flex items-center gap-8 mb-8 pb-8 border-b border-[#1C1C1C]">
-              {/* Community rating with mint ring */}
-              <div className="flex items-center gap-4">
-                <ScoreRing
+            <div className="flex items-center gap-8 mb-8">
+              <ScoreRing
                   score={parseFloat(seriesData.communityRating) || 9.5}
                   color="#61F1AC"
-                  size={64}
+                  size="lg"
                   strokeWidth={4.5}
                 />
+              {/* Community rating with mint ring */}
+              <div className="flex items-center gap-4">
+                
                 <div className="flex flex-col">
                   <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7A7A] mb-0.5">
                     Community Rating
@@ -529,149 +511,7 @@ export function SeriesDetailsPage({
         {/* 1. EPISODES TAB CONTENT WITH EPISODE RATING              */}
         {/* ======================================================== */}
         {activeTab === "Episodes" && (
-          <div className="animate-in fade-in duration-300 max-w-4xl">
-            {/* Minimal season selector dropdown chip "Season 1 ⌄" */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setSeasonDropdownOpen(!seasonDropdownOpen)}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium text-[#F5F5F5] bg-[#0B0B0B] border border-[#1C1C1C] hover:border-[#61F1AC]/50 transition-colors cursor-pointer"
-                >
-                  <span>{selectedSeason}</span>
-                  <ChevronDown
-                    size={13}
-                    className={`text-[#7A7A7A] transition-transform ${
-                      seasonDropdownOpen ? "rotate-180 text-[#61F1AC]" : ""
-                    }`}
-                  />
-                </button>
-
-                {seasonDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-36 bg-[#0B0B0B] border border-[#1C1C1C] rounded-[10px] py-1 shadow-2xl z-30">
-                    {seasonsList.map((season) => (
-                      <button
-                        key={season}
-                        type="button"
-                        onClick={() => handleSeasonChange(season)}
-                        className={`w-full text-left px-3.5 py-2 text-xs transition-colors cursor-pointer ${
-                          selectedSeason === season
-                            ? "text-[#61F1AC] bg-[#141414] font-medium"
-                            : "text-[#B5B5B5] hover:text-white hover:bg-[#141414]"
-                        }`}
-                      >
-                        {season}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <span className="text-xs text-[#7A7A7A] font-tabular">
-                {episodesList.length} episodes · Official Broadcast
-              </span>
-            </div>
-
-            {/* Clean vertical list of episodes with episode rating */}
-            <div className="flex flex-col border-t border-[#1C1C1C]">
-              {episodesList.map((ep, idx) => {
-                const isHovered = hoveredEpisodeIndex === idx;
-                const userRating = episodeRatings[ep.number];
-
-                return (
-                  <div
-                    key={ep.number}
-                    onMouseEnter={() => setHoveredEpisodeIndex(idx)}
-                    className={`h-[76px] flex items-center justify-between px-4 border-b border-[#1C1C1C] cursor-pointer transition-all duration-150 ${
-                      isHovered
-                        ? "bg-[#0B0B0B] border-l-2 border-l-[#61F1AC]"
-                        : "hover:bg-[#0B0B0B] border-l-2 border-l-transparent"
-                    }`}
-                  >
-                    {/* Left: episode number, thumbnail, title, description */}
-                    <div className="flex items-center gap-4 min-w-0 mr-4">
-                      {/* Episode number "01" */}
-                      <span className="text-xs font-mono font-medium text-[#7A7A7A] w-6 shrink-0 tabular-nums">
-                        {ep.number}
-                      </span>
-
-                      {/* 16:9 small thumbnail with 8px radius */}
-                      <div className="w-[84px] h-[48px] rounded-[8px] overflow-hidden border border-[#1C1C1C] bg-[#141414] shrink-0">
-                        {ep.thumbnail ? (
-                          <img
-                            src={ep.thumbnail}
-                            alt={ep.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[10px] text-[#7A7A7A]">
-                            EP {ep.number}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Title & one-line description */}
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-white">
-                          {ep.title}
-                        </span>
-                        <span className="text-xs text-[#7A7A7A] truncate font-light mt-0.5">
-                          {ep.description}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Right: Runtime + Episode Rating */}
-                    <div className="flex items-center gap-6 shrink-0">
-                      <span className="text-xs text-[#7A7A7A] font-tabular hidden sm:inline">
-                        {ep.runtime}
-                      </span>
-
-                      {/* Episode Rating: TMDB / Average score badge + Interactive user rating */}
-                      <div className="flex items-center gap-3">
-                        {/* Average episode rating badge */}
-                        <div
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#141414] border border-[#1C1C1C] text-xs font-tabular font-medium text-[#61F1AC]"
-                          title={`Episode Rating: ${ep.score}`}
-                        >
-                          <Star size={12} className="fill-[#61F1AC] text-[#61F1AC]" />
-                          <span>{ep.score || "—"}</span>
-                        </div>
-
-                        {/* Interactive Episode Star Rating (allows users to rate this specific episode) */}
-                        <div
-                          className="hidden sm:flex items-center gap-0.5"
-                          title={userRating ? `Your rating: ${userRating}/5` : "Rate this episode"}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {[1, 2, 3, 4, 5].map((starVal) => {
-                            const isFilled = userRating && userRating >= starVal;
-                            return (
-                              <button
-                                key={starVal}
-                                type="button"
-                                onClick={() => handleRateEpisode(ep.number, starVal)}
-                                className="p-0.5 text-[#333333] hover:text-[#61F1AC] transition-colors cursor-pointer"
-                              >
-                                <Star
-                                  size={11}
-                                  className={
-                                    isFilled
-                                      ? "fill-[#61F1AC] text-[#61F1AC]"
-                                      : "fill-transparent hover:fill-[#61F1AC]/50"
-                                  }
-                                />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <EpisodesSection seriesId={id}/>
         )}
 
         {/* ======================================================== */}
