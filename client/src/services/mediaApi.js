@@ -188,6 +188,9 @@ export async function fetchMangaDexByCategory(
             cover: fileName
                 ? `${MANGADEX_COVERS}/${item.id}/${fileName}.512.jpg`
                 : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover",
+            backdrop: fileName
+                ? `${MANGADEX_COVERS}/${item.id}/${fileName}`
+                : null,
             rating,
             chapters:
                 chText || volText || (attrs.status ? attrs.status.charAt(0).toUpperCase() + attrs.status.slice(1) : "Ongoing"),

@@ -439,23 +439,37 @@ export function BooksDashboard() {
         ) : (
           <div className="space-y-10 animate-in fade-in duration-300">
             {/* FEATURED SPOTLIGHT HERO BANNER (OPTION 3 CINEMATIC CARD) */}
-            <section className="relative w-full rounded-[18px] sm:rounded-[22px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500">
+            <section className="group relative w-full rounded-[18px] sm:rounded-[22px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500">
               {/* Integrated Object Background Image on the right side */}
-              <div className="absolute right-0 top-0 bottom-0 w-full sm:w-3/5 lg:w-1/2 pointer-events-none overflow-hidden z-0">
+              <div className="absolute right-0 top-0 bottom-0 w-full sm:w-[50%] md:w-[46%] lg:w-[42%] max-w-[560px] pointer-events-none overflow-hidden z-0">
+                {/* Ambient backdrop glow */}
+                <img
+                  src={currentHero.backdrop || currentHero.cover || currentHero.poster}
+                  alt=""
+                  aria-hidden="true"
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-25 scale-110"
+                />
+
+                {/* Main high-clarity artwork with optimized focal placement */}
                 <img
                   key={currentHero.id}
                   src={currentHero.backdrop || currentHero.cover || currentHero.poster}
                   alt={currentHero.title}
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-center sm:object-top transition-opacity duration-700"
+                  className="relative w-full h-full object-cover object-top sm:object-[center_12%] group-hover:scale-[1.02] transition-all duration-700"
                 />
-                {/* Seamless black gradient fade to blend artwork with dark background */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/75 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent sm:hidden" />
+
+                {/* Left-edge smooth fade to seamlessly blend artwork into dark card */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/30 to-transparent" />
+                {/* Subtle top/bottom edge fade */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A]/30 via-transparent to-[#0A0A0A]/50" />
+                {/* Mobile overlay for legibility */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/80 to-[#0A0A0A]/50 sm:hidden" />
               </div>
 
               {/* Card Foreground Content */}
-              <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex flex-col justify-between min-h-[300px] sm:min-h-[340px]">
+              <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex flex-col justify-between min-h-[320px] sm:min-h-[360px]">
                 {/* Top Row: Left Pill Badge & Right Dual Score Pill */}
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#0E1E14] text-[#61F1AC] border border-[#61F1AC]/35 shadow-[0_0_12px_rgba(97,241,172,0.15)]">
@@ -480,8 +494,8 @@ export function BooksDashboard() {
                   </div>
                 </div>
 
-                {/* Center: Title & Metadata */}
-                <div className="max-w-xl my-auto py-2">
+                {/* Center: Title & Metadata (Restricted width so it never crowds artwork) */}
+                <div className="max-w-md sm:max-w-lg lg:max-w-xl my-auto py-2">
                   <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white mb-2 line-clamp-2">
                     {currentHero.title}
                   </h2>
@@ -507,9 +521,9 @@ export function BooksDashboard() {
                   <div className="flex flex-wrap items-center gap-3">
                     <Link
                       to={currentHero.route}
-                      className="px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-2 bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_20px_rgba(97,241,172,0.3)] transition-all cursor-pointer group"
+                      className="px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-2 bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_20px_rgba(97,241,172,0.3)] transition-all cursor-pointer group/btn"
                     >
-                      <BookOpen size={15} className="group-hover:scale-110 transition-transform" />
+                      <BookOpen size={15} className="group-hover/btn:scale-110 transition-transform" />
                       <span>Start Reading</span>
                     </Link>
 
