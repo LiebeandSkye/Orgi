@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Star, Bookmark, MoreHorizontal, Heart, MessageSquare, Copy, AlertCircle, Check } from "lucide-react";
-import { Avatar } from "./Avatar";
+import React, { useState, useRef, useEffect } from "react"; 
+import { Star, MoreHorizontal, Heart, MessageSquare, Copy, AlertCircle, Check } from "lucide-react"; 
+import { Avatar } from "./Avatar"; 
 
 function formatRelativeTime(dateString) {
   if (!dateString) return "";
@@ -298,29 +298,8 @@ export function ReviewCard({
               className="w-full h-full object-cover"
             />
           </div>
-        )}
-
-        {/* Bookmark Button (relative z-10, pinned to bottom-right) */}
-        <button
-          type="button"
-          aria-pressed={isBookmarked}
-          aria-label={isBookmarked ? "Remove bookmark" : "Bookmark review"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleBookmark(item);
-          }}
-          className={`relative z-10 mt-auto p-1.5 -mr-1 -mb-1 rounded-md cursor-pointer transition-colors ${
-            isBookmarked
-              ? "text-[#61F1AC] hover:text-[#61F1AC]/80"
-              : "text-[#7A7A7A] hover:text-[#F5F5F5]"
-          }`}
-        >
-          <Bookmark
-            size={17}
-            className={isBookmarked ? "fill-[#61F1AC]" : ""}
-          />
-        </button>
-      </div>
-    </article>
-  );
+        )} 
+      </div> 
+    </article> 
+  ); 
 }

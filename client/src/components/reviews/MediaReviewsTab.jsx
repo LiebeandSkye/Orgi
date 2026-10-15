@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"; 
 import { 
   Star, 
-  ThumbsUp, 
+  Heart, 
   Reply, 
   MoreHorizontal, 
   ChevronDown, 
@@ -54,6 +54,213 @@ const formatReviewDate = (dateStr) => {
   } 
 }; 
 
+function CommentThreadItem({ 
+  comment, 
+  depth = 1, 
+  replyingToId, 
+  setReplyingToId, 
+  replyText, 
+  setReplyText, 
+  replyAnon, 
+  setReplyAnon, 
+  isSubmittingReply, 
+  onPostReply, 
+  toggleLike, 
+  likedReviews, 
+  handleOpenReport, 
+  currentUserAvatar, 
+}) { 
+  const isLiked = Boolean(likedReviews[comment.id]); 
+  const likeCount = (comment.likes || 0) + (isLiked && !comment.isLiked ? 1 : !isLiked && comment.isLiked ? -1 : 0); 
+  const isReplying = replyingToId === comment.id; 
+  const [menuOpen, setMenuOpen] = useState(false); 
+  const [collapsed, setCollapsed] = useState(false); 
+  const hasReplies = Array.isArray(comment.replies) && comment.replies.length > 0; 
+
+  return ( 
+    <div className="text-xs bg-[#0E0E0E] rounded-xl p-3 border border-[#1A1A1A] space-y-2.5"> 
+      <div className="flex items-center justify-between gap-2"> 
+        <div className="flex items-center gap-2 flex-wrap"> 
+          <ReviewAvatar 
+            src={comment.avatar} 
+            alt={comment.author} 
+            size="w-5 h-5" 
+          /> 
+          <span className="font-semibold text-[#F5F5F5]"> 
+            {comment.author} 
+          </span> 
+          {comment.isAnonymous && ( 
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-[#1A1A1A] text-[#888888] border border-[#262626]"> 
+              Anon 
+            </span> 
+          )} 
+          {comment.is_edited && ( 
+            <span className="text-[10px] text-[#7A7A7A] italic"> 
+              (edited) 
+            </span> 
+          )} 
+          <span className="text-[#555555]">·</span> 
+          <span className="text-[11px] text-[#7A7A7A]"> 
+            {formatReviewDate(comment.time)} 
+          </span> 
+        </div> 
+
+        <div className="relative"> 
+          <button 
+            type="button" 
+            onClick={() => setMenuOpen(!menuOpen)} 
+            className="text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer p-0.5" 
+          > 
+            <MoreHorizontal size={12} /> 
+          </button> 
+          {menuOpen && ( 
+            <div className="absolute right-0 top-full mt-1 w-28 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20"> 
+              <button 
+                type="button" 
+                onClick={() => { 
+                  setMenuOpen(false); 
+                  handleOpenReport(comment.id); 
+                }} 
+                className="w-full text-left px-2.5 py-1 text-[11px] text-[#B5B5B5] hover:text-red-400 hover:bg-[#141414] cursor-pointer" 
+              > 
+                Report 
+              </button> 
+            </div> 
+          )} 
+        </div> 
+      </div> 
+
+      <p className="text-[#CCCCCC] leading-relaxed pl-7 whitespace-pre-wrap"> 
+        {comment.content} 
+      </p> 
+
+      <div className="flex items-center gap-4 pl-7 text-[11px] text-[#7A7A7A]"> 
+        <button 
+          type="button" 
+          onClick={() => toggleLike(comment)} 
+          className={`flex items-center gap-1 transition-colors cursor-pointer ${ 
+            isLiked ? "text-rose-500 hover:text-rose-400" : "hover:text-[#F5F5F5]" 
+          }`} 
+        > 
+          <Heart 
+            size={12} 
+            className={isLiked ? "fill-rose-500 text-rose-500" : ""} 
+          /> 
+          <span className="font-tabular">{likeCount}</span> 
+        </button> 
+
+        <button 
+          type="button" 
+          onClick={() => { 
+            if (isReplying) { 
+              setReplyingToId(null); 
+              setReplyText(""); 
+            } else { 
+              setReplyingToId(comment.id); 
+              setReplyText(""); 
+            } 
+          }} 
+          className={`flex items-center gap-1 transition-colors cursor-pointer ${ 
+            isReplying ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
+          }`} 
+        > 
+          <Reply size={12} /> 
+          <span>Reply</span> 
+        </button> 
+
+        {hasReplies && ( 
+          <button 
+            type="button" 
+            onClick={() => setCollapsed(!collapsed)} 
+            className="text-[#61F1AC] hover:underline cursor-pointer" 
+          > 
+            {collapsed ? `Show ${comment.replies.length} replies` : "Hide replies"} 
+          </button> 
+        )} 
+      </div> 
+
+      {isReplying && ( 
+        <div className="pl-7 pt-2"> 
+          <div className="bg-[#121212] border border-[#222222] focus-within:border-[#61F1AC]/50 rounded-xl p-3 transition-colors"> 
+            <div className="flex items-start gap-2.5 mb-2"> 
+              <ReviewAvatar 
+                src={replyAnon ? NAVBAR_AVATAR : currentUserAvatar} 
+                alt="Avatar" 
+                size="w-5 h-5" 
+              /> 
+              <textarea 
+                value={replyText} 
+                onChange={(e) => setReplyText(e.target.value)} 
+                placeholder={`Reply to ${comment.author}…`} 
+                rows={2} 
+                className="w-full bg-transparent text-[#F5F5F5] placeholder-[#666666] text-xs resize-none outline-none leading-relaxed" 
+                autoFocus 
+              /> 
+            </div> 
+            <div className="flex items-center justify-between pt-2 border-t border-[#1C1C1C]"> 
+              <label className="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-[#7A7A7A] hover:text-[#F5F5F5]"> 
+                <input 
+                  type="checkbox" 
+                  checked={replyAnon} 
+                  onChange={(e) => setReplyAnon(e.target.checked)} 
+                  className="w-3 h-3 rounded border-[#2C2C2C] bg-[#141414] accent-[#61F1AC] cursor-pointer" 
+                /> 
+                <span>Anonymous</span> 
+              </label> 
+              <div className="flex items-center gap-2"> 
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => { 
+                    setReplyingToId(null); 
+                    setReplyText(""); 
+                  }} 
+                  className="text-xs px-2.5 py-1 text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer" 
+                > 
+                  Cancel 
+                </Button> 
+                <Button 
+                  variant="primary" 
+                  size="sm" 
+                  disabled={isSubmittingReply || !replyText.trim()} 
+                  onClick={() => onPostReply(comment.id)} 
+                  className="text-xs font-semibold px-3 py-1 cursor-pointer" 
+                > 
+                  <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
+                </Button> 
+              </div> 
+            </div> 
+          </div> 
+        </div> 
+      )} 
+
+      {hasReplies && !collapsed && ( 
+        <div className="pl-3 sm:pl-4 border-l border-[#222222] mt-2 space-y-2.5"> 
+          {comment.replies.map((childReply) => ( 
+            <CommentThreadItem 
+              key={childReply.id} 
+              comment={childReply} 
+              depth={depth + 1} 
+              replyingToId={replyingToId} 
+              setReplyingToId={setReplyingToId} 
+              replyText={replyText} 
+              setReplyText={setReplyText} 
+              replyAnon={replyAnon} 
+              setReplyAnon={setReplyAnon} 
+              isSubmittingReply={isSubmittingReply} 
+              onPostReply={onPostReply} 
+              toggleLike={toggleLike} 
+              likedReviews={likedReviews} 
+              handleOpenReport={handleOpenReport} 
+              currentUserAvatar={currentUserAvatar} 
+            /> 
+          ))} 
+        </div> 
+      )} 
+    </div> 
+  ); 
+} 
+
 export function MediaReviewsTab({ 
   mediaId, 
   mediaType = "MOVIE", 
@@ -104,11 +311,13 @@ export function MediaReviewsTab({
 
   const [newThought, setNewThought] = useState(""); 
   const [selectedScore, setSelectedScore] = useState(8); 
+  const [isAnonymous, setIsAnonymous] = useState(false); 
   const [isEditingUserReview, setIsEditingUserReview] = useState(false); 
   const [isPostingReview, setIsPostingReview] = useState(false); 
 
   const [replyingToReviewId, setReplyingToReviewId] = useState(null); 
   const [replyText, setReplyText] = useState(""); 
+  const [replyAnon, setReplyAnon] = useState(false); 
   const [isSubmittingReply, setIsSubmittingReply] = useState(false); 
   const [expandedReplies, setExpandedReplies] = useState({}); 
 
@@ -140,6 +349,11 @@ export function MediaReviewsTab({
           reviewsList.forEach((r) => { 
             if (r.isLiked) initLikes[r.id] = true; 
           }); 
+          if (Array.isArray(revData.likedProviderIds)) { 
+            revData.likedProviderIds.forEach((pid) => { 
+              initLikes[pid] = true; 
+            }); 
+          } 
           setLikedReviews((prev) => ({ ...initLikes, ...prev })); 
           updateCommunityData({ 
             communityAverage: typeof revData.communityAverage === "number" ? revData.communityAverage : null, 
@@ -176,10 +390,12 @@ export function MediaReviewsTab({
         cover_url: coverUrl, 
         score: selectedScore, 
         content: newThought.trim(), 
+        is_anonymous: isAnonymous, 
       }); 
 
       if (res?.success) { 
         setNewThought(""); 
+        setIsAnonymous(false); 
         setIsEditingUserReview(false); 
         const newRev = res.data; 
 
@@ -255,6 +471,26 @@ export function MediaReviewsTab({
     } 
   }; 
 
+  function insertReplyRecursively(list, targetParentId, newReply) { 
+    return list.map((item) => { 
+      if (item.id === targetParentId) { 
+        return { 
+          ...item, 
+          replies: [...(item.replies || []), newReply], 
+          repliesCount: (item.repliesCount || 0) + 1, 
+        }; 
+      } 
+      if (item.replies && item.replies.length > 0) { 
+        return { 
+          ...item, 
+          replies: insertReplyRecursively(item.replies, targetParentId, newReply), 
+          repliesCount: (item.repliesCount || 0) + 1, 
+        }; 
+      } 
+      return item; 
+    }); 
+  } 
+
   const handlePostReply = async (parentId) => { 
     if (!replyText.trim()) return; 
     const token = localStorage.getItem("orgi_session"); 
@@ -273,23 +509,17 @@ export function MediaReviewsTab({
         cover_url: coverUrl, 
         content: replyText.trim(), 
         parent_id: parentId, 
+        is_anonymous: replyAnon, 
       }); 
 
       if (res?.success) { 
         const newReply = res.data; 
         updateCommunityData((prev) => ({ 
           ...prev, 
-          reviews: (prev?.reviews || []).map((r) => 
-            r.id === parentId 
-              ? { 
-                  ...r, 
-                  replies: [...(r.replies || []), newReply], 
-                  repliesCount: (r.repliesCount || 0) + 1, 
-                } 
-              : r 
-          ), 
+          reviews: insertReplyRecursively(prev?.reviews || [], parentId, newReply), 
         })); 
         setReplyText(""); 
+        setReplyAnon(false); 
         setReplyingToReviewId(null); 
         setExpandedReplies((prev) => ({ ...prev, [parentId]: true })); 
       } 
@@ -308,28 +538,73 @@ export function MediaReviewsTab({
     })); 
   }; 
 
-  const toggleLike = async (reviewId) => { 
-    const isCurrentlyLiked = Boolean(likedReviews[reviewId]); 
+  const toggleLike = async (rev) => { 
+    const revId = rev.id; 
+    const isCurrentlyLiked = Boolean(likedReviews[revId]); 
     setLikedReviews((prev) => ({ 
       ...prev, 
-      [reviewId]: !isCurrentlyLiked, 
+      [revId]: !isCurrentlyLiked, 
     })); 
-    updateCommunityData((prev) => ({ 
-      ...prev, 
-      reviews: (prev?.reviews || []).map((r) => 
-        r.id === reviewId 
-          ? { 
-              ...r, 
-              likes: Math.max(0, (r.likes || 0) + (isCurrentlyLiked ? -1 : 1)), 
+
+    if (rev.source === "community") { 
+      function updateLikesRecursively(list) { 
+        return list.map((item) => { 
+          if (item.id === revId) { 
+            return { 
+              ...item, 
+              likes: Math.max(0, (item.likes || 0) + (isCurrentlyLiked ? -1 : 1)), 
               isLiked: !isCurrentlyLiked, 
-            } 
-          : r 
-      ), 
-    })); 
-    try { 
-      await api.post(`/reviews/${reviewId}/like`); 
-    } catch (err) { 
-      console.warn("Failed to persist like:", err); 
+            }; 
+          } 
+          if (item.replies && item.replies.length > 0) { 
+            return { 
+              ...item, 
+              replies: updateLikesRecursively(item.replies), 
+            }; 
+          } 
+          return item; 
+        }); 
+      } 
+
+      updateCommunityData((prev) => ({ 
+        ...prev, 
+        reviews: updateLikesRecursively(prev?.reviews || []), 
+      })); 
+
+      try { 
+        await api.post(`/reviews/${revId}/like`); 
+      } catch (err) { 
+        console.warn("Failed to persist like:", err); 
+      } 
+    } else { 
+      setProviderReviews((prev) => 
+        prev.map((r) => 
+          r.id === revId 
+            ? { 
+                ...r, 
+                likes: Math.max(0, (r.likes || 0) + (isCurrentlyLiked ? -1 : 1)), 
+                isLiked: !isCurrentlyLiked, 
+              } 
+            : r 
+        ) 
+      ); 
+
+      try { 
+        await api.post("/reviews/provider/like", { 
+          external_id: String(mediaId), 
+          provider, 
+          type: mediaType, 
+          title: mediaTitle, 
+          cover_url: coverUrl, 
+          provider_review_id: String(revId), 
+          author_name: rev.author, 
+          author_avatar: rev.avatar, 
+          content: rev.content, 
+          score: rev.score, 
+        }); 
+      } catch (err) { 
+        console.warn("Failed to persist provider like:", err); 
+      } 
     } 
   }; 
 
@@ -439,7 +714,7 @@ export function MediaReviewsTab({
           <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#1C1C1C]"> 
             <div className="flex items-center gap-3"> 
               <ReviewAvatar 
-                src={currentUserAvatar} 
+                src={userReview.isAnonymous ? NAVBAR_AVATAR : currentUserAvatar} 
                 alt={userReview.author || user?.user_metadata?.user_name} 
                 size="w-9 h-9" 
               /> 
@@ -450,6 +725,11 @@ export function MediaReviewsTab({
                 <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#61F1AC]/15 text-[#61F1AC] border border-[#61F1AC]/40"> 
                   Your Review 
                 </span> 
+                {userReview.isAnonymous && ( 
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#141414] text-[#888888] border border-[#262626]"> 
+                    Anonymous 
+                  </span> 
+                )} 
                 {userReview.is_edited && ( 
                   <span className="text-[11px] text-[#7A7A7A] italic"> 
                     (edited) 
@@ -481,6 +761,7 @@ export function MediaReviewsTab({
               onClick={() => { 
                 setNewThought(userReview.content || ""); 
                 setSelectedScore(userReview.score || 8); 
+                setIsAnonymous(Boolean(userReview.isAnonymous)); 
                 setIsEditingUserReview(true); 
               }} 
               className="px-3 py-1 rounded-lg text-xs cursor-pointer hover:border-[#61F1AC]/50" 
@@ -501,7 +782,7 @@ export function MediaReviewsTab({
         <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm"> 
           <div className="flex items-start gap-3.5 mb-4"> 
             <ReviewAvatar 
-              src={currentUserAvatar} 
+              src={isAnonymous ? NAVBAR_AVATAR : currentUserAvatar} 
               alt="User Avatar" 
               size="w-9 h-9" 
             /> 
@@ -520,7 +801,17 @@ export function MediaReviewsTab({
               onChange={setSelectedScore} 
             /> 
 
-            <div className="flex items-center gap-2 self-end sm:self-center"> 
+            <div className="flex items-center gap-3 self-end sm:self-center flex-wrap"> 
+              <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-[#8A8A8A] hover:text-[#F5F5F5] transition-colors"> 
+                <input 
+                  type="checkbox" 
+                  checked={isAnonymous} 
+                  onChange={(e) => setIsAnonymous(e.target.checked)} 
+                  className="w-3.5 h-3.5 rounded border-[#2C2C2C] bg-[#141414] accent-[#61F1AC] cursor-pointer" 
+                /> 
+                <span>Post anonymously</span> 
+              </label> 
+
               {isEditingUserReview && ( 
                 <Button 
                   variant="outline" 
@@ -528,6 +819,7 @@ export function MediaReviewsTab({
                   onClick={() => { 
                     setIsEditingUserReview(false); 
                     setNewThought(""); 
+                    setIsAnonymous(false); 
                   }} 
                   className="px-3.5 py-1.5 rounded-lg text-xs cursor-pointer" 
                 > 
@@ -617,7 +909,7 @@ export function MediaReviewsTab({
 
       <div className="flex flex-col divide-y divide-[#1C1C1C]"> 
         {sortedReviews.slice(0, visibleReviews).map((rev) => { 
-          const isLiked = likedReviews[rev.id]; 
+          const isLiked = Boolean(likedReviews[rev.id]); 
           const likeCount = (rev.likes || 0) + (isLiked && !rev.isLiked ? 1 : !isLiked && rev.isLiked ? -1 : 0); 
           const isExpanded = Boolean(expandedReviews[rev.id]); 
           const isLongContent = (rev.content || "").length > 130; 
@@ -640,6 +932,11 @@ export function MediaReviewsTab({
                         Orgi 
                       </span> 
                     )} 
+                    {rev.isAnonymous && ( 
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#141414] text-[#888888] border border-[#262626]"> 
+                        Anonymous 
+                      </span> 
+                    )} 
                     {rev.is_edited && ( 
                       <span className="text-[11px] text-[#7A7A7A] italic"> 
                         (edited) 
@@ -647,7 +944,7 @@ export function MediaReviewsTab({
                     )} 
                     <span className="text-xs text-[#7A7A7A]">·</span> 
                     <span className="text-xs text-[#7A7A7A] font-light"> 
-                      {formatReviewDate(rev.time)} 
+                      {formatReviewDate(rev.time || rev.createdAt)} 
                     </span> 
                   </div> 
                 </div> 
@@ -673,23 +970,23 @@ export function MediaReviewsTab({
                 )} 
               </div> 
 
-              {rev.source === "community" && ( 
-                <div className="flex items-center justify-between text-xs text-[#7A7A7A]"> 
-                  <div className="flex items-center gap-5"> 
-                    <button 
-                      type="button" 
-                      onClick={() => toggleLike(rev.id)} 
-                      className={`flex items-center gap-1.5 transition-colors cursor-pointer ${ 
-                        isLiked ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
-                      }`} 
-                    > 
-                      <ThumbsUp 
-                        size={13} 
-                        className={isLiked ? "fill-[#61F1AC]" : ""} 
-                      /> 
-                      <span className="font-tabular">{likeCount}</span> 
-                    </button> 
+              <div className="flex items-center justify-between text-xs text-[#7A7A7A]"> 
+                <div className="flex items-center gap-5"> 
+                  <button 
+                    type="button" 
+                    onClick={() => toggleLike(rev)} 
+                    className={`flex items-center gap-1.5 transition-colors cursor-pointer ${ 
+                      isLiked ? "text-rose-500 hover:text-rose-400" : "hover:text-[#F5F5F5]" 
+                    }`} 
+                  > 
+                    <Heart 
+                      size={14} 
+                      className={isLiked ? "fill-rose-500 text-rose-500" : ""} 
+                    /> 
+                    <span className="font-tabular text-xs">{likeCount}</span> 
+                  </button> 
 
+                  {rev.source === "community" && ( 
                     <button 
                       type="button" 
                       onClick={() => handleToggleReplyBox(rev.id)} 
@@ -700,52 +997,52 @@ export function MediaReviewsTab({
                       <Reply size={13} /> 
                       <span>Reply</span> 
                     </button> 
+                  )} 
 
-                    <div className="relative"> 
-                      <button 
-                        type="button" 
-                        onClick={() => setActiveMenuReviewId(activeMenuReviewId === rev.id ? null : rev.id)} 
-                        className="hover:text-[#F5F5F5] transition-colors cursor-pointer p-0.5" 
-                      > 
-                        <MoreHorizontal size={14} /> 
-                      </button> 
-
-                      {activeMenuReviewId === rev.id && ( 
-                        <div className="absolute left-0 top-full mt-1 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20"> 
-                          <button 
-                            type="button" 
-                            onClick={() => handleOpenReport(rev.id)} 
-                            className="w-full text-left px-3 py-1.5 text-xs text-[#B5B5B5] hover:text-red-400 hover:bg-[#141414] transition-colors cursor-pointer" 
-                          > 
-                            Report Review 
-                          </button> 
-                        </div> 
-                      )} 
-                    </div> 
-                  </div> 
-
-                  {rev.repliesCount > 0 && ( 
+                  <div className="relative"> 
                     <button 
                       type="button" 
-                      onClick={() => toggleReplies(rev.id)} 
-                      className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1" 
+                      onClick={() => setActiveMenuReviewId(activeMenuReviewId === rev.id ? null : rev.id)} 
+                      className="hover:text-[#F5F5F5] transition-colors cursor-pointer p-0.5" 
                     > 
-                      <span> 
-                        {expandedReplies[rev.id] 
-                          ? "Hide replies" 
-                          : `View ${rev.repliesCount} ${rev.repliesCount === 1 ? "reply" : "replies"} ⌄`} 
-                      </span> 
+                      <MoreHorizontal size={14} /> 
                     </button> 
-                  )} 
+
+                    {activeMenuReviewId === rev.id && ( 
+                      <div className="absolute left-0 top-full mt-1 w-32 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20"> 
+                        <button 
+                          type="button" 
+                          onClick={() => handleOpenReport(rev.id)} 
+                          className="w-full text-left px-3 py-1.5 text-xs text-[#B5B5B5] hover:text-red-400 hover:bg-[#141414] transition-colors cursor-pointer" 
+                        > 
+                          Report Review 
+                        </button> 
+                      </div> 
+                    )} 
+                  </div> 
                 </div> 
-              )} 
+
+                {rev.repliesCount > 0 && rev.source === "community" && ( 
+                  <button 
+                    type="button" 
+                    onClick={() => toggleReplies(rev.id)} 
+                    className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1" 
+                  > 
+                    <span> 
+                      {expandedReplies[rev.id] 
+                        ? "Hide replies" 
+                        : `View ${rev.repliesCount} ${rev.repliesCount === 1 ? "reply" : "replies"} ⌄`} 
+                    </span> 
+                  </button> 
+                )} 
+              </div> 
 
               {replyingToReviewId === rev.id && rev.source === "community" && ( 
-                <div className="mt-3.5 pl-11"> 
+                <div className="mt-3.5 pl-4 sm:pl-8"> 
                   <div className="bg-[#101010] border border-[#222222] focus-within:border-[#61F1AC]/50 rounded-xl p-3 transition-colors"> 
                     <div className="flex items-start gap-2.5 mb-2.5"> 
                       <ReviewAvatar 
-                        src={currentUserAvatar} 
+                        src={replyAnon ? NAVBAR_AVATAR : currentUserAvatar} 
                         alt="Your Avatar" 
                         size="w-6 h-6" 
                       /> 
@@ -758,59 +1055,63 @@ export function MediaReviewsTab({
                         autoFocus 
                       /> 
                     </div> 
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1C1C1C]"> 
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => { 
-                          setReplyingToReviewId(null); 
-                          setReplyText(""); 
-                        }} 
-                        className="text-xs px-2.5 py-1 text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer" 
-                      > 
-                        Cancel 
-                      </Button> 
-                      <Button 
-                        variant="primary" 
-                        size="sm" 
-                        disabled={isSubmittingReply || !replyText.trim()} 
-                        onClick={() => handlePostReply(rev.id)} 
-                        className="text-xs font-semibold px-3.5 py-1 cursor-pointer" 
-                      > 
-                        <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
-                      </Button> 
+                    <div className="flex items-center justify-between pt-2 border-t border-[#1C1C1C]"> 
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-[#7A7A7A] hover:text-[#F5F5F5]"> 
+                        <input 
+                          type="checkbox" 
+                          checked={replyAnon} 
+                          onChange={(e) => setReplyAnon(e.target.checked)} 
+                          className="w-3 h-3 rounded border-[#2C2C2C] bg-[#141414] accent-[#61F1AC] cursor-pointer" 
+                        /> 
+                        <span>Anonymous</span> 
+                      </label> 
+                      <div className="flex items-center gap-2"> 
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => { 
+                            setReplyingToReviewId(null); 
+                            setReplyText(""); 
+                          }} 
+                          className="text-xs px-2.5 py-1 text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer" 
+                        > 
+                          Cancel 
+                        </Button> 
+                        <Button 
+                          variant="primary" 
+                          size="sm" 
+                          disabled={isSubmittingReply || !replyText.trim()} 
+                          onClick={() => handlePostReply(rev.id)} 
+                          className="text-xs font-semibold px-3.5 py-1 cursor-pointer" 
+                        > 
+                          <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
+                        </Button> 
+                      </div> 
                     </div> 
                   </div> 
                 </div> 
               )} 
 
               {rev.replies && expandedReplies[rev.id] && rev.source === "community" && ( 
-                <div className="mt-3.5 pl-11 space-y-2.5 pt-3 border-t border-[#1C1C1C]/40"> 
+                <div className="mt-3.5 pl-4 sm:pl-8 space-y-3 pt-3 border-t border-[#1C1C1C]/40"> 
                   {rev.replies.map((reply) => ( 
-                    <div key={reply.id} className="text-xs bg-[#0E0E0E] rounded-xl p-3 border border-[#1A1A1A]"> 
-                      <div className="flex items-center gap-2 mb-1"> 
-                        <ReviewAvatar 
-                          src={reply.avatar} 
-                          alt={reply.author} 
-                          size="w-5 h-5" 
-                        /> 
-                        <span className="font-medium text-[#F5F5F5]"> 
-                          {reply.author} 
-                        </span> 
-                        {reply.is_edited && ( 
-                          <span className="text-[10px] text-[#7A7A7A] italic"> 
-                            (edited) 
-                          </span> 
-                        )} 
-                        <span className="text-[#555555]">·</span> 
-                        <span className="text-[11px] text-[#7A7A7A]"> 
-                          {formatReviewDate(reply.time)} 
-                        </span> 
-                      </div> 
-                      <p className="text-[#B5B5B5] leading-relaxed pl-7 whitespace-pre-wrap"> 
-                        {reply.content} 
-                      </p> 
-                    </div> 
+                    <CommentThreadItem 
+                      key={reply.id} 
+                      comment={reply} 
+                      depth={1} 
+                      replyingToId={replyingToReviewId} 
+                      setReplyingToId={setReplyingToReviewId} 
+                      replyText={replyText} 
+                      setReplyText={setReplyText} 
+                      replyAnon={replyAnon} 
+                      setReplyAnon={setReplyAnon} 
+                      isSubmittingReply={isSubmittingReply} 
+                      onPostReply={handlePostReply} 
+                      toggleLike={toggleLike} 
+                      likedReviews={likedReviews} 
+                      handleOpenReport={handleOpenReport} 
+                      currentUserAvatar={currentUserAvatar} 
+                    /> 
                   ))} 
                 </div> 
               )} 

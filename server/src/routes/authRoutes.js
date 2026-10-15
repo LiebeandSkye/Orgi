@@ -21,7 +21,7 @@ router.post('/signup', signupRateLimiter, async(req, res, next) => {
                 .upsert({ 
                     id: userId, 
                     public_id: helperGenerateRandomId(), 
-                    user_name: user_name || 'Unnamed Orgi_' + helperGenerateRandomId(4), 
+                    user_name: (user_name && user_name.trim()) ? user_name.trim() : 'Unnamed Orgi ' + helperGenerateRandomId(4), 
                     email: normalizedEmail, 
                 });
             if (insertError) throw insertError; 
@@ -45,7 +45,7 @@ router.post('/anonymous', async(req, res, next) => {
                 .upsert({ 
                     id: userId, 
                     public_id: helperGenerateRandomId(), 
-                    user_name: "Unnamed Orgi_" + helperGenerateRandomId(4), 
+                    user_name: "Unnamed Orgi " + helperGenerateRandomId(4), 
                     anonymous: true, 
                 }); 
             if (upsertError) throw upsertError; 
@@ -79,7 +79,7 @@ router.post('/login', async(req, res, next) => {
                     .insert({ 
                         id: userId, 
                         public_id: helperGenerateRandomId(), 
-                        user_name: data.user?.user_metadata?.user_name || 'Unnamed Orgi_' + helperGenerateRandomId(4), 
+                        user_name: data.user?.user_metadata?.user_name || 'Unnamed Orgi ' + helperGenerateRandomId(4), 
                         email: data.user?.email || normalizedEmail, 
                     });
             }
@@ -151,7 +151,7 @@ router.post('/oauth-session', async(req, res, next) => {
                 meta.name || 
                 meta.user_name || 
                 meta.preferred_username || 
-                'Unnamed Orgi_' + helperGenerateRandomId(4); 
+                'Unnamed Orgi ' + helperGenerateRandomId(4); 
             const profileUrl = meta.avatar_url || meta.picture || null; 
             const email = authUser.email ? authUser.email.toLowerCase() : null; 
             

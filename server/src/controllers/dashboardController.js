@@ -89,12 +89,37 @@ export const dashboardController = {
         .order("created_at", { ascending: false }) 
         .limit(10); 
 
+      function cleanContentAndAuthor(rev) { 
+        if (!rev) return rev; 
+        let content = rev.content || ""; 
+        let author = rev.users?.user_name || "Unnamed Orgi"; 
+        let avatar = rev.users?.profile_url || ""; 
+        const anonMatch = content.match(/^<!--anon:([^>]+)-->/); 
+        if (anonMatch) { 
+          author = anonMatch[1]; 
+          avatar = ""; 
+          content = content.replace(/^<!--anon:[^>]+-->\s*/, ""); 
+        } 
+        content = content.replace(/^<!--prov:[^>]+-->\s*/, ""); 
+        return { 
+          ...rev, 
+          content, 
+          users: rev.users ? { 
+            ...rev.users, 
+            user_name: author, 
+            profile_url: avatar, 
+          } : null, 
+        }; 
+      } 
+
+      const formattedReviews = (recentReviews || []).map(cleanContentAndAuthor); 
+
       const formattedLikes = (rawLikes || []) 
         .filter((l) => l.reviews && !l.reviews.is_deleted) 
         .map((l) => ({ 
           likeId: l.id, 
           likedAt: l.created_at, 
-          review: l.reviews, 
+          review: cleanContentAndAuthor(l.reviews), 
         })); 
 
       res.json({ 
@@ -106,7 +131,7 @@ export const dashboardController = {
             reportCount: reportCount || 0, 
           }, 
           userRole: userRecord?.role || "user", 
-          recentReviews: recentReviews || [], 
+          recentReviews: formattedReviews, 
           recentLikes: formattedLikes, 
           recentReports: recentReports || [], 
         } 
