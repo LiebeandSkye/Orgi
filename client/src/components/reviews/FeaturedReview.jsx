@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Star, ArrowRight } from "lucide-react";
 import { Avatar } from "./Avatar";
+import { API_BASE_URL, safeFetchJson } from "../../services/api";
 
 function formatRelativeTime(dateString) {
   if (!dateString) return "";
@@ -38,11 +39,7 @@ export function FeaturedReview({
 
     let mounted = true;
     setInternalLoading(true);
-    fetch("/api/reviews/featured")
-      .then((res) => {
-        if (!res.ok) throw new Error("Featured review unavailable");
-        return res.json();
-      })
+    safeFetchJson(`${API_BASE_URL}/reviews/featured`)
       .then((data) => {
         if (mounted && data.success && data.item) {
           setInternalFeatured(data.item);

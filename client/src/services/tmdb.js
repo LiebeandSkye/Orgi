@@ -1,7 +1,9 @@
 // tmdb.js — Real TMDB API Service
 // Connects to the Express backend proxy (/api/tmdb) with fallback to direct TMDB API
 
-const API_BASE_URL = "/api/tmdb";
+import { API_BASE_URL as ROOT_API_BASE_URL } from "./api";
+
+const API_BASE_URL = `${ROOT_API_BASE_URL}/tmdb`;
 const TMDB_DIRECT_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY  ; 
@@ -35,7 +37,8 @@ async function fetchFromApi(endpoint, directFallbackEndpoint, params = {}) {
     const query = new URLSearchParams(params).toString();
     const url = `${API_BASE_URL}${endpoint}${query ? `?${query}` : ""}`;
     const res = await fetch(url);
-    if (res.ok) {
+    const contentType = res.headers.get("content-type") || "";
+    if (res.ok && contentType.includes("application/json")) {
       const json = await res.json();
       if (json.success && json.data) {
         return json.data;

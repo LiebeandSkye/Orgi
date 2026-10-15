@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_BASE_URL, safeFetchJson } from "../services/api";
 
 /**
  * Hook for fetching reviews feed with page-based pagination.
@@ -30,11 +31,7 @@ export function useReviewsFeed({ category, sort, rating, type, q, page = 1, limi
     params.set("limit", String(limit || 50));
 
     try {
-      const res = await fetch(`/api/reviews?${params.toString()}`);
-      if (!res.ok) {
-        throw new Error(`Failed to load reviews (${res.status})`);
-      }
-      const data = await res.json();
+      const data = await safeFetchJson(`${API_BASE_URL}/reviews?${params.toString()}`);
       if (!data.success) {
         throw new Error(data.error || "Failed to load reviews");
       }

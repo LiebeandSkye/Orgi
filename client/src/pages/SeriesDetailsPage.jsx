@@ -17,7 +17,7 @@ import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab";
 import { Button } from "../components/ui/Button"; 
 import MediaItems from "../components/ui/MediaItems"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
-import EpisodesSection from "../components/ui/EpisodeSSection"; 
+import EpisodesSection from "../components/ui/EpisodesSection"; 
 
 
 export function SeriesDetailsPage({
