@@ -511,8 +511,27 @@ export async function fetchBooksBySubject(subject = "fantasy", limit = 16) {
         }
     } catch {}
 
+    const cleanSubj = encodeURIComponent(subject.toLowerCase());
+
+    // 1. Try server endpoint backed by Upstash Redis
     try {
-        const res = await fetch(`${OPEN_LIBRARY_BASE}/subjects/${encodeURIComponent(subject.toLowerCase())}.json?limit=${limit}`);
+        const proxyRes = await fetch(`${API_BASE_URL}/books/subject/${cleanSubj}?limit=${limit}`);
+        if (proxyRes.ok) {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success && Array.isArray(proxyJson.data) && proxyJson.data.length > 0) {
+                try {
+                    sessionStorage.setItem(cacheKey, JSON.stringify({ data: proxyJson.data, timestamp: Date.now() }));
+                } catch {}
+                return proxyJson.data;
+            }
+        }
+    } catch {
+        // Fall back to direct Open Library below
+    }
+
+    // 2. Direct Open Library fallback
+    try {
+        const res = await fetch(`${OPEN_LIBRARY_BASE}/subjects/${cleanSubj}.json?limit=${limit}`);
         if (res.ok) {
             const json = await res.json();
             const works = json.works || [];
@@ -594,6 +613,28 @@ export async function fetchCategoryHubFeeds(category, onProgress) {
     const cached = getCachedCategoryHubFeeds(category);
     if (cached && typeof onProgress === "function") {
         onProgress(cached);
+    }
+
+    // 1. Try fast server category hub endpoint backed by Upstash Redis cache
+    try {
+        const proxyRes = await fetch(`${API_BASE_URL}/hub/${encodeURIComponent(category.toLowerCase())}`);
+        if (proxyRes.ok) {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success && proxyJson.data) {
+                const hubData = proxyJson.data;
+                const entry = { data: hubData, timestamp: Date.now() };
+                MEMORY_FEED_CACHE.set(key, entry);
+                try {
+                    sessionStorage.setItem(key, JSON.stringify(entry));
+                } catch {}
+                if (typeof onProgress === "function") {
+                    onProgress(hubData);
+                }
+                return hubData;
+            }
+        }
+    } catch {
+        // Fall back to progressive client-side fetching below
     }
 
     const formatItem = (item, cat, extra = {}) => {
