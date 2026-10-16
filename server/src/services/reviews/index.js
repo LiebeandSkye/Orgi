@@ -8,6 +8,7 @@ import {
 import { getMangaDexCards, getMangaDexDetail } from "./mangadexReviewService.js"; 
 import { getOpenLibraryCards, getOpenLibraryDetail } from "./openLibraryReviewService.js"; 
 import { getOrgiReviewCards, getOrgiReviewDetail } from "./orgiReviewService.js"; 
+import { supabase } from "../supabase.js"; 
 
 export function getCapabilitiesForCategory(category, items = []) { 
   const hasRatingData = items.some((it) => it.rating !== undefined && it.rating !== null); 
@@ -50,9 +51,9 @@ export function getCapabilitiesForCategory(category, items = []) {
   } 
 } 
 
-async function getItemsForCategory(category) { 
-  const [orgiCards, providerCards] = await Promise.all([ 
-    getOrgiReviewCards({ category }), 
+async function getItemsForCategory(category, userId) { 
+  const [orgiCards, providerCards, provLikesData] = await Promise.all([ 
+    getOrgiReviewCards({ category, userId }), 
     (async () => { 
       switch (category) { 
         case "all": { 
@@ -95,38 +96,53 @@ async function getItemsForCategory(category) {
           return await getTmdbReviewCards(); 
       } 
     })(), 
+    userId && supabase 
+      ? supabase 
+          .from("review_likes") 
+          .select("reviews(content)") 
+          .eq("user_id", userId) 
+      : Promise.resolve({ data: [] }), 
   ]); 
-
-  return [...orgiCards, ...(providerCards || [])]; 
+ 
+  const myLikedProviderSet = new Set(); 
+  if (provLikesData?.data) { 
+    provLikesData.data.forEach((l) => { 
+      const match = l.reviews?.content?.match(/^<!--prov:([^>]+)-->/); 
+      if (match) myLikedProviderSet.add(match[1]); 
+    }); 
+  } 
+ 
+  const mappedProviderCards = (providerCards || []).map((card) => { 
+    const isLiked = myLikedProviderSet.has(String(card.id)); 
+    return isLiked ? { ...card, isLiked: true } : card; 
+  }); 
+ 
+  return [...orgiCards, ...mappedProviderCards]; 
 } 
 
-
-/**
- * Core aggregator function for feed
- */
-export async function queryReviews({
-  category = "all",
-  sort = "recent",
-  minRating,
-  type = "all",
-  q = "",
-  cursor = "0",
-  page,
-  limit = 25,
-}) {
-  const offset = Math.max(0, parseInt(cursor, 10) || 0);
-
-  let pool = [];
-
-  // 1. Search vs Browse
-  if (q && q.trim()) {
-    pool = await searchTmdbReviews(q.trim());
-    if (category !== "all") {
-      pool = pool.filter((it) => it.category === category);
-    }
-  } else {
-    pool = await getItemsForCategory(category);
-  }
+export async function queryReviews({ 
+  category = "all", 
+  sort = "recent", 
+  minRating, 
+  type = "all", 
+  q = "", 
+  cursor = "0", 
+  page, 
+  limit = 25, 
+  userId, 
+}) { 
+  const offset = Math.max(0, parseInt(cursor, 10) || 0); 
+ 
+  let pool = []; 
+ 
+  if (q && q.trim()) { 
+    pool = await searchTmdbReviews(q.trim()); 
+    if (category !== "all") { 
+      pool = pool.filter((it) => it.category === category); 
+    } 
+  } else { 
+    pool = await getItemsForCategory(category, userId); 
+  } 
 
   const capabilities = getCapabilitiesForCategory(category, pool);
 

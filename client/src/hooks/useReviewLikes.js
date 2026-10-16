@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect } from "react"; 
 import api from "../services/api"; 
 import { getReviewAuthor } from "../utils/reviewUtils"; 
+import { useToast } from "../context/ToastContext"; 
 
 const STORAGE_KEY = "orgi_review_likes"; 
 
 export function useReviewLikes() { 
+  const { showToast, openAuthModal } = useToast(); 
   const [likes, setLikes] = useState(() => { 
     try { 
       const stored = localStorage.getItem(STORAGE_KEY); 
@@ -28,6 +30,7 @@ export function useReviewLikes() {
             const rev = item.review; 
             if (!rev) return; 
             if (rev.id) next[rev.id] = true; 
+            if (rev.providerReviewId) next[rev.providerReviewId] = true; 
             if (rev.items?.external_id) { 
               const orgiId = `orgi:${rev.items.id}:${rev.id}`; 
               next[orgiId] = true; 
@@ -52,6 +55,16 @@ export function useReviewLikes() {
   ); 
 
   const toggleLike = useCallback(async (itemOrId) => { 
+    const sessionToken = localStorage.getItem("orgi_session"); 
+    if (!sessionToken) { 
+      showToast({ 
+        message: "Please sign in to like reviews.", 
+        actionText: "Sign In", 
+        onAction: openAuthModal, 
+      }); 
+      return false; 
+    } 
+
     const isObject = typeof itemOrId === "object" && itemOrId !== null; 
     const id = isObject ? itemOrId.id : itemOrId; 
     if (!id) return false; 
@@ -68,9 +81,6 @@ export function useReviewLikes() {
       } catch {} 
       return next; 
     }); 
-
-    const sessionToken = localStorage.getItem("orgi_session"); 
-    if (!sessionToken) return; 
 
     try { 
       if (isObject && itemOrId.source === "orgi") { 
@@ -96,7 +106,7 @@ export function useReviewLikes() {
     } catch (err) { 
       console.warn("Failed to sync like with server:", err); 
     } 
-  }, [likes]); 
+  }, [showToast, openAuthModal]); 
 
   return { 
     isLiked, 

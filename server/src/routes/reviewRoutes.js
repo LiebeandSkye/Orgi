@@ -10,7 +10,7 @@ import {
 
 const router = express.Router(); 
 
-router.get("/", async (req, res, next) => { 
+router.get("/", optionalAuth, async (req, res, next) => { 
   try { 
     const { category, sort, minRating, type, q, cursor, page, limit } = req.query; 
     const result = await queryReviews({ 
@@ -22,6 +22,7 @@ router.get("/", async (req, res, next) => {
       cursor, 
       page, 
       limit, 
+      userId: req.user?.id, 
     }); 
     res.json({ success: true, ...result }); 
   } catch (err) { 

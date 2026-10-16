@@ -63,4 +63,26 @@ describe("getReviewAuthor", () => {
     assert.equal(res.name, "Anonymous");
     assert.equal(res.avatar, undefined);
   });
+
+  it("extracts from discord and github user_metadata claims", () => {
+    const discordItem = { 
+      user_metadata: { 
+        custom_claims: { global_name: "DiscordGlobal" }, 
+        avatar: "discord_hash" 
+      } 
+    };
+    const discordRes = getReviewAuthor(discordItem);
+    assert.equal(discordRes.name, "DiscordGlobal");
+    assert.equal(discordRes.avatar, "discord_hash");
+
+    const githubItem = { 
+      user_metadata: { 
+        login: "octocat", 
+        picture: "https://example.com/octo.png" 
+      } 
+    };
+    const githubRes = getReviewAuthor(githubItem);
+    assert.equal(githubRes.name, "octocat");
+    assert.equal(githubRes.avatar, "https://example.com/octo.png");
+  });
 });

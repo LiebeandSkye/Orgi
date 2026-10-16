@@ -18,6 +18,8 @@ import { getMovieReviews, getSeriesReviews } from "../../services/tmdb";
 import { FormattedText } from "../common/FormattedText";
 import { CommentFormattingToolbar, handleFormattingKeyDown } from "../common/CommentFormattingToolbar";
 import { getReviewAuthor } from "../../utils/reviewUtils";
+import { CommentThread } from "./CommentThread";
+import { useToast } from "../../context/ToastContext"; 
 
 const NAVBAR_AVATAR =
   "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
@@ -61,245 +63,27 @@ const formatReviewDate = (dateStr) => {
 
 export function CommentThreadItem({ 
   comment, 
-  depth = 1, 
-  replyingToId, 
-  setReplyingToId, 
-  replyText, 
-  setReplyText, 
-  replyAnon, 
-  setReplyAnon, 
-  isSubmittingReply, 
-  onPostReply, 
-  toggleLike, 
-  likedReviews = {}, 
-  handleOpenReport, 
   currentUserAvatar, 
+  currentUserName = "You", 
+  likedReviews = {}, 
+  toggleLike, 
+  onPostReply, 
   allowReply = true, 
-  highlightedReviewId, 
 }) { 
-  const isLiked = Boolean(likedReviews[comment.id]); 
-  const likeCount = (comment.likes || 0) + (isLiked && !comment.isLiked ? 1 : !isLiked && comment.isLiked ? -1 : 0); 
-  const isReplying = replyingToId === comment.id; 
-  const [menuOpen, setMenuOpen] = useState(false); 
-  const [collapsed, setCollapsed] = useState(false); 
-  const hasReplies = Array.isArray(comment.replies) && comment.replies.length > 0; 
-  const replyInputRef = useRef(null);
-  const authorInfo = getReviewAuthor(comment, "Anonymous");
-  
+  if (!comment) return null; 
   return ( 
-    <div 
-      id={`review-${comment.id}`} 
-      className={`bg-[#0B0B0B] rounded-2xl p-4 sm:p-4.5 border transition-all duration-500 space-y-3 shadow-sm ${ 
-        highlightedReviewId === comment.id 
-          ? "border-[#61F1AC] ring-2 ring-[#61F1AC] bg-[#61F1AC]/5 shadow-[0_0_20px_rgba(97,241,172,0.15)]" 
-          : "border-[#1C1C1C] hover:border-[#282828]" 
-      }`} 
-    > 
-      <div className="flex items-center justify-between gap-3"> 
-        <div className="flex items-center gap-2.5 flex-wrap"> 
-          <ReviewAvatar 
-            src={authorInfo.avatar} 
-            alt={authorInfo.name} 
-            size="w-7 h-7" 
-          /> 
-          <span className="font-semibold text-sm text-[#F5F5F5]"> 
-            {authorInfo.name} 
-          </span> 
-          {comment.replyToAuthor && ( 
-            <span className="text-[#61F1AC] font-medium text-xs inline-flex items-center gap-1 bg-[#61F1AC]/10 border border-[#61F1AC]/20 px-1.5 py-0.5 rounded-full"> 
-              <span className="text-[#666666] font-normal">@</span> 
-              <span>{comment.replyToAuthor}</span> 
-            </span> 
-          )} 
-          {comment.isAnonymous && ( 
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#141414] text-[#888888] border border-[#262626]"> 
-              Anon 
-            </span> 
-          )} 
-          {comment.is_edited && ( 
-            <span className="text-[11px] text-[#7A7A7A] italic"> 
-              (edited) 
-            </span> 
-          )} 
-          <span className="text-[#555555]">·</span> 
-          <span className="text-xs text-[#7A7A7A] font-light"> 
-            {formatReviewDate(comment.time)} 
-          </span> 
-        </div> 
-        
-        {handleOpenReport && ( 
-          <div className="relative"> 
-            <button 
-              type="button" 
-              onClick={() => setMenuOpen(!menuOpen)} 
-              className="text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer p-1 rounded-md transition-colors" 
-            > 
-              <MoreHorizontal size={14} /> 
-            </button> 
-            {menuOpen && ( 
-              <div className="absolute right-0 top-full mt-1 w-28 bg-[#0B0B0B] border border-[#1C1C1C] rounded-lg py-1 shadow-2xl z-20"> 
-                <button 
-                  type="button" 
-                  onClick={() => { 
-                    setMenuOpen(false); 
-                    handleOpenReport(comment.id); 
-                  }} 
-                  className="w-full text-left px-2.5 py-1 text-xs text-[#B5B5B5] hover:text-red-400 hover:bg-[#141414] cursor-pointer" 
-                > 
-                  Report 
-                </button> 
-              </div> 
-            )} 
-          </div> 
-        )} 
-      </div> 
-      
-      <div className="text-sm leading-relaxed text-[#D5D5D5] font-light pl-9.5"> 
-        <FormattedText content={comment.content} /> 
-      </div> 
-      
-      <div className="flex items-center gap-4.5 pl-9.5 text-xs text-[#7A7A7A]"> 
-        {toggleLike && ( 
-          <button 
-            type="button" 
-            onClick={() => toggleLike(comment)} 
-            className={`flex items-center gap-1.5 transition-colors cursor-pointer ${ 
-              isLiked ? "text-rose-500 hover:text-rose-400" : "hover:text-[#F5F5F5]" 
-            }`} 
-          > 
-            <Heart 
-              size={13} 
-              className={isLiked ? "fill-rose-500 text-rose-500" : ""} 
-            /> 
-            <span className="font-tabular text-xs">{likeCount}</span> 
-          </button> 
-        )} 
-        
-        {allowReply && depth < 3 && onPostReply && ( 
-          <button 
-            type="button" 
-            onClick={() => { 
-              if (isReplying) { 
-                setReplyingToId(null); 
-                setReplyText(""); 
-              } else { 
-                setReplyingToId(comment.id); 
-                setReplyText(""); 
-              } 
-            }} 
-            className={`flex items-center gap-1.5 transition-colors cursor-pointer ${ 
-              isReplying ? "text-[#61F1AC]" : "hover:text-[#F5F5F5]" 
-            }`} 
-          > 
-            <Reply size={13} /> 
-            <span>Reply</span> 
-          </button> 
-        )} 
-        
-        {hasReplies && ( 
-          <button 
-            type="button" 
-            onClick={() => setCollapsed(!collapsed)} 
-            className="text-xs text-[#61F1AC] hover:underline cursor-pointer" 
-          > 
-            {collapsed ? `Show ${comment.replies.length} replies` : "Hide replies"} 
-          </button> 
-        )} 
-      </div> 
-      
-      {isReplying && allowReply && onPostReply && ( 
-        <div className="pl-9.5 pt-2"> 
-          <div className="bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/50 rounded-2xl p-3.5 transition-colors"> 
-            <div className="flex items-start gap-2.5 mb-2.5"> 
-              <ReviewAvatar 
-                src={replyAnon ? NAVBAR_AVATAR : currentUserAvatar} 
-                alt="Avatar" 
-                size="w-6 h-6" 
-              /> 
-              <div className="flex-1 min-w-0">
-                <textarea 
-                  ref={replyInputRef}
-                  value={replyText} 
-                  onChange={(e) => setReplyText(e.target.value)} 
-                  onKeyDown={(e) => handleFormattingKeyDown(e, replyInputRef.current, replyText, setReplyText)}
-                  placeholder={`Reply to ${authorInfo.name}…`} 
-                  rows={2} 
-                  className="w-full bg-transparent text-[#F5F5F5] placeholder-[#666666] text-xs resize-none outline-none leading-relaxed" 
-                  autoFocus 
-                /> 
-                <CommentFormattingToolbar
-                  textareaRef={replyInputRef}
-                  value={replyText}
-                  onChange={setReplyText}
-                  className="mt-1"
-                />
-              </div>
-            </div> 
-            <div className="flex items-center justify-between pt-2 border-t border-[#1C1C1C]"> 
-              <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-[#7A7A7A] hover:text-[#F5F5F5]"> 
-                <input 
-                  type="checkbox" 
-                  checked={replyAnon} 
-                  onChange={(e) => setReplyAnon(e.target.checked)} 
-                  className="w-3.5 h-3.5 rounded border-[#2C2C2C] bg-[#141414] accent-[#61F1AC] cursor-pointer" 
-                /> 
-                <span>Anonymous</span> 
-              </label> 
-              <div className="flex items-center gap-2"> 
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => { 
-                    setReplyingToId(null); 
-                    setReplyText(""); 
-                  }} 
-                  className="text-xs px-2.5 py-1 text-[#7A7A7A] hover:text-[#F5F5F5] cursor-pointer" 
-                > 
-                  Cancel 
-                </Button> 
-                <Button 
-                  variant="primary" 
-                  size="sm" 
-                  disabled={isSubmittingReply || !replyText.trim()} 
-                  onClick={() => onPostReply(comment.id, authorInfo.name)} 
-                  className="text-xs font-semibold px-3 py-1 cursor-pointer" 
-                > 
-                  <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
-                </Button> 
-              </div> 
-            </div> 
-          </div> 
-        </div> 
-      )} 
-      
-      {hasReplies && !collapsed && depth < 3 && ( 
-        <div className="pl-3 sm:pl-5 border-l-2 border-[#1C1C1C] mt-3 space-y-3"> 
-          {comment.replies.map((childReply) => ( 
-            <CommentThreadItem 
-              key={childReply.id} 
-              comment={childReply} 
-              depth={depth + 1} 
-              replyingToId={replyingToId} 
-              setReplyingToId={setReplyingToId} 
-              replyText={replyText} 
-              setReplyText={setReplyText} 
-              replyAnon={replyAnon} 
-              setReplyAnon={setReplyAnon} 
-              isSubmittingReply={isSubmittingReply} 
-              onPostReply={onPostReply} 
-              toggleLike={toggleLike} 
-              likedReviews={likedReviews} 
-              handleOpenReport={handleOpenReport} 
-              currentUserAvatar={currentUserAvatar} 
-              allowReply={allowReply} 
-              highlightedReviewId={highlightedReviewId} 
-            /> 
-          ))} 
-        </div> 
-      )} 
-    </div> 
+    <CommentThread 
+      comments={[comment]} 
+      currentUserAvatar={currentUserAvatar} 
+      currentUserName={currentUserName} 
+      likedReviews={likedReviews} 
+      onToggleLike={toggleLike} 
+      onPostReply={onPostReply} 
+      allowReply={allowReply} 
+    /> 
   ); 
 } 
+ 
 
 export function MediaReviewsTab({
   mediaId,
@@ -315,7 +99,21 @@ export function MediaReviewsTab({
   onCommunityDataChange,
 }) {
   const { user, userProfile } = useAuth();
-  const currentUserAvatar = userProfile?.profile_url || user?.user_metadata?.avatar_url || NAVBAR_AVATAR;
+  const { showToast, openAuthModal } = useToast(); 
+  const currentUserAvatar = 
+    userProfile?.profile_url || 
+    user?.profile_url || 
+    user?.user_metadata?.avatar_url || 
+    user?.user_metadata?.picture || 
+    NAVBAR_AVATAR; 
+
+  const showAuthPrompt = (message = "Please sign in to continue.") => { 
+    showToast({ 
+      message, 
+      actionText: "Sign In", 
+      onAction: openAuthModal, 
+    }); 
+  };
   
   const [internalCommunityData, setInternalCommunityData] = useState({
     communityAverage: null,
@@ -459,7 +257,7 @@ export function MediaReviewsTab({
     if (!newThought.trim()) return;
     const token = localStorage.getItem("orgi_session");
     if (!token) {
-      alert("Please sign in to rate and review.");
+      showAuthPrompt("Please sign in to rate and review."); 
       return;
     }
     
@@ -511,7 +309,7 @@ export function MediaReviewsTab({
       }
     } catch (err) {
       console.error("Failed to post review:", err);
-      alert(err.message || "Failed to post review.");
+      showToast({ message: err.message || "Failed to post review." }); 
     } finally {
       setIsPostingReview(false);
     }
@@ -540,60 +338,66 @@ export function MediaReviewsTab({
       }
     } catch (err) {
       console.error("Failed to delete review:", err);
-      alert(err.message || "Failed to delete review.");
+      showToast({ message: err.message || "Failed to delete review." }); 
     }
   };
   
-  const handleToggleReplyBox = (reviewId) => {
-    if (replyingToReviewId === reviewId) {
-      setReplyingToReviewId(null);
-      setReplyText("");
-    } else {
-      setReplyingToReviewId(reviewId);
-      setReplyText("");
-    }
-  };
-  
-  function insertReplyRecursively(list, targetParentId, newReply) {
-    return list.map((item) => {
-      if (item.id === targetParentId) {
-        return {
-          ...item,
-          replies: [...(item.replies || []), newReply],
-          repliesCount: (item.repliesCount || 0) + 1,
-        };
-      }
-      if (item.replies && item.replies.length > 0) {
-        return {
-          ...item,
-          replies: insertReplyRecursively(item.replies, targetParentId, newReply),
-          repliesCount: (item.repliesCount || 0) + 1,
-        };
-      }
-      return item;
-    });
-  }
-  
-  const handlePostReply = async (parentId, targetAuthor) => { 
-    if (!replyText.trim()) return; 
+  const handleToggleReplyBox = (reviewId) => { 
     const token = localStorage.getItem("orgi_session"); 
     if (!token) { 
-      alert("Please sign in to reply."); 
+      showAuthPrompt("Please sign in to reply."); 
       return; 
     } 
+    if (replyingToReviewId === reviewId) { 
+      setReplyingToReviewId(null); 
+      setReplyText(""); 
+    } else { 
+      setReplyingToReviewId(reviewId); 
+      setReplyText(""); 
+    } 
+  }; 
+  
+  function insertReplyRecursively(list, targetParentId, newReply) { 
+    return list.map((item) => { 
+      if (item.id === targetParentId) { 
+        return { 
+          ...item, 
+          replies: [...(item.replies || []), newReply], 
+          repliesCount: (item.repliesCount || 0) + 1, 
+        }; 
+      } 
+      if (item.replies && item.replies.length > 0) { 
+        return { 
+          ...item, 
+          replies: insertReplyRecursively(item.replies, targetParentId, newReply), 
+          repliesCount: (item.repliesCount || 0) + 1, 
+        }; 
+      } 
+      return item; 
+    }); 
+  } 
+  
+  const handlePostReply = async (parentId, targetAuthor, text = replyText, anon = replyAnon) => { 
+    const content = typeof text === "string" ? text.trim() : (replyText || "").trim(); 
+    if (!content) return false; 
+    const token = localStorage.getItem("orgi_session"); 
+    if (!token) { 
+      showAuthPrompt("Please sign in to reply."); 
+      return false; 
+    } 
     
-    setIsSubmittingReply(true);
-    try {
-      const res = await api.post("/reviews", {
-        external_id: String(mediaId),
-        provider,
-        type: mediaType,
-        title: mediaTitle,
-        cover_url: coverUrl,
-        content: replyText.trim(),
-        parent_id: parentId,
-        is_anonymous: replyAnon,
-      });
+    setIsSubmittingReply(true); 
+    try { 
+      const res = await api.post("/reviews", { 
+        external_id: String(mediaId), 
+        provider, 
+        type: mediaType, 
+        title: mediaTitle, 
+        cover_url: coverUrl, 
+        content, 
+        parent_id: parentId, 
+        is_anonymous: anon !== undefined ? anon : replyAnon, 
+      }); 
       
       if (res?.success) { 
         const newReply = { 
@@ -608,29 +412,37 @@ export function MediaReviewsTab({
         setReplyAnon(false); 
         setReplyingToReviewId(null); 
         setExpandedReplies((prev) => ({ ...prev, [parentId]: true })); 
+        return true; 
       } 
+      return false; 
     } catch (err) { 
       console.error("Failed to post reply:", err); 
-      alert(err.message || "Failed to post reply."); 
+      showToast({ message: err.message || "Failed to post reply." }); 
+      return false; 
     } finally { 
       setIsSubmittingReply(false); 
     } 
   }; 
   
-  const toggleReplies = (reviewId) => {
-    setExpandedReplies((prev) => ({
-      ...prev,
-      [reviewId]: !prev[reviewId],
-    }));
-  };
+  const toggleReplies = (reviewId) => { 
+    setExpandedReplies((prev) => ({ 
+      ...prev, 
+      [reviewId]: !prev[reviewId], 
+    })); 
+  }; 
   
-  const toggleLike = async (rev) => {
-    const revId = rev.id;
-    const isCurrentlyLiked = Boolean(likedReviews[revId]);
-    setLikedReviews((prev) => ({
-      ...prev,
-      [revId]: !isCurrentlyLiked,
-    }));
+  const toggleLike = async (rev) => { 
+    const token = localStorage.getItem("orgi_session"); 
+    if (!token) { 
+      showAuthPrompt("Please sign in to like reviews."); 
+      return; 
+    } 
+    const revId = rev.id; 
+    const isCurrentlyLiked = Boolean(likedReviews[revId]); 
+    setLikedReviews((prev) => ({ 
+      ...prev, 
+      [revId]: !isCurrentlyLiked, 
+    })); 
     
     if (rev.source === "community") {
       function updateLikesRecursively(list) {
@@ -703,12 +515,12 @@ export function MediaReviewsTab({
   
   const handleSubmitReport = async () => {
     if (!reportReason.trim()) {
-      alert("Please provide a reason for the report.");
+      showToast({ message: "Please provide a reason for the report." }); 
       return;
     }
     const token = localStorage.getItem("orgi_session");
     if (!token) {
-      alert("Please sign in to submit a report.");
+      showAuthPrompt("Please sign in to submit a report."); 
       return;
     }
     
@@ -720,11 +532,11 @@ export function MediaReviewsTab({
         reason: reportReason.trim(),
       });
       if (res?.success) {
-        alert("Report submitted for moderation. Thank you!");
+        showToast({ message: "Report submitted for moderation. Thank you!" }); 
         setReportModalOpen(false);
       }
     } catch (err) {
-      alert(err.message || "Failed to submit report");
+      showToast({ message: err.message || "Failed to submit report" }); 
     } finally {
       setIsSubmittingReport(false);
     }
@@ -1212,30 +1024,20 @@ export function MediaReviewsTab({
                 </div> 
               )} 
               
-              {rev.replies && expandedReplies[rev.id] && rev.source === "community" && (
-                <div className="mt-3.5 pl-4 sm:pl-8 space-y-3 pt-3 border-t border-[#1C1C1C]/40">
-                  {rev.replies.map((reply) => (
-                    <CommentThreadItem
-                      key={reply.id}
-                      comment={reply}
-                      depth={1}
-                      replyingToId={replyingToReviewId}
-                      setReplyingToId={setReplyingToReviewId}
-                      replyText={replyText}
-                      setReplyText={setReplyText}
-                      replyAnon={replyAnon}
-                      setReplyAnon={setReplyAnon}
-                      isSubmittingReply={isSubmittingReply}
-                      onPostReply={handlePostReply}
-                      toggleLike={toggleLike}
-                      likedReviews={likedReviews}
-                      handleOpenReport={handleOpenReport}
-                      currentUserAvatar={currentUserAvatar} 
-                      highlightedReviewId={highlightedReviewId} 
-                    /> 
-                  ))}
-                </div>
-              )}
+              {rev.replies && expandedReplies[rev.id] && rev.source === "community" && ( 
+                <div className="mt-3.5 pl-4 sm:pl-8 pt-3 border-t border-[#1C1C1C]/40"> 
+                  <CommentThread 
+                    comments={rev.replies} 
+                    currentUserAvatar={currentUserAvatar} 
+                    currentUserName={userProfile?.user_name || user?.user_name || "You"} 
+                    likedReviews={likedReviews} 
+                    onToggleLike={toggleLike} 
+                    onPostReply={(parentId, targetAuthor, text, anon) => 
+                      handlePostReply(parentId || rev.id, targetAuthor, text, anon) 
+                    } 
+                  /> 
+                </div> 
+              )} 
             </article>
           );
         })}

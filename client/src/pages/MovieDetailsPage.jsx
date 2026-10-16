@@ -19,6 +19,8 @@ import MediaItems from "../components/ui/MediaItems";
 import { fetchMediaDetails } from "../services/mediaApi"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import { useAuth } from "../context/AuthContext"; 
+import { useToast } from "../context/ToastContext"; 
+import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection"; 
 import api from "../services/api"; 
 
 
@@ -68,6 +70,7 @@ export function MovieDetailsPage({
 }) {
   const location = useLocation(); 
   const navigate = useNavigate(); 
+  const { showToast, openAuthModal } = useToast(); 
   const { category, id } = useParams(); 
   const { user, userProfile } = useAuth(); 
   const isReviewsUrl = location.pathname.includes("/reviews"); 
@@ -203,8 +206,15 @@ export function MovieDetailsPage({
     let mounted = true; 
     async function loadCollectionAndReviews() { 
       try { 
+        const token = localStorage.getItem("orgi_session"); 
+        if (!token) { 
+          if (mounted) { 
+            setInCollection(isGuestInCollection(currentProvider, currentExternalId)); 
+          } 
+        } 
+ 
         const [colRes, revRes] = await Promise.allSettled([ 
-          api.get(`/collections/check/${currentProvider}/${currentExternalId}`), 
+          token ? api.get(`/collections/check/${currentProvider}/${currentExternalId}`) : Promise.resolve(null), 
           api.get(`/reviews/${currentProvider}/${currentExternalId}`), 
         ]); 
  
@@ -235,17 +245,29 @@ export function MovieDetailsPage({
  
   const handleToggleCollection = async () => { 
     if (!movieData) return; 
-    const token = localStorage.getItem("orgi_session"); 
-    if (!token) { 
-      alert("Please sign in to add items to your collection."); 
-      return; 
-    } 
- 
     const currentProvider = category 
       ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
       : "tmdb"; 
     const currentExternalId = String(category ? id : (id || 157336)); 
     const currentType = category ? category.toUpperCase() : "MOVIE"; 
+    const token = localStorage.getItem("orgi_session"); 
+
+    if (!token) { 
+      const nextInCol = toggleGuestCollection({ 
+        external_id: currentExternalId, 
+        provider: currentProvider, 
+        type: currentType, 
+        title: movieData.title, 
+        cover_url: movieData.poster || movieData.backdrop, 
+      }); 
+      setInCollection(nextInCol); 
+      showToast({ 
+        message: nextInCol ? "Added to local collection." : "Removed from local collection.", 
+        actionText: "Sign In to Sync", 
+        onAction: openAuthModal, 
+      }); 
+      return; 
+    } 
  
     setCollectionLoading(true); 
     try { 
@@ -262,7 +284,7 @@ export function MovieDetailsPage({
       } 
     } catch (err) { 
       console.error("Failed to toggle collection:", err); 
-      alert(err.message || "Failed to update collection."); 
+      showToast({ message: err.message || "Failed to update collection." }); 
     } finally { 
       setCollectionLoading(false); 
     } 
@@ -441,7 +463,7 @@ export function MovieDetailsPage({
                 aria-label="Share"
                 onClick={() => {
                   navigator.clipboard?.writeText(window.location.href);
-                  alert("Link copied to clipboard");
+                  showToast({ message: "Link copied to clipboard." }); 
                 }}
                 className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer"
               >

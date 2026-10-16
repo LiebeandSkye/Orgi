@@ -25,13 +25,31 @@ export function AuthProvider({ children }) {
         } 
     }, []); 
 
+    const mergeGuestCollectionToServer = useCallback(async () => { 
+        const guestRaw = typeof localStorage !== "undefined" ? localStorage.getItem("orgi_guest_collection") : null; 
+        if (!guestRaw) return; 
+        try { 
+            const guestItems = JSON.parse(guestRaw); 
+            if (Array.isArray(guestItems) && guestItems.length > 0) { 
+                const res = await api.post("/collections/merge", { items: guestItems }); 
+                if (res?.success) { 
+                    localStorage.removeItem("orgi_guest_collection"); 
+                    window.dispatchEvent(new Event("orgi_guest_collection_changed")); 
+                } 
+            } else { 
+                localStorage.removeItem("orgi_guest_collection"); 
+            } 
+        } catch {} 
+    }, []); 
+
     useEffect(() => { 
         if (session?.user?.id) { 
             fetchProfile(session.user.id); 
+            mergeGuestCollectionToServer(); 
         } else { 
             setUserProfile(null); 
         } 
-    }, [session?.user?.id, fetchProfile]); 
+    }, [session?.user?.id, fetchProfile, mergeGuestCollectionToServer]); 
     
     useEffect(() => { 
         const handleSessionRefreshed = (e) => { 
@@ -57,6 +75,7 @@ export function AuthProvider({ children }) {
             localStorage.setItem("orgi_session", JSON.stringify(data)); 
             if (data?.user?.id) { 
                 fetchProfile(data.user.id); 
+                mergeGuestCollectionToServer(); 
             } 
         } else { 
             localStorage.removeItem("orgi_session"); 

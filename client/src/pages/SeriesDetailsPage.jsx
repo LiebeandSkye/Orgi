@@ -18,6 +18,8 @@ import { Button } from "../components/ui/Button";
 import MediaItems from "../components/ui/MediaItems"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import EpisodesSection from "../components/ui/EpisodesSection"; 
+import { useToast } from "../context/ToastContext"; 
+import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection"; 
 
 
 export function SeriesDetailsPage({
@@ -26,6 +28,7 @@ export function SeriesDetailsPage({
 }) {
   const location = useLocation();
   const { id } = useParams();
+  const { showToast, openAuthModal } = useToast(); 
   const isReviewsUrl = location.pathname.includes("/reviews");
   
   const [seriesData, setSeriesData] = useState(null);
@@ -54,8 +57,15 @@ export function SeriesDetailsPage({
     let mounted = true; 
     async function loadCollectionAndReviews() { 
       try { 
+        const token = localStorage.getItem("orgi_session"); 
+        if (!token) { 
+          if (mounted) { 
+            setInCollection(isGuestInCollection("tmdb", String(id))); 
+          } 
+        } 
+ 
         const [colRes, revRes] = await Promise.allSettled([ 
-          api.get(`/collections/check/tmdb/${id}`), 
+          token ? api.get(`/collections/check/tmdb/${id}`) : Promise.resolve(null), 
           api.get(`/reviews/tmdb/${id}`), 
         ]); 
  
@@ -83,31 +93,43 @@ export function SeriesDetailsPage({
     }; 
   }, [seriesData, id]); 
  
-  
   const handleToggleCollection = async () => { 
     if (!seriesData) return; 
+    const currentExternalId = String(id); 
     const token = localStorage.getItem("orgi_session"); 
     if (!token) { 
-      alert("Please sign in to add items to your collection."); 
-      return; 
-    } 
-    
-    setCollectionLoading(true); 
-    try { 
-      const res = await api.post("/collections/toggle", { 
-        external_id: String(id), 
+      const nextInCol = toggleGuestCollection({ 
+        external_id: currentExternalId, 
         provider: "tmdb", 
         type: "SERIES", 
         title: seriesData.title, 
         cover_url: seriesData.poster || seriesData.backdrop, 
       }); 
-      
+      setInCollection(nextInCol); 
+      showToast({ 
+        message: nextInCol ? "Added to local collection." : "Removed from local collection.", 
+        actionText: "Sign In to Sync", 
+        onAction: openAuthModal, 
+      }); 
+      return; 
+    } 
+ 
+    setCollectionLoading(true); 
+    try { 
+      const res = await api.post("/collections/toggle", { 
+        external_id: currentExternalId, 
+        provider: "tmdb", 
+        type: "SERIES", 
+        title: seriesData.title, 
+        cover_url: seriesData.poster || seriesData.backdrop, 
+      }); 
+ 
       if (res?.success) { 
         setInCollection(!!res.data?.inCollection); 
       } 
     } catch (err) { 
       console.error("Failed to toggle series collection:", err); 
-      alert(err.message || "Failed to update collection."); 
+      showToast({ message: err.message || "Failed to update collection." }); 
     } finally { 
       setCollectionLoading(false); 
     } 
@@ -354,7 +376,7 @@ export function SeriesDetailsPage({
                 aria-label="Share"
                 onClick={() => {
                   navigator.clipboard?.writeText(window.location.href);
-                  alert("Link copied to clipboard");
+                  showToast({ message: "Link copied to clipboard." }); 
                 }}
                 className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer"
               >

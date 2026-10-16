@@ -21,6 +21,7 @@ import { ProfileCard } from "../feature/profile/components/ProfileCard";
 import { EditProfileModal } from "../feature/profile/components/EditProfileModal"; 
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton"; 
 import { FormattedText } from "../components/common/FormattedText"; 
+import { useToast } from "../context/ToastContext"; 
 
 const DEFAULT_AVATAR = "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
 
@@ -68,6 +69,7 @@ function getItemLink(item) {
 
 export function ProfilePage() { 
   const { user, userProfile, refreshProfile } = useAuth(); 
+  const { showToast } = useToast(); 
   const [profile, setProfile] = useState(userProfile); 
   const [isEditing, setIsEditing] = useState(false); 
   const [activeTab, setActiveTab] = useState("favorites"); 
@@ -146,7 +148,7 @@ export function ProfilePage() {
       setIsEditing(false); 
     } catch (err) { 
       console.error("Failed to update profile:", err); 
-      alert(err.message || "Failed to update profile"); 
+      showToast({ message: err.message || "Failed to update profile" }); 
     } 
   }; 
 
@@ -173,7 +175,7 @@ export function ProfilePage() {
       } 
     } catch (err) { 
       console.error("Failed to upload avatar:", err); 
-      alert(err.message || "Failed to upload avatar"); 
+      showToast({ message: err.message || "Failed to upload avatar" }); 
     } finally { 
       setIsUploadingAvatar(false); 
     } 
@@ -199,7 +201,7 @@ export function ProfilePage() {
       } 
     } catch (err) { 
       console.error("Failed to upload banner:", err); 
-      alert(err.message || "Failed to upload banner"); 
+      showToast({ message: err.message || "Failed to upload banner" }); 
     } finally { 
       setIsUploadingBanner(false); 
     } 

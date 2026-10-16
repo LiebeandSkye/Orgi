@@ -1,7 +1,7 @@
 import { supabase } from "../supabase.js"; 
 import { createExcerpt } from "./excerpt.js"; 
 
-export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) { 
+export async function getOrgiReviewCards({ category = "all", limit = 20, userId } = {}) { 
   if (!supabase) return []; 
   
   try { 
@@ -39,9 +39,10 @@ export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) 
     const reviewIds = rawReviews.map((r) => r.id); 
     const likesMap = {}; 
     const repliesMap = {}; 
+    const myLikedSet = new Set(); 
     
     if (reviewIds.length > 0) { 
-      const [{ data: likesData }, { data: repliesData }] = await Promise.all([ 
+      const [{ data: likesData }, { data: repliesData }, { data: myLikes }] = await Promise.all([ 
         supabase 
           .from("review_likes") 
           .select("review_id") 
@@ -51,6 +52,13 @@ export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) 
           .select("parent_id") 
           .in("parent_id", reviewIds) 
           .eq("is_deleted", false), 
+        userId 
+          ? supabase 
+              .from("review_likes") 
+              .select("review_id") 
+              .eq("user_id", userId) 
+              .in("review_id", reviewIds) 
+          : Promise.resolve({ data: [] }), 
       ]); 
       
       (likesData || []).forEach((l) => { 
@@ -59,6 +67,10 @@ export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) 
       
       (repliesData || []).forEach((r) => { 
         repliesMap[r.parent_id] = (repliesMap[r.parent_id] || 0) + 1; 
+      }); 
+
+      (myLikes || []).forEach((l) => { 
+        myLikedSet.add(l.review_id); 
       }); 
     } 
     
@@ -129,6 +141,7 @@ export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) 
           avatarUrl: avatarUrl, 
         }, 
         likes: likesMap[rev.id] || 0, 
+        isLiked: myLikedSet.has(rev.id), 
         comments: repliesMap[rev.id] || 0, 
         commentsCount: repliesMap[rev.id] || 0, 
         createdAt: rev.created_at, 

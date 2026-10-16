@@ -11,6 +11,7 @@ import { LikeButton } from "./LikeButton";
 import { FormattedText } from "../common/FormattedText";
 import { CommentFormattingToolbar, handleFormattingKeyDown } from "../common/CommentFormattingToolbar";
 import { getReviewAuthor } from "../../utils/reviewUtils";
+import { useToast } from "../../context/ToastContext";
 
 // Insert a reply under `targetId` anywhere in the tree.
 // Only bumps repliesCount on threads that actually contain the target.
@@ -49,16 +50,29 @@ export function ReviewDetailModal({
   onToggleLike,
 }) {
   const { user, userProfile } = useAuth();
-  const currentUserAvatar =
-    userProfile?.profile_url ||
-    user?.user_metadata?.avatar_url ||
-    user?.user_metadata?.picture;
-  const currentUserName =
-    userProfile?.user_name ||
-    user?.user_metadata?.user_name ||
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    "You";
+  const { showToast, openAuthModal } = useToast(); 
+  const DEFAULT_AVATAR = 
+    "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
+  const currentUserAvatar = 
+    userProfile?.profile_url || 
+    user?.profile_url || 
+    user?.user_metadata?.avatar_url || 
+    user?.user_metadata?.picture || 
+    DEFAULT_AVATAR; 
+  const currentUserName = 
+    userProfile?.user_name || 
+    user?.user_metadata?.user_name || 
+    user?.user_metadata?.full_name || 
+    user?.user_metadata?.name || 
+    "You"; 
+
+  const showAuthPrompt = (message = "Please sign in to continue.") => { 
+    showToast({ 
+      message, 
+      actionText: "Sign In", 
+      onAction: openAuthModal, 
+    }); 
+  };
 
   const [detailData, setDetailData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -183,7 +197,7 @@ export function ReviewDetailModal({
     if (!content || !data) return false;
     const token = localStorage.getItem("orgi_session");
     if (!token) {
-      alert("Please sign in to reply.");
+      showAuthPrompt("Please sign in to reply."); 
       return false;
     }
 
@@ -221,7 +235,7 @@ export function ReviewDetailModal({
       }
       return false;
     } catch (err) {
-      alert(err.message || "Failed to post reply.");
+      showToast({ message: err.message || "Failed to post reply." }); 
       return false;
     } finally {
       setIsSubmittingReply(false);
@@ -229,6 +243,11 @@ export function ReviewDetailModal({
   };
 
   const handleTopReply = async () => {
+    const token = localStorage.getItem("orgi_session");
+    if (!token) {
+      showAuthPrompt("Please sign in to reply."); 
+      return;
+    }
     const ok = await handlePostReply(null, reviewAuthor.name, replyText, replyAnon);
     if (ok) {
       setReplyText("");
@@ -237,6 +256,11 @@ export function ReviewDetailModal({
   };
 
   const toggleLike = async (rev) => {
+    const token = localStorage.getItem("orgi_session");
+    if (!token) {
+      showAuthPrompt("Please sign in to like reviews."); 
+      return;
+    }
     const revId = rev.id;
     const isCurrentlyLiked = Boolean(likedReviews[revId]);
     setLikedReviews((prev) => ({
@@ -251,11 +275,17 @@ export function ReviewDetailModal({
   const isCommunity = data.source === "orgi" || data.source === "community" || idStr.startsWith("orgi:");
   const hasRating = data.rating !== undefined && data.rating !== null;
 
-  // Main review like (controlled by parent if it passes isLiked, otherwise local)
   const liked = isLikedProp !== undefined ? isLikedProp : localLiked;
   const baseLikes = data.likes ?? item.likes;
-  const likesCount = baseLikes != null ? baseLikes + (liked ? 1 : 0) : null;
+  const initialLiked = Boolean(data.isLiked ?? item.isLiked); 
+  const delta = (liked ? 1 : 0) - (initialLiked ? 1 : 0); 
+  const likesCount = baseLikes != null ? Math.max(0, baseLikes + delta) : null; 
   const toggleMainLike = () => {
+    const token = localStorage.getItem("orgi_session");
+    if (!token) {
+      showAuthPrompt("Please sign in to like reviews."); 
+      return;
+    }
     if (isLikedProp === undefined) setLocalLiked((v) => !v);
     onToggleLike?.(item);
   };

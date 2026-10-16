@@ -280,7 +280,7 @@ export function Navbar({ forceBooksOpen = false }) {
                 title="User Profile" 
             >
                 <img 
-                    src={userProfile?.profile_url || user?.user_metadata?.avatar_url || DEFAULT_AVATAR} 
+                    src={userProfile?.profile_url || user?.profile_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || DEFAULT_AVATAR} 
                     alt="Avatar" 
                     onError={(e) => { 
                         if (e.currentTarget.src !== DEFAULT_AVATAR) { 
