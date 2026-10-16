@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect, useRef } from "react"; 
 import { useLocation } from "react-router-dom"; 
 import { 
   Star, 
@@ -15,6 +15,9 @@ import { ReviewSlider, AnimatedScore } from "../ui/ReviewSlider";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import { getMovieReviews, getSeriesReviews } from "../../services/tmdb";
+import { FormattedText } from "../common/FormattedText";
+import { CommentFormattingToolbar, handleFormattingKeyDown } from "../common/CommentFormattingToolbar";
+import { getReviewAuthor } from "../../utils/reviewUtils";
 
 const NAVBAR_AVATAR =
   "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
@@ -80,6 +83,8 @@ export function CommentThreadItem({
   const [menuOpen, setMenuOpen] = useState(false); 
   const [collapsed, setCollapsed] = useState(false); 
   const hasReplies = Array.isArray(comment.replies) && comment.replies.length > 0; 
+  const replyInputRef = useRef(null);
+  const authorInfo = getReviewAuthor(comment, "Anonymous");
   
   return ( 
     <div 
@@ -93,12 +98,12 @@ export function CommentThreadItem({
       <div className="flex items-center justify-between gap-3"> 
         <div className="flex items-center gap-2.5 flex-wrap"> 
           <ReviewAvatar 
-            src={comment.avatar} 
-            alt={comment.author} 
+            src={authorInfo.avatar} 
+            alt={authorInfo.name} 
             size="w-7 h-7" 
           /> 
           <span className="font-semibold text-sm text-[#F5F5F5]"> 
-            {comment.author} 
+            {authorInfo.name} 
           </span> 
           {comment.replyToAuthor && ( 
             <span className="text-[#61F1AC] font-medium text-xs inline-flex items-center gap-1 bg-[#61F1AC]/10 border border-[#61F1AC]/20 px-1.5 py-0.5 rounded-full"> 
@@ -149,9 +154,9 @@ export function CommentThreadItem({
         )} 
       </div> 
       
-      <p className="text-sm leading-relaxed text-[#D5D5D5] font-light pl-9.5 whitespace-pre-wrap"> 
-        {comment.content} 
-      </p> 
+      <div className="text-sm leading-relaxed text-[#D5D5D5] font-light pl-9.5"> 
+        <FormattedText content={comment.content} /> 
+      </div> 
       
       <div className="flex items-center gap-4.5 pl-9.5 text-xs text-[#7A7A7A]"> 
         {toggleLike && ( 
@@ -211,14 +216,24 @@ export function CommentThreadItem({
                 alt="Avatar" 
                 size="w-6 h-6" 
               /> 
-              <textarea 
-                value={replyText} 
-                onChange={(e) => setReplyText(e.target.value)} 
-                placeholder={`Reply to ${comment.author}…`} 
-                rows={2} 
-                className="w-full bg-transparent text-[#F5F5F5] placeholder-[#666666] text-xs resize-none outline-none leading-relaxed" 
-                autoFocus 
-              /> 
+              <div className="flex-1 min-w-0">
+                <textarea 
+                  ref={replyInputRef}
+                  value={replyText} 
+                  onChange={(e) => setReplyText(e.target.value)} 
+                  onKeyDown={(e) => handleFormattingKeyDown(e, replyInputRef.current, replyText, setReplyText)}
+                  placeholder={`Reply to ${authorInfo.name}…`} 
+                  rows={2} 
+                  className="w-full bg-transparent text-[#F5F5F5] placeholder-[#666666] text-xs resize-none outline-none leading-relaxed" 
+                  autoFocus 
+                /> 
+                <CommentFormattingToolbar
+                  textareaRef={replyInputRef}
+                  value={replyText}
+                  onChange={setReplyText}
+                  className="mt-1"
+                />
+              </div>
             </div> 
             <div className="flex items-center justify-between pt-2 border-t border-[#1C1C1C]"> 
               <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-[#7A7A7A] hover:text-[#F5F5F5]"> 
@@ -246,7 +261,7 @@ export function CommentThreadItem({
                   variant="primary" 
                   size="sm" 
                   disabled={isSubmittingReply || !replyText.trim()} 
-                  onClick={() => onPostReply(comment.id, comment.author)} 
+                  onClick={() => onPostReply(comment.id, authorInfo.name)} 
                   className="text-xs font-semibold px-3 py-1 cursor-pointer" 
                 > 
                   <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 
@@ -335,6 +350,8 @@ export function MediaReviewsTab({
   }, [initialProviderReviews, initialProviderPage, initialTotalPages]);
   
   const [newThought, setNewThought] = useState("");
+  const newThoughtRef = useRef(null);
+  const reviewLevelReplyRef = useRef(null);
   const [selectedScore, setSelectedScore] = useState(8);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isEditingUserReview, setIsEditingUserReview] = useState(false);
@@ -818,9 +835,9 @@ export function MediaReviewsTab({
             <AnimatedScore value={userReview.score} />
           </div>
           
-          <p className="text-sm leading-relaxed text-[#E0E0E0] mb-4 font-light whitespace-pre-wrap">
-            {userReview.content}
-          </p>
+          <div className="text-sm leading-relaxed text-[#E0E0E0] mb-4 font-light">
+            <FormattedText content={userReview.content} />
+          </div>
           
           <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#1C1C1C]/60">
             <Button
@@ -854,13 +871,23 @@ export function MediaReviewsTab({
               alt="User Avatar"
               size="w-9 h-9"
             />
-            <textarea
-              value={newThought}
-              onChange={(e) => setNewThought(e.target.value)}
-              placeholder={isEditingUserReview ? "Update your thought…" : "Add a thought…"}
-              rows={3}
-              className="w-full bg-transparent text-[#F5F5F5] placeholder-[#7A7A7A] text-sm resize-none focus:outline-none"
-            />
+            <div className="flex-1 min-w-0">
+              <textarea
+                ref={newThoughtRef}
+                value={newThought}
+                onChange={(e) => setNewThought(e.target.value)}
+                onKeyDown={(e) => handleFormattingKeyDown(e, newThoughtRef.current, newThought, setNewThought)}
+                placeholder={isEditingUserReview ? "Update your thought…" : "Add a thought…"}
+                rows={3}
+                className="w-full bg-transparent text-[#F5F5F5] placeholder-[#7A7A7A] text-sm resize-none focus:outline-none leading-relaxed"
+              />
+              <CommentFormattingToolbar
+                textareaRef={newThoughtRef}
+                value={newThought}
+                onChange={setNewThought}
+                className="mt-1"
+              />
+            </div>
           </div>
           
           <div className="flex flex-col gap-3 pt-3 border-t border-[#1C1C1C]/60">
@@ -987,6 +1014,7 @@ export function MediaReviewsTab({
           const likeCount = (rev.likes || 0) + (isLiked && !rev.isLiked ? 1 : !isLiked && rev.isLiked ? -1 : 0);
           const isExpanded = Boolean(expandedReviews[rev.id]);
           const isLongContent = (rev.content || "").length > 130;
+          const revAuthor = getReviewAuthor(rev, "Reviewer");
           
           return ( 
             <article 
@@ -1001,13 +1029,13 @@ export function MediaReviewsTab({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <ReviewAvatar
-                    src={rev.avatar}
-                    alt={rev.author}
+                    src={revAuthor.avatar}
+                    alt={revAuthor.name}
                     size="w-9 h-9"
                   />
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-sm text-[#F5F5F5]">
-                      {rev.author}
+                      {revAuthor.name}
                     </span>
                     {rev.source === "community" && (
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#61F1AC]/10 text-[#61F1AC] border border-[#61F1AC]/30">
@@ -1038,9 +1066,9 @@ export function MediaReviewsTab({
               </div>
               
               <div className="mb-4">
-                <p className={`text-sm leading-relaxed text-[#D0D0D0] font-light ${isExpanded ? "" : "line-clamp-2"}`}>
-                  {rev.content}
-                </p>
+                <div className={`text-sm leading-relaxed text-[#D0D0D0] font-light ${isExpanded ? "" : "line-clamp-2"}`}>
+                  <FormattedText content={rev.content} isExcerpt={!isExpanded} />
+                </div>
                 {isLongContent && (
                   <button
                     type="button"
@@ -1128,14 +1156,24 @@ export function MediaReviewsTab({
                         alt="Your Avatar" 
                         size="w-6 h-6" 
                       /> 
-                      <textarea 
-                        value={replyText} 
-                        onChange={(e) => setReplyText(e.target.value)} 
-                        placeholder={`Reply to ${rev.author}…`} 
-                        rows={2} 
-                        className="w-full bg-transparent text-[#F5F5F5] placeholder-[#666666] text-xs resize-none outline-none leading-relaxed" 
-                        autoFocus 
-                      /> 
+                      <div className="flex-1 min-w-0">
+                        <textarea 
+                          ref={reviewLevelReplyRef}
+                          value={replyText} 
+                          onChange={(e) => setReplyText(e.target.value)} 
+                          onKeyDown={(e) => handleFormattingKeyDown(e, reviewLevelReplyRef.current, replyText, setReplyText)}
+                          placeholder={`Reply to ${revAuthor.name}…`} 
+                          rows={2} 
+                          className="w-full bg-transparent text-[#F5F5F5] placeholder-[#666666] text-xs resize-none outline-none leading-relaxed" 
+                          autoFocus 
+                        /> 
+                        <CommentFormattingToolbar
+                          textareaRef={reviewLevelReplyRef}
+                          value={replyText}
+                          onChange={setReplyText}
+                          className="mt-1"
+                        />
+                      </div>
                     </div> 
                     <div className="flex items-center justify-between pt-2 border-t border-[#1C1C1C]"> 
                       <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-[#7A7A7A] hover:text-[#F5F5F5]"> 
@@ -1163,7 +1201,7 @@ export function MediaReviewsTab({
                           variant="primary" 
                           size="sm" 
                           disabled={isSubmittingReply || !replyText.trim()} 
-                          onClick={() => handlePostReply(rev.id, rev.author)} 
+                          onClick={() => handlePostReply(rev.id, revAuthor.name)} 
                           className="text-xs font-semibold px-3.5 py-1 cursor-pointer" 
                         > 
                           <span>{isSubmittingReply ? "Posting..." : "Reply"}</span> 

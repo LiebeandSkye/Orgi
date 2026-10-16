@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react"; 
 import api from "../services/api"; 
+import { getReviewAuthor } from "../utils/reviewUtils"; 
 
 const STORAGE_KEY = "orgi_review_likes"; 
 
@@ -84,8 +85,8 @@ export function useReviewLikes() {
           title: itemOrId.title || "Untitled", 
           cover_url: itemOrId.posterUrl || itemOrId.backdropUrl || null, 
           provider_review_id: String(itemOrId.id || ""), 
-          author_name: itemOrId.author?.name || "Reviewer", 
-          author_avatar: itemOrId.author?.avatarUrl || null, 
+          author_name: getReviewAuthor(itemOrId, "Reviewer").name, 
+          author_avatar: getReviewAuthor(itemOrId, "Reviewer").avatar || null, 
           content: itemOrId.rawContent || itemOrId.excerpt || itemOrId.content || "", 
           score: itemOrId.rating || itemOrId.score || null, 
         }); 

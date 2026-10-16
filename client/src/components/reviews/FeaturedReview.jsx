@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Star, ArrowRight } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { API_BASE_URL, safeFetchJson } from "../../services/api";
+import { FormattedText } from "../common/FormattedText";
+import { getReviewAuthor } from "../../utils/reviewUtils";
 
 function formatRelativeTime(dateString) {
   if (!dateString) return "";
@@ -98,6 +100,7 @@ export function FeaturedReview({
               alt={featured.title}
               loading="lazy"
               decoding="async"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
             />
           </div>
@@ -106,6 +109,9 @@ export function FeaturedReview({
             <img
               src={featured.posterUrl}
               alt={featured.title}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-top"
             />
           </div>
@@ -124,10 +130,17 @@ export function FeaturedReview({
         {/* Reviewer Row with Score on Far Right */}
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#1C1C1C]">
           <div className="flex items-center gap-2 min-w-0">
-            <Avatar src={featured.author?.avatarUrl} name={featured.author?.name} size="w-5 h-5" />
-            <span className="text-[12px] font-medium text-[#F5F5F5] truncate max-w-[120px]">
-              {featured.author?.name || "Reviewer"}
-            </span>
+            {(() => {
+              const reviewAuthor = getReviewAuthor(featured, "Reviewer");
+              return (
+                <>
+                  <Avatar src={reviewAuthor.avatar} name={reviewAuthor.name} size="w-5 h-5" />
+                  <span className="text-[12px] font-medium text-[#F5F5F5] truncate max-w-[120px]">
+                    {reviewAuthor.name}
+                  </span>
+                </>
+              );
+            })()}
             {relativeTime && (
               <span className="text-[11px] text-[#B5B5B5] shrink-0">· {relativeTime}</span>
             )}
@@ -144,9 +157,9 @@ export function FeaturedReview({
         </div>
 
         {/* Excerpt clamp 4 lines */}
-        <p className="text-[13px] text-[#B5B5B5] leading-relaxed line-clamp-4">
-          {featured.excerpt}
-        </p>
+        <div className="text-[13px] text-[#B5B5B5] leading-relaxed line-clamp-4 break-words">
+          <FormattedText content={featured.excerpt} isExcerpt={true} />
+        </div>
 
         {/* Action Button: Read full review */}
         <button

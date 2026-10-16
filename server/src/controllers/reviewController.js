@@ -118,7 +118,12 @@ export const reviewController = {
           userId: parsed.userId, 
           parentId: rev.parent_id, 
           author: parsed.author, 
+          authorName: parsed.author, 
+          author_name: parsed.author, 
           avatar: parsed.avatar, 
+          avatarUrl: parsed.avatar, 
+          authorAvatar: parsed.avatar, 
+          author_avatar: parsed.avatar, 
           score: rev.score, 
           content: parsed.content, 
           isAnonymous: parsed.isAnonymous, 
@@ -314,7 +319,19 @@ export const reviewController = {
         
         if (replyError) throw replyError; 
         
-        const parsed = parseReviewMetadata(reply, userId); 
+        let userObj = reply.users;
+        if (!userObj?.user_name) {
+          const { data: dbUser } = await supabaseAdmin
+            .from("users")
+            .select("user_name, profile_url")
+            .eq("id", userId)
+            .maybeSingle();
+          userObj = dbUser || {
+            user_name: req.user?.user_metadata?.user_name || req.user?.user_metadata?.full_name || req.user?.email?.split("@")[0] || "Unnamed Orgi",
+            profile_url: req.user?.user_metadata?.avatar_url || req.user?.user_metadata?.picture || "",
+          };
+        }
+        const parsed = parseReviewMetadata({ ...reply, users: userObj }, userId); 
         
         return res.json({ 
           success: true, 
@@ -323,8 +340,13 @@ export const reviewController = {
             userId: parsed.userId, 
             parentId: reply.parent_id, 
             author: parsed.author, 
+            authorName: parsed.author, 
+            author_name: parsed.author, 
             replyToAuthor: parentAuthor, 
             avatar: parsed.avatar, 
+            avatarUrl: parsed.avatar, 
+            authorAvatar: parsed.avatar, 
+            author_avatar: parsed.avatar, 
             content: parsed.content, 
             isAnonymous: parsed.isAnonymous, 
             is_edited: reply.is_edited || false, 
@@ -417,7 +439,19 @@ export const reviewController = {
       const { data: reviewRecord, error: reviewError } = await query; 
       if (reviewError) throw reviewError; 
       
-      const parsed = parseReviewMetadata(reviewRecord, userId); 
+      let userObj = reviewRecord.users;
+      if (!userObj?.user_name) {
+        const { data: dbUser } = await supabaseAdmin
+          .from("users")
+          .select("user_name, profile_url")
+          .eq("id", userId)
+          .maybeSingle();
+        userObj = dbUser || {
+          user_name: req.user?.user_metadata?.user_name || req.user?.user_metadata?.full_name || req.user?.email?.split("@")[0] || "Unnamed Orgi",
+          profile_url: req.user?.user_metadata?.avatar_url || req.user?.user_metadata?.picture || "",
+        };
+      }
+      const parsed = parseReviewMetadata({ ...reviewRecord, users: userObj }, userId); 
       
       res.json({ 
         success: true, 
@@ -425,7 +459,12 @@ export const reviewController = {
           id: reviewRecord.id, 
           userId: parsed.userId, 
           author: parsed.author, 
+          authorName: parsed.author, 
+          author_name: parsed.author, 
           avatar: parsed.avatar, 
+          avatarUrl: parsed.avatar, 
+          authorAvatar: parsed.avatar, 
+          author_avatar: parsed.avatar, 
           score: reviewRecord.score, 
           content: parsed.content, 
           isAnonymous: parsed.isAnonymous, 
@@ -832,7 +871,12 @@ export const reviewController = {
           userId: parsed.userId, 
           parentId: rev.parent_id, 
           author: parsed.author, 
+          authorName: parsed.author, 
+          author_name: parsed.author, 
           avatar: parsed.avatar, 
+          avatarUrl: parsed.avatar, 
+          authorAvatar: parsed.avatar, 
+          author_avatar: parsed.avatar, 
           score: rev.score, 
           content: parsed.content, 
           isAnonymous: parsed.isAnonymous, 

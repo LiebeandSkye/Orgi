@@ -20,6 +20,7 @@ import api from "../services/api";
 import { ProfileCard } from "../feature/profile/components/ProfileCard"; 
 import { EditProfileModal } from "../feature/profile/components/EditProfileModal"; 
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton"; 
+import { FormattedText } from "../components/common/FormattedText"; 
 
 const DEFAULT_AVATAR = "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
 
@@ -438,6 +439,7 @@ export function ProfilePage() {
                                 } 
                                 alt={item.title} 
                                 loading="lazy" 
+                                referrerPolicy="no-referrer"
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                               /> 
                               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" /> 
@@ -522,6 +524,7 @@ export function ProfilePage() {
                                   } 
                                   alt={item?.title || "Cover"} 
                                   loading="lazy" 
+                                  referrerPolicy="no-referrer"
                                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" 
                                 /> 
                               </Link> 
@@ -546,9 +549,9 @@ export function ProfilePage() {
                                       </div> 
                                     )} 
                                   </div> 
-                                  <p className="text-xs sm:text-sm text-[#CCCCCC] leading-relaxed line-clamp-2 sm:line-clamp-3"> 
-                                    {rev.content} 
-                                  </p> 
+                                  <div className="text-xs sm:text-sm text-[#CCCCCC] leading-relaxed line-clamp-2 sm:line-clamp-3 break-words"> 
+                                    <FormattedText content={rev.content} isExcerpt={true} /> 
+                                  </div> 
                                 </div> 
                                 <div className="flex items-center gap-2 text-[11px] text-[#7A7A7A] mt-3"> 
                                   <span>{timeAgo(rev.created_at)}</span> 
@@ -612,6 +615,7 @@ export function ProfilePage() {
                                 } 
                                 alt={item?.title || "Cover"} 
                                 loading="lazy" 
+                                referrerPolicy="no-referrer" 
                                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" 
                               /> 
                             </Link> 
@@ -636,9 +640,9 @@ export function ProfilePage() {
                                     </div> 
                                   )} 
                                 </div> 
-                                <p className="text-xs sm:text-sm text-[#CCCCCC] leading-relaxed line-clamp-3"> 
-                                  {rev.content} 
-                                </p> 
+                                <div className="text-xs sm:text-sm text-[#CCCCCC] leading-relaxed line-clamp-3 break-words"> 
+                                  <FormattedText content={rev.content} isExcerpt={true} /> 
+                                </div> 
                               </div> 
                               <div className="flex items-center gap-2 text-[11px] text-[#7A7A7A] mt-3"> 
                                 <span>{timeAgo(rev.created_at)}</span> 
@@ -696,6 +700,7 @@ export function ProfilePage() {
                               } 
                               alt={item.title} 
                               loading="lazy" 
+                              referrerPolicy="no-referrer" 
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                             /> 
                             <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-black/80 backdrop-blur-md text-[#F5F5F5]"> 

@@ -109,6 +109,8 @@ export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) 
         else if (category !== mappedCategory && !(category === "series" && mappedCategory === "series") && !(category === "movie" && mappedCategory === "movie") && !(category === "anime" && mappedCategory === "anime")) continue; 
       } 
       
+      const isBookOrManga = ["manga", "manhwa", "manhua", "book", "novel"].includes(mappedCategory);
+
       cards.push({ 
         id: `orgi:${item.id}:${rev.id}`, 
         source: "orgi", 
@@ -117,7 +119,7 @@ export async function getOrgiReviewCards({ category = "all", limit = 20 } = {}) 
         title: item.title, 
         mediaLabel, 
         posterUrl: item.cover_url, 
-        backdropUrl: item.cover_url, 
+        backdropUrl: isBookOrManga ? undefined : item.cover_url, 
         genres: [], 
         rating: typeof rev.score === "number" && rev.score > 0 ? rev.score : undefined, 
         excerpt: createExcerpt(contentText, 260), 
@@ -147,7 +149,8 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
   if (!supabase) return null; 
   
   try { 
-    const { data: rev, error } = await supabase 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId);
+    let query = supabase 
       .from("reviews") 
       .select(` 
         id, 
@@ -169,9 +172,21 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
           user_name, 
           profile_url 
         ) 
-      `) 
-      .eq("id", reviewId) 
-      .maybeSingle(); 
+      `); 
+
+    if (isUuid) {
+      query = query.eq("id", reviewId);
+    } else {
+      const { data: itemData } = await supabase
+        .from("items")
+        .select("id")
+        .eq("external_id", String(titleId))
+        .maybeSingle();
+      if (!itemData) return null;
+      query = query.eq("item_id", itemData.id).is("parent_id", null).order("created_at", { ascending: false }).limit(1);
+    }
+
+    const { data: rev, error } = await query.maybeSingle(); 
     
     if (error || !rev || !rev.items) return null; 
     
@@ -252,7 +267,12 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
         userId: child.user_id, 
         parentId: child.parent_id, 
         author: cAuthor, 
+        authorName: cAuthor, 
+        author_name: cAuthor, 
         avatar: cAvatar, 
+        avatarUrl: cAvatar, 
+        authorAvatar: cAvatar, 
+        author_avatar: cAvatar, 
         score: child.score, 
         content: cContent, 
         isAnonymous: cIsAnon, 
@@ -309,6 +329,8 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
     } 
     detailContent = detailContent.replace(/^<!--prov:[^>]+-->\s*/, ""); 
     
+    const isBookOrManga = ["manga", "manhwa", "manhua", "book", "novel"].includes(mappedCategory);
+
     return { 
       id: `orgi:${item.id}:${rev.id}`, 
       source: "orgi", 
@@ -317,7 +339,7 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
       title: item.title, 
       mediaLabel, 
       posterUrl: item.cover_url, 
-      backdropUrl: item.cover_url, 
+      backdropUrl: isBookOrManga ? undefined : item.cover_url, 
       genres: [], 
       rating: typeof rev.score === "number" && rev.score > 0 ? rev.score : undefined, 
       excerpt: createExcerpt(detailContent, 260), 
@@ -326,6 +348,12 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
         name: detailAuthor, 
         avatarUrl: detailAvatar, 
       }, 
+      authorName: detailAuthor, 
+      author_name: detailAuthor, 
+      avatar: detailAvatar, 
+      avatarUrl: detailAvatar, 
+      authorAvatar: detailAvatar, 
+      author_avatar: detailAvatar, 
       likes: likesCount || 0, 
       comments: repliesCount || 0, 
       commentsCount: repliesCount || 0, 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react"; 
+import React, { useState, useEffect, useCallback, useRef } from "react"; 
 import { Link } from "react-router-dom"; 
 import { 
   Star, 
@@ -25,6 +25,8 @@ import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/Button"; 
 import { ReviewSlider } from "../components/ui/ReviewSlider"; 
 import { CommentThreadItem } from "../components/reviews/MediaReviewsTab"; 
+import { FormattedText } from "../components/common/FormattedText"; 
+import { CommentFormattingToolbar, handleFormattingKeyDown } from "../components/common/CommentFormattingToolbar"; 
 
 const DEFAULT_AVATAR = "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
 
@@ -102,6 +104,7 @@ export function DashboardPage() {
   const [editingReview, setEditingReview] = useState(null); 
   const [editScore, setEditScore] = useState(8); 
   const [editContent, setEditContent] = useState(""); 
+  const editContentRef = useRef(null);
   const [savingEdit, setSavingEdit] = useState(false); 
   
   const [deletingReviewId, setDeletingReviewId] = useState(null); 
@@ -572,6 +575,9 @@ export function DashboardPage() {
                                 <img 
                                   src={item.cover_url} 
                                   alt={item?.title || "Cover"} 
+                                  loading="lazy" 
+                                  decoding="async" 
+                                  referrerPolicy="no-referrer" 
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                                 /> 
                               </Link> 
@@ -617,9 +623,9 @@ export function DashboardPage() {
                                 </div> 
                               </div> 
                               
-                              <p className="text-xs text-[#CCCCCC] leading-relaxed whitespace-pre-line"> 
-                                {review.content} 
-                              </p> 
+                              <div className="text-xs text-[#CCCCCC] leading-relaxed"> 
+                                <FormattedText content={review.content} /> 
+                              </div> 
                             </div> 
                             
                             <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-[#1C1C1C] flex-wrap"> 
@@ -733,6 +739,9 @@ export function DashboardPage() {
                                 <img 
                                   src={media.cover_url} 
                                   alt={media?.title || "Media"} 
+                                  loading="lazy" 
+                                  decoding="async" 
+                                  referrerPolicy="no-referrer" 
                                   className="w-full h-full object-cover" 
                                 /> 
                               </Link> 
@@ -784,9 +793,9 @@ export function DashboardPage() {
                                 </div> 
                               </div> 
                               
-                              <p className="text-xs text-[#CCCCCC] leading-relaxed line-clamp-3"> 
-                                {rev.content} 
-                              </p> 
+                              <div className="text-xs text-[#CCCCCC] leading-relaxed line-clamp-3"> 
+                                <FormattedText content={rev.content} isExcerpt={true} /> 
+                              </div> 
                             </div> 
                             
                             <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-[#1C1C1C] flex-wrap"> 
@@ -940,9 +949,9 @@ export function DashboardPage() {
                             <span className="text-[10px] uppercase font-bold tracking-wider text-[#7A7A7A] block"> 
                               Reported Comment 
                             </span> 
-                            <p className="text-xs text-[#D5D5D5] font-light leading-relaxed whitespace-pre-wrap"> 
-                              "{target.content}" 
-                            </p> 
+                            <div className="text-xs text-[#D5D5D5] font-light leading-relaxed"> 
+                              <FormattedText content={target.content} /> 
+                            </div> 
                           </div> 
                         )} 
                         
@@ -1132,13 +1141,21 @@ export function DashboardPage() {
                 Review Content 
               </label> 
               <textarea 
+                ref={editContentRef}
                 value={editContent} 
                 onChange={(e) => setEditContent(e.target.value)} 
+                onKeyDown={(e) => handleFormattingKeyDown(e, editContentRef.current, editContent, setEditContent)}
                 rows={5} 
                 disabled={savingEdit} 
                 className="w-full bg-[#141414] border border-[#222222] focus:border-[#61F1AC]/60 rounded-xl p-3 text-xs text-[#F5F5F5] placeholder-[#555555] outline-none resize-none leading-relaxed" 
                 placeholder="Share your detailed analysis..." 
               /> 
+              <CommentFormattingToolbar
+                textareaRef={editContentRef}
+                value={editContent}
+                onChange={setEditContent}
+                className="mt-1.5"
+              />
             </div> 
             
             <div className="flex justify-end gap-2.5"> 

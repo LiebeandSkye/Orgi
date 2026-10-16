@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Star } from "lucide-react";
 import { API_BASE_URL, safeFetchJson } from "../../services/api";
+import { getReviewAuthor } from "../../utils/reviewUtils";
 
 export function TopRatedRail({ category, onOpenDetail }) {
   const [items, setItems] = useState([]);
@@ -68,13 +69,22 @@ export function TopRatedRail({ category, onOpenDetail }) {
                     alt={it.title}
                     loading="lazy"
                     decoding="async"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      if (e.currentTarget.nextElementSibling) {
+                        e.currentTarget.nextElementSibling.style.display = "flex";
+                      }
+                    }}
                     className="w-full h-full object-cover"
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[9px] text-[#7A7A7A] text-center p-0.5">
-                    {it.title}
-                  </div>
-                )}
+                ) : null}
+                <div
+                  className="w-full h-full items-center justify-center text-[9px] text-[#7A7A7A] text-center p-0.5"
+                  style={{ display: it.posterUrl ? "none" : "flex" }}
+                >
+                  {it.title}
+                </div>
               </div>
 
               <div className="flex-1 min-w-0">
@@ -82,7 +92,7 @@ export function TopRatedRail({ category, onOpenDetail }) {
                   {it.title}
                 </h4>
                 <p className="text-[12px] text-[#B5B5B5] truncate mb-1">
-                  {it.author?.name || "Community score"}
+                  {getReviewAuthor(it, "Community score").name}
                 </p>
                 {it.rating !== undefined && it.rating !== null && (
                   <div className="flex items-center gap-1 text-[12px] font-medium text-[#61F1AC]">
