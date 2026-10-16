@@ -71,6 +71,7 @@ export function ReviewsHero({ backdropUrl, initialQuery = "", onSearchChange }) 
             alt=""
             loading="eager"
             decoding="async"
+            referrerPolicy="no-referrer"
             onLoad={() => setBackdropLoaded(true)}
             onError={() => setBackdropError(true)}
             className={`absolute right-0 top-0 h-full w-full md:w-3/4 object-cover object-center transition-opacity duration-500 ${

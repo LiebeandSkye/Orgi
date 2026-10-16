@@ -1,5 +1,6 @@
 import { 
   getTmdbReviewCards, 
+  getTmdbAnimeCards,
   searchTmdbReviews, 
   getTmdbFeaturedReview, 
   getTmdbReviewDetail, 
@@ -55,8 +56,19 @@ async function getItemsForCategory(category) {
     (async () => { 
       switch (category) { 
         case "all": { 
-          const tmdbCards = await getTmdbReviewCards(); 
-          return tmdbCards; 
+          const [tmdbCards, animeCards] = await Promise.all([ 
+            getTmdbReviewCards(), 
+            getTmdbAnimeCards(), 
+          ]); 
+          const seen = new Set(); 
+          const combined = []; 
+          for (const card of [...(tmdbCards || []), ...(animeCards || [])]) { 
+            if (!seen.has(card.id)) { 
+              seen.add(card.id); 
+              combined.push(card); 
+            } 
+          } 
+          return combined; 
         } 
         case "movie": { 
           const tmdbCards = await getTmdbReviewCards(); 
@@ -67,8 +79,7 @@ async function getItemsForCategory(category) {
           return tmdbCards.filter((c) => c.category === "series"); 
         } 
         case "anime": { 
-          const tmdbCards = await getTmdbReviewCards(); 
-          return tmdbCards.filter((c) => c.category === "anime"); 
+          return await getTmdbAnimeCards(); 
         } 
         case "manga": 
           return await getMangaDexCards("manga", 100); 
@@ -247,7 +258,7 @@ export async function getFeaturedReview() {
  * Detailed review for modal / full review page
  */
 export async function getReviewDetail(source, titleId, reviewId) { 
-  if (source === "orgi") { 
+  if (source === "orgi" || source === "community") { 
     return await getOrgiReviewDetail(titleId, reviewId); 
   } 
   if (source === "mangadex") { 

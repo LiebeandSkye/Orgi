@@ -27,20 +27,20 @@ export function SeriesDetailsPage({
   const location = useLocation();
   const { id } = useParams();
   const isReviewsUrl = location.pathname.includes("/reviews");
-
+  
   const [seriesData, setSeriesData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
-
-
+  
+  
   // Synopsis expansion state
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
   const synopsisRef = useRef(null);
   const [contentHeight, setContentHeight] = useState(0);
   const [hasOverflow, setHasOverflow] = useState(false);
-
+  
   const [communityData, setCommunityData] = useState({ 
     communityAverage: null, 
     communityVotes: 0, 
@@ -83,7 +83,7 @@ export function SeriesDetailsPage({
     }; 
   }, [seriesData, id]); 
  
-
+  
   const handleToggleCollection = async () => { 
     if (!seriesData) return; 
     const token = localStorage.getItem("orgi_session"); 
@@ -91,7 +91,7 @@ export function SeriesDetailsPage({
       alert("Please sign in to add items to your collection."); 
       return; 
     } 
-
+    
     setCollectionLoading(true); 
     try { 
       const res = await api.post("/collections/toggle", { 
@@ -101,7 +101,7 @@ export function SeriesDetailsPage({
         title: seriesData.title, 
         cover_url: seriesData.poster || seriesData.backdrop, 
       }); 
-
+      
       if (res?.success) { 
         setInCollection(!!res.data?.inCollection); 
       } 
@@ -112,9 +112,9 @@ export function SeriesDetailsPage({
       setCollectionLoading(false); 
     } 
   };
-
+  
   const contentRef = useRef(null);
-
+  
   useEffect(() => {
     let mounted = true;
     async function loadSeries() {
@@ -127,7 +127,7 @@ export function SeriesDetailsPage({
       setError(null);
       try {
         const data = await getSeriesDetails(id);
-
+        
         if (mounted && data) {
           setSeriesData(data);
         }
@@ -140,31 +140,35 @@ export function SeriesDetailsPage({
         if (mounted) setIsLoading(false);
       }
     }
-
+    
     loadSeries();
-
+    
     return () => {
       mounted = false;
     };
   }, [id]);
-
-
-  const activeTab =
-    selectedTabOverride !== null
-      ? selectedTabOverride
-      : isReviewsUrl
-        ? "Reviews"
-        : initialTab;
-
-  const cropHero =
-    cropHeroOverride !== null
-      ? cropHeroOverride
-      : isReviewsUrl
-        ? true
+  
+  
+  const searchParams = new URLSearchParams(location.search); 
+  const isReviewsParam = searchParams.get("tab")?.toLowerCase() === "reviews"; 
+  const shouldOpenReviews = isReviewsUrl || isReviewsParam; 
+  
+  const activeTab = 
+    selectedTabOverride !== null 
+      ? selectedTabOverride 
+      : shouldOpenReviews 
+        ? "Reviews" 
+        : initialTab; 
+  
+  const cropHero = 
+    cropHeroOverride !== null 
+      ? cropHeroOverride 
+      : shouldOpenReviews 
+        ? true 
         : initialCropHero;
-
+  
   const displaySynopsis = seriesData?.synopsis || "";
-
+  
   useEffect(() => {
     const checkOverflow = () => {
       if (synopsisRef.current) {
@@ -178,20 +182,20 @@ export function SeriesDetailsPage({
     window.addEventListener("resize", checkOverflow);
     return () => window.removeEventListener("resize", checkOverflow);
   }, [displaySynopsis]);
-
+  
   const handleTabChange = (tab) => {
     setSelectedTabOverride(tab);
     setCropHeroOverride(false);
   };
-
+  
   const toggleLike = (reviewId) => {
     setLikedReviews((prev) => ({
       ...prev,
       [reviewId]: !prev[reviewId],
     }));
   };
-
-
+  
+  
   if (error && !seriesData) {
     return (
       <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col items-center justify-center p-6 text-center">
@@ -207,7 +211,7 @@ export function SeriesDetailsPage({
       </div>
     );
   }
-
+  
   if (isLoading || !seriesData) {
     return (
       <div className="min-h-screen bg-[#000000] text-[#F5F5F5] select-none pt-12 pb-24">
@@ -227,7 +231,7 @@ export function SeriesDetailsPage({
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24">
       {/* HERO SECTION */}
@@ -250,7 +254,7 @@ export function SeriesDetailsPage({
           <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-[#000000]/75 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#000000]/80 via-transparent to-[#000000]/80" />
         </div>
-
+        
         {/* Hero Content: Two-column layout with 120px side margins */}
         <div
           className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12 pb-16 flex flex-col md:flex-row gap-12 lg:gap-16 items-start transition-opacity duration-300 ${
@@ -268,7 +272,7 @@ export function SeriesDetailsPage({
               />
               <div className="absolute inset-0 border border-white/5 rounded-[16px] pointer-events-none" />
             </div>
-
+            
             {/* Poster Caption / Metadata */}
             <div className="mt-3.5 flex flex-col gap-1 text-center">
               <span className="text-xs text-[#7A7A7A] font-light">
@@ -279,25 +283,25 @@ export function SeriesDetailsPage({
               </span>
             </div>
           </div>
-
+          
           {/* RIGHT: Meta, Title, Scores, Buttons, Synopsis */}
           <div className="flex-1 flex flex-col pt-2 min-w-0">
             {/* Small muted uppercase label "SERIES" */}
             <div className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
               SERIES
             </div>
-
+            
             {/* Huge clean title */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-[#F5F5F5] mb-3">
               {seriesData.title}
             </h1>
-
+            
             <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-4 flex items-center gap-2">
               <span className="shrink-0 rounded-full border border-white/30 px-4 py-2 font-medium leading-6 text-white transition-all duration-200 hover:border-[#61F1AC]/40 hover:bg-white/10">
                 {seriesData.genres}
               </span>
             </div>
-
+            
             {/* Muted meta line "2008–2013 · Crime, Drama · 5 seasons · 62 episodes" */}
             <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-8 mx-2 flex flex-wrap items-center gap-2">
               <span>{seriesData.year}</span>
@@ -306,7 +310,7 @@ export function SeriesDetailsPage({
               <span>·</span>
               <span>{seriesData.episodesCount}</span>
             </div>
-
+            
             {/* Row with two circular score rings */}
             <DetailScoreRings 
               providerRating={seriesData.tmdbRating} 
@@ -316,8 +320,8 @@ export function SeriesDetailsPage({
               fallbackCommunityRating={seriesData.communityRating} 
               fallbackCommunityVotes={seriesData.communityVotes} 
             /> 
-
-
+            
+            
             {/* Row of actions: Mint primary button "Rate this", secondary "Add to list", round Share button */}
             <div className="flex items-center gap-3 mb-8">
               <Button
@@ -331,7 +335,7 @@ export function SeriesDetailsPage({
                 <Star size={15} className="fill-black text-black" />
                 <span>Rate this</span>
               </Button>
-
+              
               <Button
                 variant={inCollection ? "mintGhost" : "outline"}
                 size="md"
@@ -344,7 +348,7 @@ export function SeriesDetailsPage({
                 {inCollection ? <Check size={15} /> : <Plus size={15} />}
                 <span>{inCollection ? "In collection" : "Add to collection"}</span>
               </Button>
-
+              
               <button
                 type="button"
                 aria-label="Share"
@@ -357,7 +361,7 @@ export function SeriesDetailsPage({
                 <Share2 size={15} />
               </button>
             </div>
-
+            
             {/* Synopsis: dark blur appears ONLY if there is a See more button */}
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
@@ -373,7 +377,7 @@ export function SeriesDetailsPage({
                     {displaySynopsis}
                   </p>
                 </div>
-
+                
                 {/* Dark blur at the end ONLY if it has a See more button and is not expanded */}
                 {hasOverflow && (
                   <div
@@ -383,7 +387,7 @@ export function SeriesDetailsPage({
                   />
                 )}
               </div>
-
+              
               {hasOverflow && (
                 <button
                   type="button"
@@ -403,7 +407,7 @@ export function SeriesDetailsPage({
           </div>
         </div>
       </section>
-
+      
       {/* BELOW THE HERO: Minimal horizontal tab switcher */}
       <div
         ref={contentRef}
@@ -434,7 +438,7 @@ export function SeriesDetailsPage({
           </div>
         </div>
       </div>
-
+      
       {/* TAB CONTENT */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
         {/* ======================================================== */}
@@ -443,8 +447,8 @@ export function SeriesDetailsPage({
         {activeTab === "Episodes" && ( 
           <EpisodesSection seriesId={id} seriesData={seriesData} /> 
         )} 
-
-
+        
+        
         {/* ======================================================== */}
         {/* 2. CAST TAB CONTENT                                      */}
         {/* ======================================================== */}
@@ -457,7 +461,7 @@ export function SeriesDetailsPage({
             />
           </div>
         )}
-
+        
         {/* ======================================================== */}
         {/* 3. REVIEWS TAB CONTENT                                   */}
         {/* ======================================================== */}
@@ -475,8 +479,8 @@ export function SeriesDetailsPage({
             onCommunityDataChange={setCommunityData} 
           /> 
         )} 
-
-
+        
+        
         {/* ======================================================== */}
         {/* 4. MEDIA TAB CONTENT                                     */}
         {/* ======================================================== */}
@@ -485,7 +489,7 @@ export function SeriesDetailsPage({
             <MediaItems seriesData={seriesData} />
           </div>
         )}
-
+        
         {/* ======================================================== */}
         {/* 5. DETAILS TAB CONTENT                                   */}
         {/* ======================================================== */}

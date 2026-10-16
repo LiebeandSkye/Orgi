@@ -108,6 +108,15 @@ test("reviewRoutes /api/reviews endpoints respond with expected structure", asyn
     assert.equal(topJson.success, true);
     assert.ok(Array.isArray(topJson.items));
     assert.ok(topJson.items.length <= 5);
+
+    // 4. Anime category feed query
+    const animeRes = await fetch(`http://localhost:${port}/api/reviews?category=anime&limit=10`);
+    assert.equal(animeRes.status, 200);
+    const animeJson = await animeRes.json();
+    assert.equal(animeJson.success, true);
+    assert.ok(Array.isArray(animeJson.items));
+    assert.ok(animeJson.total > 0, "Anime feed should return items");
+    assert.equal(animeJson.items[0]?.category, "anime");
   } finally {
     server.close();
   }
