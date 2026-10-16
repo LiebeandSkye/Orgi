@@ -453,27 +453,13 @@ export function BooksDashboard() {
     if (feeds.trendingManga[1]) pool.push({ ...feeds.trendingManga[1], badge: "Featured Manga" });
 
     if (pool.length > 0) return pool;
-
-    return [
-      {
-        id: "omniscient-reader",
-        title: "Omniscient Reader's Viewpoint",
-        rating: "9.6",
-        synopsis:
-          "Dokja was an average office worker whose sole interest was reading his favorite web novel. But when the novel suddenly becomes reality, he is the only person who knows how the world will end.",
-        cover: "https://uploads.mangadex.org/covers/a0445479-7a7d-411a-8c7c-473d82136e65/7a83f982-b7e6-4279-9fc6-cfb06df489f4.jpg.512.jpg",
-        backdrop: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1600&auto=format&fit=crop&q=80",
-        route: "/books/manhwa/a0445479-7a7d-411a-8c7c-473d82136e65",
-        type: "MANHWA",
-        chapters: "Ch. 220+",
-        badge: "Trending Manhwa",
-      },
-    ];
+    return [];
   }, [activeTab, feeds, hubFeedsByCat]);
 
-  const currentHero = spotlightPool[heroIndex % spotlightPool.length] || spotlightPool[0];
+  const currentHero = spotlightPool.length > 0 ? (spotlightPool[heroIndex % spotlightPool.length] || spotlightPool[0]) : null;
 
   const heroGenres = useMemo(() => {
+    if (!currentHero) return [];
     if (Array.isArray(currentHero.genres) && currentHero.genres.length > 0) {
       return currentHero.genres.slice(0, 4);
     }
@@ -553,125 +539,151 @@ export function BooksDashboard() {
         {/* ======================================================== */}
         {/* 1. HERO SPOTLIGHT BANNER (DIRECTLY BELOW NAVBAR)         */}
         {/* ======================================================== */}
-        <section className="group relative w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500 min-h-[340px] sm:min-h-[380px] md:min-h-[420px] flex flex-col justify-between mb-6">
-          {/* Backdrop Image with Cinematic Overlays */}
-          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-            <img
-              key={currentHero.id}
-              src={currentHero.backdrop || currentHero.cover || currentHero.poster}
-              alt=""
-              aria-hidden="true"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-700 ease-out filter brightness-[0.7] contrast-[1.05]"
-            />
-
-            {/* Ambient Dark Gradients for contrast */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 sm:via-black/70 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
-
-            {/* Subtle Neon Mint Aura */}
-            <div className="absolute top-1/4 left-10 w-96 h-60 bg-[#61F1AC]/[0.05] blur-[120px] rounded-full pointer-events-none" />
-          </div>
-
-          {/* Foreground Content Stack */}
-          <div className="relative z-10 p-6 sm:p-10 lg:p-12 flex flex-col justify-between h-full flex-1 min-h-[340px] sm:min-h-[380px] md:min-h-[420px]">
-            {/* Top Row: Rating Badge & MangaDex-Style Tag Pills */}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#61F1AC] text-black shadow-[0_0_15px_rgba(97,241,172,0.35)]">
-                  <Star size={11} className="fill-black text-black" />
-                  <span>{currentHero.score || currentHero.rating || "9.2"}</span>
-                </span>
-
-                <span className="text-xs text-[#A3A3A3] font-medium font-mono">
-                  Bayesian{currentHero.chapters ? ` · ${currentHero.chapters}` : ""}{currentHero.badge ? ` · ${currentHero.badge}` : ""}
-                </span>
+        {!currentHero ? (
+          <section className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl min-h-[340px] sm:min-h-[380px] md:min-h-[420px] mb-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-between animate-pulse">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-20 h-6 rounded-full bg-[#181818]" />
+                <div className="w-32 h-4 rounded bg-[#141414]" />
               </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-16 h-5 rounded bg-[#141414]" />
+                <div className="w-16 h-5 rounded bg-[#141414]" />
+              </div>
+            </div>
 
-              {/* MangaDex Genre / Content Tag Chips */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                {heroGenres.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-white/[0.08] border border-white/[0.12] text-[#E0E0E0] backdrop-blur-md"
-                  >
-                    {tag}
+            <div className="max-w-xl flex flex-col gap-3 my-auto py-4">
+              <div className="w-72 sm:w-96 h-10 rounded bg-[#181818]" />
+              <div className="w-full sm:w-[500px] h-4 rounded bg-[#141414]" />
+              <div className="w-64 h-4 rounded bg-[#141414]" />
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-white/[0.04]">
+              <div className="w-44 h-10 rounded-full bg-[#181818]" />
+              <div className="w-24 h-8 rounded-full bg-[#141414]" />
+            </div>
+          </section>
+        ) : (
+          <section className="group relative w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500 min-h-[340px] sm:min-h-[380px] md:min-h-[420px] flex flex-col justify-between mb-6">
+            {/* Backdrop Image with Cinematic Overlays */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+              <img
+                key={currentHero.id}
+                src={currentHero.backdrop || currentHero.cover || currentHero.poster}
+                alt=""
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-700 ease-out filter brightness-[0.7] contrast-[1.05]"
+              />
+
+              {/* Ambient Dark Gradients for contrast */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 sm:via-black/70 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+
+              {/* Subtle Neon Mint Aura */}
+              <div className="absolute top-1/4 left-10 w-96 h-60 bg-[#61F1AC]/[0.05] blur-[120px] rounded-full pointer-events-none" />
+            </div>
+
+            {/* Foreground Content Stack */}
+            <div className="relative z-10 p-6 sm:p-10 lg:p-12 flex flex-col justify-between h-full flex-1 min-h-[340px] sm:min-h-[380px] md:min-h-[420px]">
+              {/* Top Row: Rating Badge & MangaDex-Style Tag Pills */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#61F1AC] text-black shadow-[0_0_15px_rgba(97,241,172,0.35)]">
+                    <Star size={11} className="fill-black text-black" />
+                    <span>{currentHero.score || currentHero.rating || "9.2"}</span>
                   </span>
-                ))}
-              </div>
-            </div>
 
-            {/* Center: Title & Synopsis */}
-            <div className="max-w-2xl my-auto py-2">
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white mb-3 line-clamp-2 drop-shadow-lg">
-                {currentHero.title}
-              </h1>
+                  <span className="text-xs text-[#A3A3A3] font-medium font-mono">
+                    Bayesian{currentHero.chapters ? ` · ${currentHero.chapters}` : ""}{currentHero.badge ? ` · ${currentHero.badge}` : ""}
+                  </span>
+                </div>
 
-              <p className="text-xs sm:text-sm text-[#CCCCCC] font-light leading-relaxed line-clamp-3 mb-3 drop-shadow">
-                {currentHero.synopsis || "Explore one of the highest-rated titles across the community reading list."}
-              </p>
-
-              <p className="text-xs sm:text-sm text-[#888888] font-light">
-                Author: <span className="text-[#F5F5F5] font-medium italic">{currentHero.author || "Editorial Pick"}</span>
-              </p>
-            </div>
-
-            {/* Bottom Row: Actions & MangaDex Carousel Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-4 mt-2 border-t border-white/[0.08]">
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3">
-                <Link
-                  to={currentHero.route}
-                  className="px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-2 bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_20px_rgba(97,241,172,0.35)] transition-all cursor-pointer group/btn"
-                >
-                  <BookOpen size={15} className="group-hover/btn:scale-110 transition-transform" />
-                  <span>Read Details / Add to List</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => toggleReadingList(currentHero.id)}
-                  className={`px-4 py-2.5 rounded-full text-xs sm:text-sm font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all ${
-                    inListMap[currentHero.id]
-                      ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/60"
-                      : "bg-[#141414]/80 hover:bg-[#1E1E1E] text-[#E5E5E5] border border-white/10 hover:border-[#61F1AC]/40"
-                  }`}
-                >
-                  {inListMap[currentHero.id] ? <Check size={14} /> : <Plus size={14} />}
-                  <span>{inListMap[currentHero.id] ? "In Reading List" : "Quick Save"}</span>
-                </button>
+                {/* MangaDex Genre / Content Tag Chips */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {heroGenres.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-white/[0.08] border border-white/[0.12] text-[#E0E0E0] backdrop-blur-md"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              {/* MangaDex-Style Pagination & Chevrons */}
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono font-bold tracking-wider text-[#A3A3A3]">
-                  NO. {heroIndex + 1}
-                </span>
+              {/* Center: Title & Synopsis */}
+              <div className="max-w-2xl my-auto py-2">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white mb-3 line-clamp-2 drop-shadow-lg">
+                  {currentHero.title}
+                </h1>
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    aria-label="Previous featured title"
-                    onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
-                    className="w-8 h-8 rounded-full border border-white/15 bg-black/60 hover:bg-black/90 backdrop-blur-md flex items-center justify-center text-[#CCCCCC] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                <p className="text-xs sm:text-sm text-[#CCCCCC] font-light leading-relaxed line-clamp-3 mb-3 drop-shadow">
+                  {currentHero.synopsis || "Explore one of the highest-rated titles across the community reading list."}
+                </p>
+
+                <p className="text-xs sm:text-sm text-[#888888] font-light">
+                  Author: <span className="text-[#F5F5F5] font-medium italic">{currentHero.author || "Editorial Pick"}</span>
+                </p>
+              </div>
+
+              {/* Bottom Row: Actions & MangaDex Carousel Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 mt-2 border-t border-white/[0.08]">
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3">
+                  <Link
+                    to={currentHero.route}
+                    className="px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-2 bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_20px_rgba(97,241,172,0.35)] transition-all cursor-pointer group/btn"
                   >
-                    <ChevronLeft size={16} />
-                  </button>
+                    <BookOpen size={15} className="group-hover/btn:scale-110 transition-transform" />
+                    <span>Read Details / Add to List</span>
+                  </Link>
 
                   <button
                     type="button"
-                    aria-label="Next featured title"
-                    onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
-                    className="w-8 h-8 rounded-full border border-white/15 bg-black/60 hover:bg-black/90 backdrop-blur-md flex items-center justify-center text-[#CCCCCC] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                    onClick={() => toggleReadingList(currentHero.id)}
+                    className={`px-4 py-2.5 rounded-full text-xs sm:text-sm font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all ${
+                      inListMap[currentHero.id]
+                        ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/60"
+                        : "bg-[#141414]/80 hover:bg-[#1E1E1E] text-[#E5E5E5] border border-white/10 hover:border-[#61F1AC]/40"
+                    }`}
                   >
-                    <ChevronRight size={16} />
+                    {inListMap[currentHero.id] ? <Check size={14} /> : <Plus size={14} />}
+                    <span>{inListMap[currentHero.id] ? "In Reading List" : "Quick Save"}</span>
                   </button>
+                </div>
+
+                {/* MangaDex-Style Pagination & Chevrons */}
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono font-bold tracking-wider text-[#A3A3A3]">
+                    NO. {heroIndex + 1}
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      aria-label="Previous featured title"
+                      onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
+                      className="w-8 h-8 rounded-full border border-white/15 bg-black/60 hover:bg-black/90 backdrop-blur-md flex items-center justify-center text-[#CCCCCC] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label="Next featured title"
+                      onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
+                      className="w-8 h-8 rounded-full border border-white/15 bg-black/60 hover:bg-black/90 backdrop-blur-md flex items-center justify-center text-[#CCCCCC] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ======================================================== */}
         {/* 2. CATEGORY TABS & IN-LINE CONTROLS (STICKY)             */}

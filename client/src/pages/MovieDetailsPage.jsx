@@ -6,6 +6,10 @@ import {
   Check,
   Share2,
   ChevronDown,
+  ThumbsUp,
+  Reply,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 import { getMovieDetails, getMovieMedia } from "../services/tmdb";
 import { DetailScoreRings } from "../components/ui/DetailScoreRings";
@@ -14,7 +18,48 @@ import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab";
 import MediaItems from "../components/ui/MediaItems";
 import { fetchMediaDetails } from "../services/mediaApi";
 import { CastCarousel } from "../components/ui/CastCarousel";
+import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+
+const formatReviewDate = (dateStr) => {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
+const NAVBAR_AVATAR =
+  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
+
+function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
+  const [errorSrc, setErrorSrc] = useState(null);
+  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src;
+  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR;
+
+  return (
+    <div
+      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`}
+    >
+      <img
+        key={src}
+        src={effectiveSrc}
+        alt={alt || "Avatar"}
+        onError={() => setErrorSrc(src)}
+        className={`w-full h-full object-cover ${
+          isNavbarAvatar ? "scale-125" : ""
+        }`}
+      />
+    </div>
+  );
+}
 
 export function MovieDetailsPage({
   initialTab = "Cast",
@@ -22,12 +67,14 @@ export function MovieDetailsPage({
 }) {
   const location = useLocation();
   const { category, id } = useParams();
-  const isReviewsUrl = location.pathname.includes("/reviews"); 
+  const { user, userProfile } = useAuth();
+  const isReviewsUrl = location.pathname.includes("/reviews");
+  const currentUserAvatar = userProfile?.profile_url || user?.user_metadata?.avatar_url || NAVBAR_AVATAR;
   const [movieData, setMovieData] = useState(null); 
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
-
+  
   useEffect(() => {
     let mounted = true;
     async function loadTmdbMovie() {
@@ -36,7 +83,7 @@ export function MovieDetailsPage({
         const data = category
           ? await fetchMediaDetails(category, id)
           : await getMovieDetails(id || 157336);
-
+        
         if (mounted && data) {
           setMovieData(data);
         }
@@ -47,12 +94,12 @@ export function MovieDetailsPage({
       }
     }
     loadTmdbMovie();
-
+    
     return () => {
       mounted = false;
     };
   }, [category, id]);
-
+  
   const [mediaData, setMediaData] = useState({ 
     images: { 
       backdrops: [], 
@@ -62,17 +109,17 @@ export function MovieDetailsPage({
       results: [], 
     }, 
   }); 
-
+  
   useEffect(() => { 
     if (category) return; 
     const targetMovieId = id || 157336; 
-
+    
     let cancelled = false; 
-
+    
     async function fetchMedia() { 
       try { 
         const data = await getMovieMedia(targetMovieId); 
-
+        
         if (!cancelled) { 
           setMediaData(data); 
         } 
@@ -80,34 +127,38 @@ export function MovieDetailsPage({
         console.error("Failed to load movie media:", error); 
       } 
     } 
-
+    
     fetchMedia(); 
-
+    
     return () => { 
       cancelled = true; 
     }; 
   }, [category, id]); 
-
-
-  const activeTab =
-    selectedTabOverride !== null
-      ? selectedTabOverride
-      : isReviewsUrl
-        ? "Reviews"
-        : initialTab;
-
-  const cropHero =
-    cropHeroOverride !== null
-      ? cropHeroOverride
-      : isReviewsUrl
-        ? true
+  
+  
+  const searchParams = new URLSearchParams(location.search); 
+  const isReviewsParam = searchParams.get("tab")?.toLowerCase() === "reviews"; 
+  const shouldOpenReviews = isReviewsUrl || isReviewsParam; 
+  
+  const activeTab = 
+    selectedTabOverride !== null 
+      ? selectedTabOverride 
+      : shouldOpenReviews 
+        ? "Reviews" 
+        : initialTab; 
+  
+  const cropHero = 
+    cropHeroOverride !== null 
+      ? cropHeroOverride 
+      : shouldOpenReviews 
+        ? true 
         : initialCropHero;
-
+  
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
   const synopsisRef = useRef(null);
   const [contentHeight, setContentHeight] = useState(0);
   const [hasOverflow, setHasOverflow] = useState(false);
-
+  
   const displaySynopsis =
     (movieData?.synopsis || "") +
     ((movieData?.id === 157336 || movieData?.title?.toLowerCase() === "interstellar") &&
@@ -116,7 +167,7 @@ export function MovieDetailsPage({
     !movieData.synopsis.includes("dust storms")
       ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
       : "");
-
+  
   useEffect(() => { 
     const checkOverflow = () => { 
       if (synopsisRef.current) { 
@@ -129,7 +180,7 @@ export function MovieDetailsPage({
     window.addEventListener("resize", checkOverflow); 
     return () => window.removeEventListener("resize", checkOverflow); 
   }, [displaySynopsis]);
-
+  
   const isLongSynopsis = contentHeight === 0 || contentHeight > 82; 
   const [inCollection, setInCollection] = useState(false); 
   const [collectionLoading, setCollectionLoading] = useState(false); 
@@ -247,7 +298,7 @@ export function MovieDetailsPage({
     setCropHeroOverride(false); 
   }; 
  
-
+  
   if (isLoading || !movieData) {
     return (
       <div className="min-h-screen bg-[#000000] text-[#F5F5F5] select-none pt-12 pb-24">
@@ -267,7 +318,7 @@ export function MovieDetailsPage({
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24">
       {/* HERO SECTION */}
@@ -290,7 +341,7 @@ export function MovieDetailsPage({
           <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-[#000000]/75 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#000000]/80 via-transparent to-[#000000]/80" />
         </div>
-
+        
         {/* Hero Content: Two-column layout with 120px side margins */}
         <div
           className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-10 pb-8 flex items-start gap-12 transition-transform duration-500 ${
@@ -311,7 +362,7 @@ export function MovieDetailsPage({
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
-
+          
           {/* RIGHT: Meta, Title, Scores, Buttons, Synopsis */}
           <div className="flex-1 flex flex-col pt-2 min-w-0">
             {/* Small muted uppercase label "MOVIE" or breadcrumb link */}
@@ -328,18 +379,18 @@ export function MovieDetailsPage({
                 movieData.type
               )}
             </div>
-
+            
             {/* Large light-weight white title "Interstellar" */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-[#F5F5F5] mb-3">
               {movieData.title}
             </h1>
-
+            
             <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-4 flex items-center gap-2">
               <span className="shrink-0 rounded-full border border-white/30 px-4 py-2 font-medium leading-6 text-white transition-all duration-200 hover:border-[#61F1AC]/40 hover:bg-white/10">
                 {movieData.genres}
               </span>
             </div>
-
+            
             {/* One muted meta line "2014 · Sci-Fi, Adventure · 2h 49m · PG-13" */}
             <div className="text-sm text-[#7A7A7A] font-normal tracking-normal mb-8 mx-2 flex items-center gap-2">
               <span>{movieData.year}</span>
@@ -348,7 +399,7 @@ export function MovieDetailsPage({
               <span>·</span>
               <span>{movieData.certificate}</span>
             </div>
-
+            
             <DetailScoreRings 
               blendedScore={blendedScore} 
               totalVotesLabel={totalVotesLabel} 
@@ -381,7 +432,7 @@ export function MovieDetailsPage({
                 {inCollection ? <Check size={15} /> : <Plus size={15} />} 
                 <span>{inCollection ? "In collection" : "Add to collection"}</span> 
               </Button>
-
+              
               <button
                 type="button"
                 aria-label="Share"
@@ -394,9 +445,9 @@ export function MovieDetailsPage({
                 <Share2 size={15} />
               </button>
             </div>
-
+            
             {/* 3-line synopsis in #B5B5B5 at 16px with mint "Read more" link */}
-
+            
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
               <div
                 style={{
@@ -411,7 +462,7 @@ export function MovieDetailsPage({
                     {displaySynopsis}
                   </p>
                 </div>
-
+                
                 {/* Dark blur at the end ONLY if it has a See more button and is not expanded */}
                 {hasOverflow && (
                   <div
@@ -421,7 +472,7 @@ export function MovieDetailsPage({
                   />
                 )}
               </div>
-
+              
               {hasOverflow && (
                 <button
                   type="button"
@@ -441,7 +492,7 @@ export function MovieDetailsPage({
           </div>
         </div>
       </section>
-
+      
       {/* BELOW THE HERO: Minimal horizontal tab switcher */}
       <div
         ref={contentRef}
@@ -473,7 +524,7 @@ export function MovieDetailsPage({
           </div>
         </div>
       </div>
-
+      
       {/* TAB CONTENT (Only the active tab's content is shown, never all at once) */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
         {/* ======================================================== */}
@@ -488,8 +539,8 @@ export function MovieDetailsPage({
                 </h2> 
               </div> 
             )} 
-
-
+            
+            
             {category ? (
               /* Vertical Portrait Author Cards for Book, Manga, Manhwa, and Manhua */
               <div className="flex flex-wrap items-stretch gap-5">
@@ -507,7 +558,7 @@ export function MovieDetailsPage({
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-
+                    
                     {/* Bottom Info Box */}
                     <div className="p-3.5 flex flex-col flex-1">
                       <span className="font-semibold text-sm text-[#F5F5F5] leading-snug group-hover:text-white">
@@ -533,7 +584,6 @@ export function MovieDetailsPage({
             )}
           </div>
         )}
-
         {activeTab === "Reviews" && (
           <MediaReviewsTab
             mediaId={category ? id : (id || 157336)}
@@ -553,7 +603,7 @@ export function MovieDetailsPage({
             onCommunityDataChange={setCommunityData}
           />
         )} 
-
+        
         {activeTab === "Media" && (
           <div className="animate-in fade-in duration-300">
             <MediaItems
@@ -565,7 +615,7 @@ export function MovieDetailsPage({
             />
           </div>
         )}
-
+        
         {/* ======================================================== */}
         {/* 3. DETAILS TAB CONTENT                                   */}
         {/* ======================================================== */}
