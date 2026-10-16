@@ -162,7 +162,11 @@ export function ReviewDetailModal({
     }
   }, [isOpen, onClose]);
 
+  if (!isOpen || !item) return null;
+
   const data = detailData || item;
+  if (!data) return null;
+
   const isSynopsis = data.excerptKind === "synopsis";
   const sourceLabel = data.source === "mangadex" ? "MangaDex" : "Open Library";
   const reviewAuthor = getReviewAuthor(data, isSynopsis ? `${sourceLabel} Community Overview` : "Anonymous Reviewer");
@@ -243,8 +247,6 @@ export function ReviewDetailModal({
       await api.post(`/reviews/${revId}/like`);
     } catch {}
   };
-
-  if (!isOpen || !item) return null;
 
   const isCommunity = data.source === "orgi" || data.source === "community" || idStr.startsWith("orgi:");
   const hasRating = data.rating !== undefined && data.rating !== null;

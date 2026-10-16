@@ -80,6 +80,8 @@ export function ReviewCard({
     }, 1500);
   };
 
+  if (!item) return null;
+
   const isSynopsis = item.excerptKind === "synopsis";
   const sourceLabel = item.source === "mangadex" ? "MangaDex" : "Open Library";
   const relativeTime = formatRelativeTime(item.createdAt);
