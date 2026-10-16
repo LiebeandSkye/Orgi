@@ -319,7 +319,7 @@ export const mediaController = {
 
   async getDashboardFeeds(req, res, next) {
     try {
-      const cacheKey = "media:books:dashboard_feeds:v3";
+      const cacheKey = "media:books:dashboard_feeds:v4";
       const data = await getOrSetCache(cacheKey, 3600, async () => {
         async function fetchMangaCategory(cat, sortOrder = "desc", sortField = "followedCount") {
           const params = new URLSearchParams();
@@ -341,7 +341,21 @@ export const mediaController = {
           if (!resp.ok) return [];
           const j = await resp.json();
           const list = j.data || [];
-          return list.map((item) => {
+
+          let statsMap = {};
+          if (list.length > 0) {
+            try {
+              const statParams = new URLSearchParams();
+              list.forEach((m) => statParams.append("manga[]", m.id));
+              const statRes = await fetch(`${MANGADEX_BASE}/statistics/manga?${statParams.toString()}`);
+              if (statRes.ok) {
+                const statJson = await statRes.json();
+                statsMap = statJson.statistics || {};
+              }
+            } catch {}
+          }
+
+          return list.map((item, idx) => {
             const attrs = item.attributes || {};
             const title = getEnglishTitle(attrs);
             const coverRel = item.relationships?.find((r) => r.type === "cover_art");
@@ -349,6 +363,12 @@ export const mediaController = {
             const fileName = coverRel?.attributes?.fileName;
             const coverUrl = fileName ? `${MANGADEX_COVERS}/${item.id}/${fileName}.512.jpg` : null;
             const fullBackdrop = fileName ? `${MANGADEX_COVERS}/${item.id}/${fileName}` : null;
+            const rawScore = statsMap[item.id]?.rating?.bayesian;
+            const rating = rawScore ? rawScore.toFixed(1) : Math.min(9.5, 8.6 + ((idx * 2) % 7) * 0.1).toFixed(1);
+            const genreList = (attrs.tags || [])
+              .map((t) => t.attributes?.name?.en)
+              .filter(Boolean);
+
             return {
               id: item.id,
               title,
@@ -357,9 +377,13 @@ export const mediaController = {
               poster: coverUrl,
               backdrop: fullBackdrop || coverUrl,
               route: `/books/${cat}/${item.id}`,
-              score: "9.1",
+              score: rating,
+              rating: rating,
               type: cat.toUpperCase(),
               chapters: attrs.lastChapter ? `Ch. ${attrs.lastChapter}` : "Ongoing",
+              genres: genreList,
+              genre: genreList.slice(0, 4).join(", "),
+              follows: statsMap[item.id]?.follows || 0,
               synopsis: attrs.description?.en || Object.values(attrs.description || {})[0] || "",
             };
           });
@@ -459,7 +483,7 @@ export const mediaController = {
     try {
       const { category = "manga" } = req.params;
       const cat = category.toLowerCase();
-      const cacheKey = `media:hub:v2:${cat}`;
+      const cacheKey = `media:hub:v3:${cat}`;
 
       const data = await getOrSetCache(cacheKey, 2 * 3600, async () => {
         if (cat === "novels" || cat === "books") {
@@ -540,6 +564,20 @@ export const mediaController = {
           if (!resp.ok) return [];
           const j = await resp.json();
           const list = j.data || [];
+
+          let statsMap = {};
+          if (list.length > 0) {
+            try {
+              const statParams = new URLSearchParams();
+              list.forEach((m) => statParams.append("manga[]", m.id));
+              const statRes = await fetch(`${MANGADEX_BASE}/statistics/manga?${statParams.toString()}`);
+              if (statRes.ok) {
+                const statJson = await statRes.json();
+                statsMap = statJson.statistics || {};
+              }
+            } catch {}
+          }
+
           return list.map((item, idx) => {
             const attrs = item.attributes || {};
             const title = getEnglishTitle(attrs);
@@ -548,7 +586,11 @@ export const mediaController = {
             const fileName = coverRel?.attributes?.fileName;
             const coverUrl = fileName ? `${MANGADEX_COVERS}/${item.id}/${fileName}.512.jpg` : null;
             const fullBackdrop = fileName ? `${MANGADEX_COVERS}/${item.id}/${fileName}` : null;
-            const score = Math.min(9.5, 8.7 + ((idx * 2) % 8) * 0.1).toFixed(1);
+            const rawScore = statsMap[item.id]?.rating?.bayesian;
+            const score = rawScore ? rawScore.toFixed(1) : Math.min(9.5, 8.6 + ((idx * 2) % 7) * 0.1).toFixed(1);
+            const genreList = (attrs.tags || [])
+              .map((t) => t.attributes?.name?.en)
+              .filter(Boolean);
             return {
               id: item.id,
               title,
@@ -561,6 +603,9 @@ export const mediaController = {
               rating: score,
               type: cat.toUpperCase(),
               chapters: attrs.lastChapter ? `Ch. ${attrs.lastChapter}` : "Ongoing",
+              genres: genreList,
+              genre: genreList.slice(0, 4).join(", "),
+              follows: statsMap[item.id]?.follows || 0,
               status: status === "completed" ? "Completed" : "Ongoing",
               ...(status === "completed" ? { statusBadge: "Completed" } : {}),
               synopsis: attrs.description?.en || Object.values(attrs.description || {})[0] || "",

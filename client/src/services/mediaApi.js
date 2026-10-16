@@ -223,8 +223,8 @@ export async function fetchMangaDexByCategory(
 
 // Multi-tier client cache (Memory + SessionStorage)
 const MEMORY_FEED_CACHE = new Map();
-const DASHBOARD_CACHE_KEY = "orgi_books_dashboard_feeds_v3";
-const POPULAR_BOOKS_CACHE_KEY = "orgi_popular_books_cache_v3";
+const DASHBOARD_CACHE_KEY = "orgi_books_dashboard_feeds_v4";
+const POPULAR_BOOKS_CACHE_KEY = "orgi_popular_books_cache_v4";
 const DASHBOARD_CACHE_TTL = 20 * 60 * 1000; // 20 minutes
 const POPULAR_BOOKS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
@@ -585,7 +585,7 @@ export async function fetchBooksBySubject(subject = "fantasy", limit = 16) {
     }));
 }
 
-const HUB_CACHE_PREFIX = "orgi_cat_hub_v2_";
+const HUB_CACHE_PREFIX = "orgi_cat_hub_v3_";
 
 export function getCachedCategoryHubFeeds(category) {
     if (!category || category === "all") return null;
