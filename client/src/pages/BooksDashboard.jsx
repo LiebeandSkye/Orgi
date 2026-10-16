@@ -16,9 +16,12 @@ import {
 } from "lucide-react";
 import { BorderBeam } from "../components/ui/border-beam";
 import { MediaCarousel } from "../components/ui/MediaCarousel";
+import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 import {
   fetchBooksDashboardFeeds,
   getCachedBooksDashboardFeeds,
+  fetchCategoryHubFeeds,
+  getCachedCategoryHubFeeds,
   searchMangaDex,
   searchBooks,
 } from "../services/mediaApi";
@@ -31,6 +34,76 @@ const CATEGORY_TABS = [
   { key: "manhua", label: "Manhua", count: "3.2k", sectionId: "section-manhua", catalogUrl: "/books/manhua" },
   { key: "favorites", label: "Fan Favorites", count: "Top", sectionId: "section-favorites", catalogUrl: null },
 ];
+
+const SUB_FILTER_CHIPS = {
+  manga: [
+    { key: "all", label: "All Manga" },
+    { key: "completed", label: "Completed Series" },
+    { key: "action", label: "Shonen Action" },
+    { key: "darkFantasy", label: "Dark Fantasy" },
+    { key: "masterpieces", label: "Masterpieces" },
+    { key: "psychological", label: "Psychological" },
+  ],
+  manhwa: [
+    { key: "all", label: "All Manhwa" },
+    { key: "completed", label: "Completed Series" },
+    { key: "action", label: "Dungeon & Action" },
+    { key: "darkFantasy", label: "Dark Fantasy" },
+    { key: "masterpieces", label: "Masterpieces" },
+    { key: "psychological", label: "Murim & Martial Arts" },
+  ],
+  manhua: [
+    { key: "all", label: "All Manhua" },
+    { key: "completed", label: "Completed Series" },
+    { key: "action", label: "Action & Wuxia" },
+    { key: "darkFantasy", label: "Dark Fantasy" },
+    { key: "masterpieces", label: "Masterpieces" },
+    { key: "psychological", label: "Cultivation & Martial Arts" },
+  ],
+  novels: [
+    { key: "all", label: "All Books & Novels" },
+    { key: "completed", label: "Completed Classics" },
+    { key: "action", label: "Sci-Fi & Cyberpunk" },
+    { key: "darkFantasy", label: "Epic Fantasy" },
+    { key: "masterpieces", label: "Masterpieces" },
+    { key: "psychological", label: "Mystery & Psychological" },
+  ],
+};
+
+const HUB_SHELF_CONFIG = {
+  manga: [
+    { key: "trending", title: "TRENDING THIS WEEK — MANGA", showTopScore: true, catalogUrl: "/books/manga" },
+    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true, catalogUrl: "/books/manga" },
+    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true, catalogUrl: "/books/manga" },
+    { key: "darkFantasy", title: "DARK FANTASY & PSYCHOLOGICAL", showTopScore: true, catalogUrl: "/books/manga" },
+    { key: "action", title: "SHONEN ACTION & HIGH-OCTANE BATTLES", showTopScore: true, catalogUrl: "/books/manga" },
+    { key: "psychological", title: "MIND GAMES & SUSPENSE THRILLERS", showTopScore: true, catalogUrl: "/books/manga" },
+  ],
+  manhwa: [
+    { key: "trending", title: "TRENDING THIS WEEK — MANHWA", showTopScore: true, catalogUrl: "/books/manhwa" },
+    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true, catalogUrl: "/books/manhwa" },
+    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true, catalogUrl: "/books/manhwa" },
+    { key: "darkFantasy", title: "DUNGEONS, TOWERS & DARK FANTASY", showTopScore: true, catalogUrl: "/books/manhwa" },
+    { key: "action", title: "HIGH-OCTANE ACTION & SYSTEM HITS", showTopScore: true, catalogUrl: "/books/manhwa" },
+    { key: "psychological", title: "MURIM & MARTIAL ARTS DYNASTIES", showTopScore: true, catalogUrl: "/books/manhwa" },
+  ],
+  manhua: [
+    { key: "trending", title: "TRENDING THIS WEEK — MANHUA", showTopScore: true, catalogUrl: "/books/manhua" },
+    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true, catalogUrl: "/books/manhua" },
+    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true, catalogUrl: "/books/manhua" },
+    { key: "darkFantasy", title: "IMMORTAL REALMS & DARK FANTASY", showTopScore: true, catalogUrl: "/books/manhua" },
+    { key: "action", title: "ACTION & SUPERNATURAL AWAKENING", showTopScore: true, catalogUrl: "/books/manhua" },
+    { key: "psychological", title: "CULTIVATION, XIANXIA & MARTIAL ARTS", showTopScore: true, catalogUrl: "/books/manhua" },
+  ],
+  novels: [
+    { key: "trending", title: "TRENDING THIS MONTH — NOVELS & BOOKS", showTopScore: true, catalogUrl: "/books/novels" },
+    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true, catalogUrl: "/books/novels" },
+    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true, catalogUrl: "/books/novels" },
+    { key: "darkFantasy", title: "EPIC FANTASY & WORLDBUILDING", showTopScore: true, catalogUrl: "/books/novels" },
+    { key: "action", title: "MIND-BENDING SCI-FI & CYBERPUNK", showTopScore: true, catalogUrl: "/books/novels" },
+    { key: "psychological", title: "PSYCHOLOGICAL THRILLERS & MYSTERY", showTopScore: true, catalogUrl: "/books/novels" },
+  ],
+};
 
 const SECTION_OPTIONS = [
   { label: "Trending Manhwa", id: "section-manhwa" },
@@ -98,12 +171,18 @@ function ShelfGrid({ title, items, isLoading, sectionId, catalogUrl, showRank = 
                 </div>
               )}
 
-              <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md border border-white/10 flex items-center gap-1">
-                <Star size={10} className="fill-[#61F1AC] text-[#61F1AC]" />
-                <span className="text-[10px] font-tabular font-semibold text-[#61F1AC]">
-                  {item.score || item.rating || "8.8"}
-                </span>
-              </div>
+              {item.statusBadge ? (
+                <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 rounded-full bg-[#61F1AC] text-black text-[10px] font-bold tracking-tight shadow-md">
+                  {item.statusBadge}
+                </div>
+              ) : (
+                <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md border border-white/10 flex items-center gap-1">
+                  <Star size={10} className="fill-[#61F1AC] text-[#61F1AC]" />
+                  <span className="text-[10px] font-tabular font-semibold text-[#61F1AC]">
+                    {item.score || item.rating || "8.8"}
+                  </span>
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
 
@@ -124,6 +203,7 @@ function ShelfGrid({ title, items, isLoading, sectionId, catalogUrl, showRank = 
 
 export function BooksDashboard() {
   const [activeTab, setActiveTab] = useState("all");
+  const [activeSubFilter, setActiveSubFilter] = useState("all");
   const [viewMode, setViewMode] = useState("carousel");
   const [jumpMenuOpen, setJumpMenuOpen] = useState(false);
   const jumpMenuRef = useRef(null);
@@ -132,7 +212,7 @@ export function BooksDashboard() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const searchInputRef = useRef(null);
 
-  // Instant 0ms cache hydration
+  // Instant 0ms cache hydration for Overview feeds
   const initialCached = useMemo(() => getCachedBooksDashboardFeeds(), []);
   const [feeds, setFeeds] = useState(
     initialCached || {
@@ -145,10 +225,21 @@ export function BooksDashboard() {
   );
   const [isLoadingFeeds, setIsLoadingFeeds] = useState(!initialCached);
 
+  // Dedicated Category Hub feeds state (keyed by category: manga, manhwa, manhua, novels)
+  const [hubFeedsByCat, setHubFeedsByCat] = useState(() => ({
+    manga: getCachedCategoryHubFeeds("manga"),
+    manhwa: getCachedCategoryHubFeeds("manhwa"),
+    manhua: getCachedCategoryHubFeeds("manhua"),
+    novels: getCachedCategoryHubFeeds("novels"),
+  }));
+  const [isLoadingHub, setIsLoadingHub] = useState(false);
+
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [inListMap, setInListMap] = useState({});
   const [heroIndex, setHeroIndex] = useState(0);
+
+  const isCategoryHubActive = ["manga", "manhwa", "manhua", "novels"].includes(activeTab);
 
   // Close jump menu on outside click
   useEffect(() => {
@@ -161,7 +252,7 @@ export function BooksDashboard() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load all carousel feeds on mount with progressive updates
+  // Load main overview feeds on mount with progressive updates
   useEffect(() => {
     let mounted = true;
     if (!initialCached) {
@@ -189,6 +280,44 @@ export function BooksDashboard() {
       mounted = false;
     };
   }, [initialCached]);
+
+  // Load dedicated Category Hub feeds whenever a category tab is selected
+  useEffect(() => {
+    if (!isCategoryHubActive) return;
+
+    let mounted = true;
+    const existingHub = hubFeedsByCat[activeTab] || getCachedCategoryHubFeeds(activeTab);
+    if (!existingHub) {
+      setIsLoadingHub(true);
+    } else {
+      setIsLoadingHub(false);
+    }
+
+    fetchCategoryHubFeeds(activeTab, (progressiveHub) => {
+      if (mounted && progressiveHub) {
+        setHubFeedsByCat((prev) => ({ ...prev, [activeTab]: progressiveHub }));
+        if (
+          progressiveHub.trending?.length > 0 ||
+          progressiveHub.masterpieces?.length > 0 ||
+          progressiveHub.completed?.length > 0
+        ) {
+          setIsLoadingHub(false);
+        }
+      }
+    })
+      .then((finalHub) => {
+        if (mounted && finalHub) {
+          setHubFeedsByCat((prev) => ({ ...prev, [activeTab]: finalHub }));
+        }
+      })
+      .finally(() => {
+        if (mounted) setIsLoadingHub(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [activeTab, isCategoryHubActive]);
 
   // Keyboard shortcut: "/" to focus search
   useEffect(() => {
@@ -261,7 +390,61 @@ export function BooksDashboard() {
 
   const isSearchActive = searchQuery.trim().length > 0;
 
+  // Contextual Spotlight Pool (adapts dynamically to the active category tab!)
   const spotlightPool = useMemo(() => {
+    if (activeTab === "manga") {
+      const mangaList =
+        hubFeedsByCat.manga?.masterpieces?.length > 0
+          ? hubFeedsByCat.manga.masterpieces
+          : feeds.trendingManga;
+      if (mangaList && mangaList.length > 0) {
+        return mangaList.slice(0, 5).map((item) => ({
+          ...item,
+          badge: "Top Rated Manga",
+        }));
+      }
+    } else if (activeTab === "manhwa") {
+      const manhwaList =
+        hubFeedsByCat.manhwa?.masterpieces?.length > 0
+          ? hubFeedsByCat.manhwa.masterpieces
+          : feeds.trendingManhwa;
+      if (manhwaList && manhwaList.length > 0) {
+        return manhwaList.slice(0, 5).map((item) => ({
+          ...item,
+          badge: "Top Rated Manhwa",
+        }));
+      }
+    } else if (activeTab === "manhua") {
+      const manhuaList =
+        hubFeedsByCat.manhua?.masterpieces?.length > 0
+          ? hubFeedsByCat.manhua.masterpieces
+          : feeds.trendingManhua;
+      if (manhuaList && manhuaList.length > 0) {
+        return manhuaList.slice(0, 5).map((item) => ({
+          ...item,
+          badge: "Top Rated Manhua",
+        }));
+      }
+    } else if (activeTab === "novels") {
+      const booksList =
+        hubFeedsByCat.novels?.trending?.length > 0
+          ? hubFeedsByCat.novels.trending
+          : feeds.trendingBooks;
+      if (booksList && booksList.length > 0) {
+        return booksList.slice(0, 5).map((item) => ({
+          ...item,
+          badge: "Featured Book / Novel",
+        }));
+      }
+    } else if (activeTab === "favorites") {
+      if (feeds.fanFavorites && feeds.fanFavorites.length > 0) {
+        return feeds.fanFavorites.slice(0, 5).map((item) => ({
+          ...item,
+          badge: "Hall of Fame Favorite",
+        }));
+      }
+    }
+
     const pool = [];
     if (feeds.trendingManhwa[0]) pool.push({ ...feeds.trendingManhwa[0], badge: "Trending Manhwa" });
     if (feeds.trendingManga[0]) pool.push({ ...feeds.trendingManga[0], badge: "Trending Manga" });
@@ -287,9 +470,13 @@ export function BooksDashboard() {
         badge: "Trending Manhwa",
       },
     ];
-  }, [feeds]);
+  }, [activeTab, feeds, hubFeedsByCat]);
 
   const currentHero = spotlightPool[heroIndex % spotlightPool.length] || spotlightPool[0];
+
+  useEffect(() => {
+    setHeroIndex(0);
+  }, [activeTab]);
 
   useEffect(() => {
     if (spotlightPool.length <= 1) return;
@@ -305,18 +492,12 @@ export function BooksDashboard() {
 
   const handleTabClick = (tab) => {
     setActiveTab(tab.key);
-    if (tab.key !== "all" && tab.sectionId) {
-      setTimeout(() => {
-        const el = document.getElementById(tab.sectionId);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 50);
-    }
+    setActiveSubFilter("all");
   };
 
   const scrollToSection = (id) => {
     setActiveTab("all");
+    setActiveSubFilter("all");
     setJumpMenuOpen(false);
     setTimeout(() => {
       const el = document.getElementById(id);
@@ -326,16 +507,39 @@ export function BooksDashboard() {
     }, 50);
   };
 
+  // Resolve current category hub shelves with instant fallback to overview feed for the first shelf
+  const activeHubData = useMemo(() => {
+    if (!isCategoryHubActive) return null;
+    const raw = hubFeedsByCat[activeTab] || {};
+    const overviewFallback =
+      activeTab === "manga"
+        ? feeds.trendingManga
+        : activeTab === "manhwa"
+        ? feeds.trendingManhwa
+        : activeTab === "manhua"
+        ? feeds.trendingManhua
+        : feeds.trendingBooks;
+
+    return {
+      trending: raw.trending?.length > 0 ? raw.trending : overviewFallback || [],
+      masterpieces: raw.masterpieces || [],
+      completed: raw.completed || [],
+      darkFantasy: raw.darkFantasy || [],
+      action: raw.action || [],
+      psychological: raw.psychological || [],
+    };
+  }, [activeTab, isCategoryHubActive, hubFeedsByCat, feeds]);
+
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col justify-between pt-10 pb-24 select-none">
+    <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col justify-between pt-8 pb-24 select-none">
       <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-[120px]">
         {/* HEADER SEARCH HERO */}
-        <section className="flex flex-col items-center justify-center pt-2 pb-8 text-center">
+        <section className="flex flex-col items-center justify-center pt-1 pb-6 text-center">
           <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
             BOOKS · NOVELS · MANGA · MANHWA · MANHUA
           </span>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-light tracking-tight text-[#F5F5F5] mb-8">
+          <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-light tracking-tight text-[#F5F5F5] mb-6">
             What are you reading?
           </h1>
 
@@ -346,7 +550,7 @@ export function BooksDashboard() {
               borderRadius={27}
               className="w-full rounded-full"
             >
-              <div className="relative w-full h-[54px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all">
+              <div className="relative w-full h-[52px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all">
                 <div className="flex items-center gap-3.5 flex-1 min-w-0">
                   <Search size={18} className="text-[#61F1AC] shrink-0" />
                   <input
@@ -455,153 +659,8 @@ export function BooksDashboard() {
             )}
           </section>
         ) : (
-          <div className="space-y-10 animate-in fade-in duration-300">
-            {/* FEATURED SPOTLIGHT HERO BANNER (OPTION 3 CINEMATIC CARD) */}
-            <section className="group relative w-full rounded-[18px] sm:rounded-[22px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500">
-              {/* Integrated Object Background Image on the right side */}
-              <div className="absolute right-0 top-0 bottom-0 w-full sm:w-[50%] md:w-[46%] lg:w-[42%] max-w-[560px] pointer-events-none overflow-hidden z-0">
-                {/* Ambient backdrop glow */}
-                <img
-                  src={currentHero.backdrop || currentHero.cover || currentHero.poster}
-                  alt=""
-                  aria-hidden="true"
-                  referrerPolicy="no-referrer"
-                  className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-25 scale-110"
-                />
-
-                {/* Main high-clarity artwork with optimized focal placement */}
-                <img
-                  key={currentHero.id}
-                  src={currentHero.backdrop || currentHero.cover || currentHero.poster}
-                  alt={currentHero.title}
-                  referrerPolicy="no-referrer"
-                  className="relative w-full h-full object-cover object-top sm:object-[center_12%] group-hover:scale-[1.02] transition-all duration-700"
-                />
-
-                {/* Left-edge smooth fade to seamlessly blend artwork into dark card */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/30 to-transparent" />
-                {/* Subtle top/bottom edge fade */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A]/30 via-transparent to-[#0A0A0A]/50" />
-                {/* Mobile overlay for legibility */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/80 to-[#0A0A0A]/50 sm:hidden" />
-              </div>
-
-              {/* Card Foreground Content */}
-              <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex flex-col justify-between min-h-[320px] sm:min-h-[360px]">
-                {/* Top Row: Left Pill Badge & Right Dual Score Pill */}
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#0E1E14] text-[#61F1AC] border border-[#61F1AC]/35 shadow-[0_0_12px_rgba(97,241,172,0.15)]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] animate-pulse" />
-                    Featured Spotlight
-                  </span>
-
-                  {/* Top Right Score & Reads Dual Capsule (Image 2 style) */}
-                  <div className="inline-flex items-center rounded-full bg-[#141414]/90 border border-[#222222] overflow-hidden shadow-lg backdrop-blur-md">
-                    <div className="flex items-center gap-1 px-3 py-1 text-xs font-semibold text-[#F5F5F5]">
-                      <span>{currentHero.score || currentHero.rating || "9.0"}</span>
-                      <Star size={11} className="fill-[#61F1AC] text-[#61F1AC]" />
-                    </div>
-                    <div className="px-3 py-1 text-xs font-bold bg-[#61F1AC] text-black">
-                      {(() => {
-                        const cnt = currentHero.follows || currentHero.voteCount || 42100;
-                        if (cnt >= 1000000) return `${(cnt / 1000000).toFixed(1)}m`;
-                        if (cnt >= 1000) return `${(cnt / 1000).toFixed(1)}k`;
-                        return `${cnt}`;
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Center: Title & Metadata (Restricted width so it never crowds artwork) */}
-                <div className="max-w-md sm:max-w-lg lg:max-w-xl my-auto py-2">
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white mb-2 line-clamp-2">
-                    {currentHero.title}
-                  </h2>
-
-                  <p className="text-xs sm:text-sm text-[#B5B5B5] font-light leading-relaxed line-clamp-2 mb-1.5">
-                    <span className="text-[#888888] font-normal">Synopsis: </span>
-                    {currentHero.synopsis || currentHero.overview || "Explore one of the highest-rated titles across the community reading list."}
-                  </p>
-
-                  <p className="text-xs sm:text-sm text-[#888888] font-light">
-                    Author: <span className="text-[#D4D4D4] font-medium">{currentHero.author || "Editorial Pick"}</span>
-                    {currentHero.chapters && (
-                      <>
-                        <span className="mx-2 text-[#555555]">·</span>
-                        <span className="text-[#61F1AC]">{currentHero.chapters}</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                {/* Bottom: Action Buttons & Subtle Slider Navigation */}
-                <div className="flex flex-wrap items-center justify-between gap-4 pt-4 mt-2">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Link
-                      to={currentHero.route}
-                      className="px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-2 bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_20px_rgba(97,241,172,0.3)] transition-all cursor-pointer group/btn"
-                    >
-                      <BookOpen size={15} className="group-hover/btn:scale-110 transition-transform" />
-                      <span>Start Reading</span>
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={() => toggleReadingList(currentHero.id)}
-                      className={`px-4 py-2.5 rounded-full text-xs sm:text-sm font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all ${
-                        inListMap[currentHero.id]
-                          ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/60"
-                          : "bg-[#141414]/80 hover:bg-[#1E1E1E] text-[#E5E5E5] border border-white/10 hover:border-[#61F1AC]/40"
-                      }`}
-                    >
-                      {inListMap[currentHero.id] ? <Check size={14} /> : <Plus size={14} />}
-                      <span>{inListMap[currentHero.id] ? "In Reading List" : "Add to List"}</span>
-                    </button>
-                  </div>
-
-                  {/* Subtle Pagination Indicators */}
-                  {spotlightPool.length > 1 && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        aria-label="Previous recommendation"
-                        onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
-                        className="w-7 h-7 rounded-full border border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
-                      >
-                        <ChevronLeft size={13} />
-                      </button>
-
-                      <div className="flex items-center gap-1.5 px-1">
-                        {spotlightPool.map((_, dotIdx) => (
-                          <button
-                            key={dotIdx}
-                            type="button"
-                            aria-label={`Jump to recommendation ${dotIdx + 1}`}
-                            onClick={() => setHeroIndex(dotIdx)}
-                            className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                              dotIdx === heroIndex % spotlightPool.length
-                                ? "w-5 bg-[#61F1AC]"
-                                : "w-1.5 bg-white/20 hover:bg-white/40"
-                            }`}
-                          />
-                        ))}
-                      </div>
-
-                      <button
-                        type="button"
-                        aria-label="Next recommendation"
-                        onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
-                        className="w-7 h-7 rounded-full border border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
-                      >
-                        <ChevronRight size={13} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* OPTION 2: STREAMING-STYLE MINIMALIST UNDERLINE CATEGORY TABS (STICKY) */}
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* STREAMING-STYLE MINIMALIST UNDERLINE CATEGORY TABS (STICKY) */}
             <div className="sticky top-0 z-30 bg-[#000000]/95 backdrop-blur-md border-b border-[#1C1C1C] pt-2 pb-0 -mx-6 px-6 lg:-mx-[120px] lg:px-[120px] transition-all">
               <div className="flex items-center justify-between gap-4">
                 {/* Left Underline Tabs */}
@@ -669,153 +728,352 @@ export function BooksDashboard() {
                   </div>
 
                   {/* Jump to Section Dropdown */}
-                  <div className="relative" ref={jumpMenuRef}>
-                    <button
-                      type="button"
-                      onClick={() => setJumpMenuOpen(!jumpMenuOpen)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#0B0B0B] border border-[#1C1C1C] text-xs font-medium text-[#B5B5B5] hover:text-[#F5F5F5] hover:border-[#61F1AC]/40 transition-colors cursor-pointer"
-                    >
-                      <span>Jump to Section</span>
-                      <ChevronDown
-                        size={12}
-                        className={`text-[#7A7A7A] transition-transform duration-200 ${
-                          jumpMenuOpen ? "rotate-180 text-[#61F1AC]" : ""
-                        }`}
-                      />
-                    </button>
+                  {activeTab === "all" && (
+                    <div className="relative" ref={jumpMenuRef}>
+                      <button
+                        type="button"
+                        onClick={() => setJumpMenuOpen(!jumpMenuOpen)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#0B0B0B] border border-[#1C1C1C] text-xs font-medium text-[#B5B5B5] hover:text-[#F5F5F5] hover:border-[#61F1AC]/40 transition-colors cursor-pointer"
+                      >
+                        <span>Jump to Section</span>
+                        <ChevronDown
+                          size={12}
+                          className={`text-[#7A7A7A] transition-transform duration-200 ${
+                            jumpMenuOpen ? "rotate-180 text-[#61F1AC]" : ""
+                          }`}
+                        />
+                      </button>
 
-                    {jumpMenuOpen && (
-                      <div className="absolute right-0 top-full mt-1.5 w-48 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl py-1.5 shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-150">
-                        {SECTION_OPTIONS.map((sec) => (
-                          <button
-                            key={sec.id}
-                            type="button"
-                            onClick={() => scrollToSection(sec.id)}
-                            className="w-full text-left px-3.5 py-2 text-xs text-[#B5B5B5] hover:text-[#61F1AC] hover:bg-[#141414] transition-colors cursor-pointer flex items-center justify-between"
-                          >
-                            <span>{sec.label}</span>
-                            <span className="text-[10px] text-[#555555] font-mono">↓</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                      {jumpMenuOpen && (
+                        <div className="absolute right-0 top-full mt-1.5 w-48 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl py-1.5 shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-150">
+                          {SECTION_OPTIONS.map((sec) => (
+                            <button
+                              key={sec.id}
+                              type="button"
+                              onClick={() => scrollToSection(sec.id)}
+                              className="w-full text-left px-3.5 py-2 text-xs text-[#B5B5B5] hover:text-[#61F1AC] hover:bg-[#141414] transition-colors cursor-pointer flex items-center justify-between"
+                            >
+                              <span>{sec.label}</span>
+                              <span className="text-[10px] text-[#555555] font-mono">↓</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* DASHBOARD SHELVES (CAROUSEL OR GRID VIEW) */}
-            <div className="space-y-8 pb-12">
-              {/* 1. MANHWA SHELF */}
-              {(activeTab === "all" || activeTab === "manhwa") && (
-                viewMode === "carousel" ? (
-                  <div id="section-manhwa" className="scroll-mt-24">
-                    <MediaCarousel
+            {/* FEATURED SPOTLIGHT HERO BANNER (CONTEXTUAL TO ACTIVE TAB) */}
+            <section className="group relative w-full rounded-[18px] sm:rounded-[22px] overflow-hidden border border-[#1C1C1C] bg-[#0A0A0A] shadow-2xl transition-all duration-500">
+              {/* Integrated Object Background Image on the right side */}
+              <div className="absolute right-0 top-0 bottom-0 w-full sm:w-[50%] md:w-[46%] lg:w-[42%] max-w-[560px] pointer-events-none overflow-hidden z-0">
+                <img
+                  src={currentHero.backdrop || currentHero.cover || currentHero.poster}
+                  alt=""
+                  aria-hidden="true"
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-25 scale-110"
+                />
+
+                <img
+                  key={currentHero.id}
+                  src={currentHero.backdrop || currentHero.cover || currentHero.poster}
+                  alt={currentHero.title}
+                  referrerPolicy="no-referrer"
+                  className="relative w-full h-full object-cover object-top sm:object-[center_12%] group-hover:scale-[1.02] transition-all duration-700"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/30 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A]/30 via-transparent to-[#0A0A0A]/50" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/80 to-[#0A0A0A]/50 sm:hidden" />
+              </div>
+
+              {/* Card Foreground Content */}
+              <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex flex-col justify-between min-h-[300px] sm:min-h-[340px]">
+                {/* Top Row: Left Pill Badge & Metadata */}
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#61F1AC] text-black shadow-[0_0_15px_rgba(97,241,172,0.35)]">
+                      <Star size={11} className="fill-black text-black" />
+                      <span>{currentHero.score || currentHero.rating || "9.2"}</span>
+                    </span>
+                    <span className="text-xs text-[#9A9A9A] font-medium">
+                      Bayesian
+                      {currentHero.chapters ? ` · ${currentHero.chapters}` : ""}
+                      {currentHero.badge ? ` · ${currentHero.badge}` : ""}
+                    </span>
+                  </div>
+
+                  {/* Top Right Score & Reads Dual Capsule */}
+                  <div className="hidden sm:inline-flex items-center rounded-full bg-[#141414]/90 border border-[#222222] overflow-hidden shadow-lg backdrop-blur-md">
+                    <div className="flex items-center gap-1 px-3 py-1 text-xs font-semibold text-[#F5F5F5]">
+                      <span>{currentHero.score || currentHero.rating || "9.0"}</span>
+                      <Star size={11} className="fill-[#61F1AC] text-[#61F1AC]" />
+                    </div>
+                    <div className="px-3 py-1 text-xs font-bold bg-[#61F1AC] text-black">
+                      {(() => {
+                        const cnt = currentHero.follows || currentHero.voteCount || 42100;
+                        if (cnt >= 1000000) return `${(cnt / 1000000).toFixed(1)}m`;
+                        if (cnt >= 1000) return `${(cnt / 1000).toFixed(1)}k`;
+                        return `${cnt}`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Center: Title & Metadata */}
+                <div className="max-w-md sm:max-w-lg lg:max-w-xl my-auto py-2">
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold uppercase tracking-tight text-white mb-2.5 line-clamp-2">
+                    {currentHero.title}
+                  </h2>
+
+                  <p className="text-xs sm:text-sm text-[#B5B5B5] font-light leading-relaxed line-clamp-2 mb-2">
+                    {currentHero.synopsis || currentHero.overview || "Explore one of the highest-rated titles across the community reading list."}
+                  </p>
+
+                  <p className="text-xs sm:text-sm text-[#888888] font-light">
+                    Author: <span className="text-[#D4D4D4] font-medium">{currentHero.author || "Editorial Pick"}</span>
+                  </p>
+                </div>
+
+                {/* Bottom: Action Buttons & Slider Navigation */}
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-4 mt-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      to={currentHero.route}
+                      className="px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold inline-flex items-center gap-2 bg-[#61F1AC] hover:bg-[#7BF5BB] text-black shadow-[0_4px_20px_rgba(97,241,172,0.35)] transition-all cursor-pointer group/btn"
+                    >
+                      <BookOpen size={15} className="group-hover/btn:scale-110 transition-transform" />
+                      <span>Read Details / Add to List</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleReadingList(currentHero.id)}
+                      className={`px-4 py-2.5 rounded-full text-xs sm:text-sm font-medium inline-flex items-center gap-1.5 cursor-pointer transition-all ${
+                        inListMap[currentHero.id]
+                          ? "bg-[#141414] text-[#61F1AC] border border-[#61F1AC]/60"
+                          : "bg-[#141414]/80 hover:bg-[#1E1E1E] text-[#E5E5E5] border border-white/10 hover:border-[#61F1AC]/40"
+                      }`}
+                    >
+                      {inListMap[currentHero.id] ? <Check size={14} /> : <Plus size={14} />}
+                      <span>{inListMap[currentHero.id] ? "In Reading List" : "Quick Save"}</span>
+                    </button>
+                  </div>
+
+                  {/* Subtle Pagination Indicators */}
+                  {spotlightPool.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label="Previous recommendation"
+                        onClick={() => setHeroIndex((prev) => (prev - 1 + spotlightPool.length) % spotlightPool.length)}
+                        className="w-7 h-7 rounded-full border border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                      >
+                        <ChevronLeft size={13} />
+                      </button>
+
+                      <div className="flex items-center gap-1.5 px-1">
+                        {spotlightPool.map((_, dotIdx) => (
+                          <button
+                            key={dotIdx}
+                            type="button"
+                            aria-label={`Jump to recommendation ${dotIdx + 1}`}
+                            onClick={() => setHeroIndex(dotIdx)}
+                            className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                              dotIdx === heroIndex % spotlightPool.length
+                                ? "w-5 bg-[#61F1AC]"
+                                : "w-1.5 bg-white/20 hover:bg-white/40"
+                            }`}
+                          />
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        aria-label="Next recommendation"
+                        onClick={() => setHeroIndex((prev) => (prev + 1) % spotlightPool.length)}
+                        className="w-7 h-7 rounded-full border border-white/10 bg-black/60 backdrop-blur-md flex items-center justify-center text-[#7A7A7A] hover:text-[#61F1AC] hover:border-[#61F1AC]/50 cursor-pointer transition-colors"
+                      >
+                        <ChevronRight size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* SUB-CATEGORY QUICK FILTER CHIPS (WHEN MANGA / MANHWA / MANHUA / NOVELS TAB IS ACTIVE) */}
+            {isCategoryHubActive && SUB_FILTER_CHIPS[activeTab] && (
+              <div className="flex items-center justify-center gap-2.5 flex-wrap pt-1 pb-2 animate-in fade-in duration-200">
+                {SUB_FILTER_CHIPS[activeTab].map((chip) => {
+                  const isChipActive = activeSubFilter === chip.key;
+                  return (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => setActiveSubFilter(chip.key)}
+                      className={`px-4 py-1.5 rounded-full text-xs sm:text-sm transition-all cursor-pointer ${
+                        isChipActive
+                          ? "bg-[#61F1AC] text-black font-semibold shadow-[0_0_20px_rgba(97,241,172,0.45)]"
+                          : "bg-[#0B0B0B] border border-[#1F1F1F] text-[#B5B5B5] hover:text-[#F5F5F5] hover:border-[#61F1AC]/40"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* DEDICATED CATEGORY HUB SHELVES OR OVERVIEW SHELVES */}
+            {isCategoryHubActive && activeHubData ? (
+              <div className="space-y-8 pb-12 animate-in fade-in duration-200">
+                {(HUB_SHELF_CONFIG[activeTab] || [])
+                  .filter((shelf) => activeSubFilter === "all" || activeSubFilter === shelf.key)
+                  .map((shelf) => {
+                    const shelfItems = activeHubData[shelf.key] || [];
+                    const shelfLoading = isLoadingHub && shelfItems.length === 0;
+                    return viewMode === "carousel" ? (
+                      <div key={shelf.key} id={`hub-${activeTab}-${shelf.key}`} className="scroll-mt-24">
+                        <MediaCarousel
+                          title={shelf.title}
+                          items={shelfItems}
+                          isLoading={shelfLoading}
+                          showRank={Boolean(shelf.showRank)}
+                          showTopScore={Boolean(shelf.showTopScore)}
+                        />
+                      </div>
+                    ) : (
+                      <ShelfGrid
+                        key={shelf.key}
+                        sectionId={`hub-${activeTab}-${shelf.key}`}
+                        title={shelf.title}
+                        items={shelfItems}
+                        isLoading={shelfLoading}
+                        showRank={Boolean(shelf.showRank)}
+                        catalogUrl={shelf.catalogUrl}
+                      />
+                    );
+                  })}
+              </div>
+            ) : (
+              /* OVERVIEW DASHBOARD SHELVES (ALL LITERATURE OR FAN FAVORITES) */
+              <div className="space-y-8 pb-12">
+                {/* 1. MANHWA SHELF */}
+                {activeTab === "all" && (
+                  viewMode === "carousel" ? (
+                    <div id="section-manhwa" className="scroll-mt-24">
+                      <MediaCarousel
+                        title="Trending this week — Manhwa"
+                        items={feeds.trendingManhwa}
+                        isLoading={isLoadingFeeds}
+                        showTopScore={true}
+                      />
+                    </div>
+                  ) : (
+                    <ShelfGrid
+                      sectionId="section-manhwa"
                       title="Trending this week — Manhwa"
                       items={feeds.trendingManhwa}
                       isLoading={isLoadingFeeds}
-                      seeAllLink="/books/manhwa"
+                      catalogUrl="/books/manhwa"
                     />
-                  </div>
-                ) : (
-                  <ShelfGrid
-                    sectionId="section-manhwa"
-                    title="Trending this week — Manhwa"
-                    items={feeds.trendingManhwa}
-                    isLoading={isLoadingFeeds}
-                    catalogUrl="/books/manhwa"
-                  />
-                )
-              )}
+                  )
+                )}
 
-              {/* 2. MANGA SHELF */}
-              {(activeTab === "all" || activeTab === "manga") && (
-                viewMode === "carousel" ? (
-                  <div id="section-manga" className="scroll-mt-24">
-                    <MediaCarousel
+                {/* 2. MANGA SHELF */}
+                {activeTab === "all" && (
+                  viewMode === "carousel" ? (
+                    <div id="section-manga" className="scroll-mt-24">
+                      <MediaCarousel
+                        title="Trending this week — Manga"
+                        items={feeds.trendingManga}
+                        isLoading={isLoadingFeeds}
+                        showTopScore={true}
+                      />
+                    </div>
+                  ) : (
+                    <ShelfGrid
+                      sectionId="section-manga"
                       title="Trending this week — Manga"
                       items={feeds.trendingManga}
                       isLoading={isLoadingFeeds}
-                      seeAllLink="/books/manga"
+                      catalogUrl="/books/manga"
                     />
-                  </div>
-                ) : (
-                  <ShelfGrid
-                    sectionId="section-manga"
-                    title="Trending this week — Manga"
-                    items={feeds.trendingManga}
-                    isLoading={isLoadingFeeds}
-                    catalogUrl="/books/manga"
-                  />
-                )
-              )}
+                  )
+                )}
 
-              {/* 3. BOOKS & NOVELS SHELF */}
-              {(activeTab === "all" || activeTab === "novels") && (
-                viewMode === "carousel" ? (
-                  <div id="section-novels" className="scroll-mt-24">
-                    <MediaCarousel
+                {/* 3. BOOKS & NOVELS SHELF */}
+                {activeTab === "all" && (
+                  viewMode === "carousel" ? (
+                    <div id="section-novels" className="scroll-mt-24">
+                      <MediaCarousel
+                        title="Trending this month — Novels & Books"
+                        items={feeds.trendingBooks}
+                        isLoading={isLoadingFeeds}
+                        showTopScore={true}
+                      />
+                    </div>
+                  ) : (
+                    <ShelfGrid
+                      sectionId="section-novels"
                       title="Trending this month — Novels & Books"
                       items={feeds.trendingBooks}
                       isLoading={isLoadingFeeds}
-                      seeAllLink="/books/novels"
+                      catalogUrl="/books/novels"
                     />
-                  </div>
-                ) : (
-                  <ShelfGrid
-                    sectionId="section-novels"
-                    title="Trending this month — Novels & Books"
-                    items={feeds.trendingBooks}
-                    isLoading={isLoadingFeeds}
-                    catalogUrl="/books/novels"
-                  />
-                )
-              )}
+                  )
+                )}
 
-              {/* 4. MANHUA SHELF */}
-              {(activeTab === "all" || activeTab === "manhua") && (
-                viewMode === "carousel" ? (
-                  <div id="section-manhua" className="scroll-mt-24">
-                    <MediaCarousel
+                {/* 4. MANHUA SHELF */}
+                {activeTab === "all" && (
+                  viewMode === "carousel" ? (
+                    <div id="section-manhua" className="scroll-mt-24">
+                      <MediaCarousel
+                        title="Trending this month — Manhua"
+                        items={feeds.trendingManhua}
+                        isLoading={isLoadingFeeds}
+                        showTopScore={true}
+                      />
+                    </div>
+                  ) : (
+                    <ShelfGrid
+                      sectionId="section-manhua"
                       title="Trending this month — Manhua"
                       items={feeds.trendingManhua}
                       isLoading={isLoadingFeeds}
-                      seeAllLink="/books/manhua"
+                      catalogUrl="/books/manhua"
                     />
-                  </div>
-                ) : (
-                  <ShelfGrid
-                    sectionId="section-manhua"
-                    title="Trending this month — Manhua"
-                    items={feeds.trendingManhua}
-                    isLoading={isLoadingFeeds}
-                    catalogUrl="/books/manhua"
-                  />
-                )
-              )}
+                  )
+                )}
 
-              {/* 5. FAN FAVORITES SHELF */}
-              {(activeTab === "all" || activeTab === "favorites") && (
-                viewMode === "carousel" ? (
-                  <div id="section-favorites" className="scroll-mt-24">
-                    <MediaCarousel
+                {/* 5. FAN FAVORITES SHELF */}
+                {(activeTab === "all" || activeTab === "favorites") && (
+                  viewMode === "carousel" ? (
+                    <div id="section-favorites" className="scroll-mt-24">
+                      <MediaCarousel
+                        title="Fan Favorites — All Time"
+                        items={feeds.fanFavorites}
+                        isLoading={isLoadingFeeds}
+                        showRank={true}
+                        showTopScore={true}
+                      />
+                    </div>
+                  ) : (
+                    <ShelfGrid
+                      sectionId="section-favorites"
                       title="Fan Favorites — All Time"
                       items={feeds.fanFavorites}
                       isLoading={isLoadingFeeds}
                       showRank={true}
                     />
-                  </div>
-                ) : (
-                  <ShelfGrid
-                    sectionId="section-favorites"
-                    title="Fan Favorites — All Time"
-                    items={feeds.fanFavorites}
-                    isLoading={isLoadingFeeds}
-                    showRank={true}
-                  />
-                )
-              )}
-            </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

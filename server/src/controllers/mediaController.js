@@ -67,60 +67,6 @@ function formatReviewContent(rawText) {
   return text;
 }
 
-function getDefaultCommunityReviews(title, type = "Novel", baseRating = 8.5, author = "") {
-  const scoreNum = typeof baseRating === "number" ? baseRating : parseFloat(baseRating) || 8.5;
-  const authorMention = author && author !== "Unknown Author" ? ` by ${author}` : "";
-
-  const reviewers = [
-    {
-      name: "Aria_Reads",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80",
-      time: "2 days ago",
-      scoreDelta: 0.3,
-      content: `An utterly compelling work! "${title}"${authorMention} has some of the finest narrative pacing I've read in recent memory. The depth of the characterization and the thematic resonance build up remarkably well towards the climactic chapters. Truly a standout addition to the ${type.toLowerCase()} medium.`,
-      likes: 42,
-    },
-    {
-      name: "Kaelen_Bookworm",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80",
-      time: "1 week ago",
-      scoreDelta: -0.1,
-      content: `The world-building and descriptive atmosphere in "${title}" are top notch. You can genuinely feel the craftsmanship in every arc. Highly recommended for anyone looking for a rich, immersive story that doesn't shy away from emotional stakes.`,
-      likes: 29,
-    },
-    {
-      name: "Min_Jae",
-      avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80",
-      time: "2 weeks ago",
-      scoreDelta: 0.5,
-      content: `Easily one of my favorite discoveries this year. The narrative balance between action and quiet introspective moments is executed with surgical precision. If you're on the fence about starting "${title}", consider this your sign to jump in right now.`,
-      likes: 19,
-    },
-    {
-      name: "ElenaV",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80",
-      time: "1 month ago",
-      scoreDelta: -0.4,
-      content: `Solid storytelling throughout. While the midsection takes its time setting up the overarching conflict, the payoff in the latter half more than justifies the investment. A memorable, high-caliber read.`,
-      likes: 14,
-    },
-  ];
-
-  return reviewers.map((r, i) => {
-    const score = Math.min(10, Math.max(6.0, Number((scoreNum + r.scoreDelta).toFixed(1))));
-    return {
-      id: `community-rev-${i + 1}`,
-      author: r.name,
-      avatar: r.avatar,
-      time: r.time,
-      score,
-      content: r.content,
-      likes: r.likes,
-      repliesCount: 0,
-    };
-  });
-}
-
 export const mediaController = {
   async ping(req, res) {
     res.json({ status: "ok" });
@@ -428,7 +374,7 @@ export const mediaController = {
   async getDetail(req, res, next) {
     try {
       const { category, id } = req.params;
-      const cacheKey = `media:detail:${category.toLowerCase()}:${id}`;
+      const cacheKey = `media:detail:v2:${category.toLowerCase()}:${id}`;
 
       const data = await getOrSetCache(cacheKey, 24 * 3600, async () => {
         const catLower = (category || "").toLowerCase();
@@ -529,64 +475,6 @@ export const mediaController = {
             // keep rawCovers fallback
           }
 
-          let bookReviews = [];
-          try {
-            const aniQuery = `
-              query ($search: String) {
-                Media(search: $search, type: MANGA) {
-                  reviews(perPage: 6, sort: [RATING_DESC]) {
-                    nodes {
-                      id
-                      summary
-                      body
-                      rating
-                      score
-                      createdAt
-                      user {
-                        name
-                        avatar {
-                          medium
-                          large
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            `;
-            const aniRes = await fetch("https://graphql.anilist.co", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                query: aniQuery,
-                variables: { search: bookData.title || "Fiction" },
-              }),
-            }).catch(() => null);
-
-            if (aniRes && aniRes.ok) {
-              const aniJson = await aniRes.json();
-              const nodes = aniJson?.data?.Media?.reviews?.nodes || [];
-              if (nodes.length > 0) {
-                bookReviews = nodes.map((node, idx) => ({
-                  id: `rev-book-${node.id || idx}`,
-                  author: node.user?.name || `reader_${idx + 1}`,
-                  avatar: node.user?.avatar?.medium || node.user?.avatar?.large || null,
-                  time: node.createdAt ? new Date(node.createdAt * 1000).toLocaleDateString() : "Recent",
-                  score: typeof node.score === "number" ? Number((node.score / 10).toFixed(1)) : bookRating,
-                  content: formatReviewContent(node.body || node.summary || ""),
-                  likes: typeof node.rating === "number" ? node.rating : 15 + idx * 8,
-                  repliesCount: 0,
-                }));
-              }
-            }
-          } catch {
-            // fallback
-          }
-
-          if (bookReviews.length === 0) {
-            bookReviews = getDefaultCommunityReviews(bookData.title || "Untitled", "Book / Novel", bookRating, authorName);
-          }
-
           return {
             id,
             type: "BOOK / NOVEL",
@@ -628,7 +516,7 @@ export const mediaController = {
                 format: "poster",
               })),
             },
-            reviews: bookReviews,
+            reviews: [],
             details: {
               director: authorName,
               writers: authorName,
@@ -774,10 +662,10 @@ export const mediaController = {
           volumeCount = volumeCovers.length;
         }
 
-        // Fetch official banner, art, and reviews from AniList / Kitsu
+        // Fetch official banner and art from AniList / Kitsu
         let officialArtworks = [];
         let officialBanner = null;
-        let mangaReviews = [];
+        const mangaReviews = [];
 
         const alId = attrs.links?.al;
         try {
@@ -788,23 +676,6 @@ export const mediaController = {
                 coverImage {
                   extraLarge
                   large
-                }
-                reviews(perPage: 8, sort: [RATING_DESC]) {
-                  nodes {
-                    id
-                    summary
-                    body
-                    rating
-                    score
-                    createdAt
-                    user {
-                      name
-                      avatar {
-                        medium
-                        large
-                      }
-                    }
-                  }
                 }
               }
             }
@@ -843,18 +714,6 @@ export const mediaController = {
                 url: media.coverImage.extraLarge,
                 format: "poster",
               });
-            }
-            if (Array.isArray(media?.reviews?.nodes) && media.reviews.nodes.length > 0) {
-              mangaReviews = media.reviews.nodes.map((node, idx) => ({
-                id: `rev-al-${node.id || idx}`,
-                author: node.user?.name || `reader_${idx + 1}`,
-                avatar: node.user?.avatar?.medium || node.user?.avatar?.large || null,
-                time: node.createdAt ? new Date(node.createdAt * 1000).toLocaleDateString() : "Recent",
-                score: typeof node.score === "number" ? Number((node.score / 10).toFixed(1)) : liveRating,
-                content: formatReviewContent(node.body || node.summary || "Incredible read. Highly recommended."),
-                likes: typeof node.rating === "number" ? node.rating : 12 + idx * 7,
-                repliesCount: 0,
-              }));
             }
           }
         } catch {
@@ -896,10 +755,6 @@ export const mediaController = {
 
         const authorName = authorRel?.attributes?.name || "Unknown Author";
         const artistName = artistRel?.attributes?.name || authorName;
-
-        if (mangaReviews.length === 0) {
-          mangaReviews = getDefaultCommunityReviews(title, (category || "manhwa").toUpperCase(), liveRating, authorName);
-        }
 
         const genres = (attrs.tags || [])
           .filter((t) => t.attributes?.group === "genre")
