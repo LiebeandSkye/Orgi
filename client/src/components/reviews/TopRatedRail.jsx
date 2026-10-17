@@ -3,34 +3,46 @@ import { Star } from "lucide-react";
 import { API_BASE_URL, safeFetchJson } from "../../services/api";
 import { getReviewAuthor } from "../../utils/reviewUtils";
 
-export function TopRatedRail({ category, onOpenDetail }) {
-  const [items, setItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let mounted = true;
-    setIsLoading(true);
-    setError(null);
-
-    const catParam = category && category !== "all" ? `?category=${category}` : "";
-    safeFetchJson(`${API_BASE_URL}/reviews/top${catParam}`)
-      .then((data) => {
-        if (mounted && data.success) {
-          setItems(data.items || []);
-        }
-      })
-      .catch((err) => {
-        if (mounted) setError(err.message);
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [category]);
+const topRailCache = new Map(); 
+ 
+export function TopRatedRail({ category, onOpenDetail }) { 
+  const catKey = category || "all"; 
+  const cached = topRailCache.get(catKey); 
+  const [items, setItems] = useState(() => cached || []); 
+  const [isLoading, setIsLoading] = useState(() => !cached); 
+  const [error, setError] = useState(null); 
+ 
+  useEffect(() => { 
+    if (topRailCache.has(catKey)) { 
+      setItems(topRailCache.get(catKey)); 
+      setIsLoading(false); 
+      return; 
+    } 
+ 
+    let mounted = true; 
+    setIsLoading(true); 
+    setError(null); 
+ 
+    const catParam = category && category !== "all" ? `?category=${category}` : ""; 
+    safeFetchJson(`${API_BASE_URL}/reviews/top${catParam}`) 
+      .then((data) => { 
+        if (mounted && data.success) { 
+          const loaded = data.items || []; 
+          topRailCache.set(catKey, loaded); 
+          setItems(loaded); 
+        } 
+      }) 
+      .catch((err) => { 
+        if (mounted) setError(err.message); 
+      }) 
+      .finally(() => { 
+        if (mounted) setIsLoading(false); 
+      }); 
+ 
+    return () => { 
+      mounted = false; 
+    }; 
+  }, [category, catKey]);
 
   if (error || (!isLoading && items.length === 0)) {
     return null; // Collapse gracefully if error or empty per spec

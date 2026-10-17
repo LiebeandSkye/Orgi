@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation, useParams, Link } from "react-router-dom";
+import { useLocation, useParams, Link, useNavigate } from "react-router-dom";
 import {
   Star,
   Plus,
@@ -9,14 +9,16 @@ import {
   ThumbsUp,
   Reply,
   MoreHorizontal,
-  ChevronDown, 
-  X, 
-} from "lucide-react"; 
-import { getMovieDetails, getMovieMedia } from "../services/tmdb"; 
-import { DetailScoreRings } from "../components/ui/DetailScoreRings"; 
-import { Button } from "../components/ui/Button"; 
-import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab"; 
-import MediaItems from "../components/ui/MediaItems"; 
+  X,
+  Play,
+  Bookmark,
+} from "lucide-react";
+import { getMovieDetails, getMovieMedia, getMediaVideos, findTrailerKey } from "../services/tmdb";
+import { DetailScoreRings } from "../components/ui/DetailScoreRings";
+import { Button } from "../components/ui/Button";
+import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab";
+import MediaItems from "../components/ui/MediaItems";
+import Trailer from "../components/ui/Trailer";
 import { fetchMediaDetails } from "../services/mediaApi"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import { useAuth } from "../context/AuthContext"; 
@@ -81,6 +83,9 @@ export function MovieDetailsPage({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
+  const [activeTrailerKey, setActiveTrailerKey] = useState(null);
+  const [isLoadingTrailer, setIsLoadingTrailer] = useState(false);
   
   useEffect(() => {
     let mounted = true;
@@ -174,6 +179,32 @@ export function MovieDetailsPage({
     !movieData.synopsis.includes("dust storms")
       ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
       : "");
+
+  const handlePlayTrailer = async () => { 
+    const immediateKey = activeTrailerKey || findTrailerKey(mediaData?.videos) || findTrailerKey(movieData?.videos); 
+    if (immediateKey) { 
+      setActiveTrailerKey(immediateKey); 
+      setShowTrailerModal(true); 
+      return; 
+    } 
+
+    setIsLoadingTrailer(true); 
+    try { 
+      const targetId = id || 157336; 
+      const fetchedVideos = await getMediaVideos(targetId, "movie"); 
+      const fetchedKey = findTrailerKey(fetchedVideos); 
+      if (fetchedKey) { 
+        setActiveTrailerKey(fetchedKey); 
+        setShowTrailerModal(true); 
+      } else { 
+        showToast({ message: "No official trailer available for this movie." }); 
+      } 
+    } catch { 
+      showToast({ message: "Unable to load trailer right now." }); 
+    } finally { 
+      setIsLoadingTrailer(false); 
+    } 
+  }; 
   
   useEffect(() => { 
     const checkOverflow = () => { 
@@ -437,40 +468,52 @@ export function MovieDetailsPage({
               <Button 
                 variant="primary" 
                 size="md" 
+                disabled={isLoadingTrailer} 
                 className="px-5 py-2.5 rounded-[10px]" 
+                onClick={handlePlayTrailer} 
+              > 
+                <Play size={15} className="fill-black text-black" /> 
+                <span>{isLoadingTrailer ? "Loading..." : "Trailer"}</span> 
+              </Button> 
+
+              <Button 
+                variant="outline" 
+                size="md" 
+                className="px-5 py-2.5 rounded-[10px] transition-all cursor-pointer hover:border-[#61F1AC]/50 hover:text-white" 
                 onClick={() => { 
                   handleTabChange("Reviews"); 
                 }} 
               > 
-                <Star size={15} className="fill-black text-black" /> 
-                <span>Rate this</span> 
+                <Star size={15} className="text-[#61F1AC]" /> 
+                <span>Rate</span> 
               </Button> 
- 
-              <Button 
-                variant={inCollection ? "mintGhost" : "outline"} 
-                size="md" 
+
+              <button 
+                type="button" 
+                aria-label={inCollection ? "Remove from collection" : "Add to collection"} 
                 disabled={collectionLoading} 
-                className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${ 
-                  inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : "" 
-                }`} 
                 onClick={handleToggleCollection} 
+                className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${ 
+                  inCollection 
+                    ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" 
+                    : "border-[#1C1C1C] text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414]" 
+                }`} 
               > 
-                {inCollection ? <Check size={15} /> : <Plus size={15} />} 
-                <span>{inCollection ? "In collection" : "Add to collection"}</span> 
-              </Button>
-              
-              <button
-                type="button"
-                aria-label="Share"
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  showToast({ message: "Link copied to clipboard." }); 
-                }}
-                className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer"
-              >
-                <Share2 size={15} />
-              </button>
-            </div>
+                <Bookmark size={15} className={inCollection ? "fill-[#61F1AC]" : ""} /> 
+              </button> 
+
+              <button 
+                type="button" 
+                aria-label="Share" 
+                onClick={() => { 
+                  navigator.clipboard?.writeText(window.location.href); 
+                  showToast({ message: "Link copied to clipboard." });  
+                }} 
+                className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer" 
+              > 
+                <Share2 size={15} /> 
+              </button> 
+            </div> 
             
             {/* 3-line synopsis in #B5B5B5 at 16px with mint "Read more" link */}
             
@@ -697,6 +740,13 @@ export function MovieDetailsPage({
           </div> 
         )} 
       </main> 
+ 
+      <Trailer 
+        open={showTrailerModal} 
+        videoKey={activeTrailerKey || findTrailerKey(mediaData?.videos) || findTrailerKey(movieData?.videos)} 
+        videoName={`${movieData?.title || "Movie"} Trailer`} 
+        onClose={() => setShowTrailerModal(false)} 
+      /> 
     </div> 
   ); 
 } 

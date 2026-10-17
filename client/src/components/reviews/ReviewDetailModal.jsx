@@ -42,14 +42,16 @@ function insertReply(list, targetId, newReply) {
   return [next, found];
 }
 
-export function ReviewDetailModal({
-  item,
-  isOpen,
-  onClose,
-  isLiked: isLikedProp,
-  onToggleLike,
-}) {
-  const { user, userProfile } = useAuth();
+const modalDetailCache = new Map(); 
+ 
+export function ReviewDetailModal({ 
+  item, 
+  isOpen, 
+  onClose, 
+  isLiked: isLikedProp, 
+  onToggleLike, 
+}) { 
+  const { user, userProfile } = useAuth(); 
   const { showToast, openAuthModal } = useToast(); 
   const DEFAULT_AVATAR = 
     "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
@@ -65,99 +67,103 @@ export function ReviewDetailModal({
     user?.user_metadata?.full_name || 
     user?.user_metadata?.name || 
     "You"; 
-
+ 
   const showAuthPrompt = (message = "Please sign in to continue.") => { 
     showToast({ 
       message, 
       actionText: "Sign In", 
       onAction: openAuthModal, 
     }); 
-  };
-
-  const [detailData, setDetailData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [replies, setReplies] = useState([]);
-  const [loadingReplies, setLoadingReplies] = useState(false);
-  // State for the TOP composer only. Inline reply composers own their own state.
-  const [replyText, setReplyText] = useState("");
-  const replyInputRef = useRef(null);
-  const [replyAnon, setReplyAnon] = useState(false);
-  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
-  const [likedReviews, setLikedReviews] = useState({});
-  const [localLiked, setLocalLiked] = useState(false);
-
-  const source = item?.source || "tmdb";
-  const titleId = item?.titleId;
-  const idStr = item?.id != null ? String(item.id) : "";
-  const isOrgi = source === "orgi" || source === "community" || idStr.startsWith("orgi:");
-  const parts = idStr.includes(":") ? idStr.split(":") : [];
-  const rawReviewId = parts.length >= 3 ? parts[2] : idStr;
-  const reviewId = rawReviewId && rawReviewId !== "title" ? rawReviewId : "";
-
-  useEffect(() => {
-    if (!isOpen || !item) {
-      setDetailData(null);
-      setReplies([]);
-      setIsLoading(false);
-      setLoadingReplies(false);
-      setLocalLiked(false);
-      return;
-    }
-
-    let active = true;
-    setIsLoading(true);
-    setLoadingReplies(isOrgi);
-    if (Array.isArray(item.replies) && item.replies.length > 0) {
-      setReplies(item.replies);
-    }
-
-    const url = item.detailHref
-      ? `${API_BASE_URL}${item.detailHref}`
-      : `${API_BASE_URL}/reviews/${source}/${titleId}${reviewId ? `/${reviewId}` : ""}`;
-
-    safeFetchJson(url)
-      .then(async (json) => {
-        if (!active) return;
-        if (json?.success && json?.data) {
-          setDetailData(json.data);
-          if (Array.isArray(json.data.replies)) {
-            setReplies(json.data.replies);
-            setLoadingReplies(false);
-            return;
-          }
-        } else {
-          setDetailData({
-            ...item,
-            content: item.rawContent || item.excerpt,
-          });
-        }
-
-        if (isOrgi && reviewId) {
-          try {
-            const repRes = await api.get(`/reviews/${reviewId}/replies`);
-            if (active && repRes?.success && Array.isArray(repRes.data)) {
-              setReplies(repRes.data);
-            }
-          } catch {}
-        }
-      })
-      .catch(() => {
-        if (!active) return;
-        setDetailData({
-          ...item,
-          content: item.rawContent || item.excerpt,
-        });
-      })
-      .finally(() => {
-        if (active) {
-          setIsLoading(false);
-          setLoadingReplies(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
+  }; 
+ 
+  const [detailData, setDetailData] = useState(null); 
+  const [isLoading, setIsLoading] = useState(false); 
+  const [replies, setReplies] = useState([]); 
+  const [loadingReplies, setLoadingReplies] = useState(false); 
+  const [replyText, setReplyText] = useState(""); 
+  const replyInputRef = useRef(null); 
+  const [replyAnon, setReplyAnon] = useState(false); 
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false); 
+  const [likedReviews, setLikedReviews] = useState({}); 
+  const [localLiked, setLocalLiked] = useState(false); 
+ 
+  const source = item?.source || "tmdb"; 
+  const titleId = item?.titleId; 
+  const idStr = item?.id != null ? String(item.id) : ""; 
+  const isOrgi = source === "orgi" || source === "community" || idStr.startsWith("orgi:"); 
+  const parts = idStr.includes(":") ? idStr.split(":") : []; 
+  const rawReviewId = parts.length >= 3 ? parts[2] : idStr; 
+  const reviewId = rawReviewId && rawReviewId !== "title" ? rawReviewId : ""; 
+ 
+  useEffect(() => { 
+    if (!isOpen || !item) { 
+      setDetailData(null); 
+      setReplies([]); 
+      setIsLoading(false); 
+      setLoadingReplies(false); 
+      setLocalLiked(false); 
+      return; 
+    } 
+ 
+    let active = true; 
+    const url = item.detailHref 
+      ? `${API_BASE_URL}${item.detailHref}` 
+      : `${API_BASE_URL}/reviews/${source}/${titleId}${reviewId ? `/${reviewId}` : ""}`; 
+ 
+    const cached = modalDetailCache.get(url); 
+    if (cached) { 
+      setDetailData(cached); 
+      if (Array.isArray(cached.replies)) setReplies(cached.replies); 
+      setIsLoading(false); 
+      setLoadingReplies(false); 
+    } else { 
+      setDetailData({ 
+        ...item, 
+        content: item.rawContent || item.excerpt, 
+      }); 
+      setIsLoading(!item.rawContent && !item.excerpt); 
+      setLoadingReplies(isOrgi); 
+    } 
+ 
+    if (Array.isArray(item.replies) && item.replies.length > 0) { 
+      setReplies(item.replies); 
+    } 
+ 
+    safeFetchJson(url) 
+      .then(async (json) => { 
+        if (!active) return; 
+        if (json?.success && json?.data) { 
+          modalDetailCache.set(url, json.data); 
+          setDetailData(json.data); 
+          if (Array.isArray(json.data.replies)) { 
+            setReplies(json.data.replies); 
+            setLoadingReplies(false); 
+            return; 
+          } 
+        } 
+ 
+        if (isOrgi && reviewId) { 
+          try { 
+            const repRes = await api.get(`/reviews/${reviewId}/replies`); 
+            if (active && repRes?.success && Array.isArray(repRes.data)) { 
+              setReplies(repRes.data); 
+            } 
+          } catch {} 
+        } 
+      }) 
+      .catch(() => { 
+        if (!active) return; 
+      }) 
+      .finally(() => { 
+        if (active) { 
+          setIsLoading(false); 
+          setLoadingReplies(false); 
+        } 
+      }); 
+ 
+    return () => { 
+      active = false; 
+    }; 
   }, [isOpen, item, source, titleId, reviewId, isOrgi]);
 
   useEffect(() => {
@@ -312,11 +318,11 @@ export function ReviewDetailModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="review-detail-title"
-      className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-6 bg-black/70 backdrop-blur-sm animate-backdrop-fade"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-[600px] h-full sm:h-auto max-h-full sm:max-h-[90vh] bg-black sm:border sm:border-[#1C1C1C] sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-modal-pop"
+      className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-6 bg-black/70 backdrop-blur-sm animate-backdrop-fade will-change-[opacity]" 
+      onClick={onClose} 
+    > 
+      <div 
+        className="relative w-full max-w-[600px] h-full sm:h-auto max-h-full sm:max-h-[90vh] bg-black sm:border sm:border-[#1C1C1C] sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl animate-modal-pop will-change-[transform,opacity]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

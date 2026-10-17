@@ -128,7 +128,7 @@ function ScrollRow({ children, label }) {
 /* ------------------------------------------------------------------ */
 /*  YouTube Modal                                                       */
 /* ------------------------------------------------------------------ */
-function VideoModal({ videoKey, videoName, onClose }) {
+export function VideoModal({ videoKey, videoName, onClose }) {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === "Escape") onClose();

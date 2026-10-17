@@ -9,13 +9,16 @@ import {
   Reply,
   MoreHorizontal,
   ChevronDown,
+  Play,
+  Bookmark,
 } from "lucide-react";
 import api from "../services/api";
-import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb"; 
+import { getSeriesDetails, getSeasonEpisodes, getMediaVideos, findTrailerKey } from "../services/tmdb"; 
 import { DetailScoreRings } from "../components/ui/DetailScoreRings"; 
 import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab"; 
 import { Button } from "../components/ui/Button"; 
 import MediaItems from "../components/ui/MediaItems"; 
+import Trailer from "../components/ui/Trailer"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import EpisodesSection from "../components/ui/EpisodesSection"; 
 import { useToast } from "../context/ToastContext"; 
@@ -51,6 +54,9 @@ export function SeriesDetailsPage({
   }); 
   const [inCollection, setInCollection] = useState(false); 
   const [collectionLoading, setCollectionLoading] = useState(false); 
+  const [showTrailerModal, setShowTrailerModal] = useState(false); 
+  const [activeTrailerKey, setActiveTrailerKey] = useState(null); 
+  const [isLoadingTrailer, setIsLoadingTrailer] = useState(false); 
  
   useEffect(() => { 
     if (!seriesData || !id) return; 
@@ -189,7 +195,32 @@ export function SeriesDetailsPage({
         ? true 
         : initialCropHero;
   
-  const displaySynopsis = seriesData?.synopsis || "";
+  const displaySynopsis = seriesData?.synopsis || ""; 
+ 
+  const handlePlayTrailer = async () => { 
+    const immediateKey = activeTrailerKey || findTrailerKey(seriesData?.videos); 
+    if (immediateKey) { 
+      setActiveTrailerKey(immediateKey); 
+      setShowTrailerModal(true); 
+      return; 
+    } 
+
+    setIsLoadingTrailer(true); 
+    try { 
+      const fetchedVideos = await getMediaVideos(id, "tv"); 
+      const fetchedKey = findTrailerKey(fetchedVideos); 
+      if (fetchedKey) { 
+        setActiveTrailerKey(fetchedKey); 
+        setShowTrailerModal(true); 
+      } else { 
+        showToast({ message: "No official trailer available for this series." }); 
+      } 
+    } catch { 
+      showToast({ message: "Unable to load trailer right now." }); 
+    } finally { 
+      setIsLoadingTrailer(false); 
+    } 
+  }; 
   
   useEffect(() => {
     const checkOverflow = () => {
@@ -344,45 +375,56 @@ export function SeriesDetailsPage({
             /> 
             
             
-            {/* Row of actions: Mint primary button "Rate this", secondary "Add to list", round Share button */}
-            <div className="flex items-center gap-3 mb-8">
-              <Button
-                variant="primary"
-                size="md"
-                className="px-5 py-2.5 rounded-[10px]"
-                onClick={() => {
-                  handleTabChange("Reviews");
-                }}
-              >
-                <Star size={15} className="fill-black text-black" />
-                <span>Rate this</span>
-              </Button>
-              
-              <Button
-                variant={inCollection ? "mintGhost" : "outline"}
-                size="md"
-                disabled={collectionLoading}
-                className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${
-                  inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : ""
-                }`}
-                onClick={handleToggleCollection}
-              >
-                {inCollection ? <Check size={15} /> : <Plus size={15} />}
-                <span>{inCollection ? "In collection" : "Add to collection"}</span>
-              </Button>
-              
-              <button
-                type="button"
-                aria-label="Share"
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  showToast({ message: "Link copied to clipboard." }); 
-                }}
-                className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer"
-              >
-                <Share2 size={15} />
-              </button>
-            </div>
+            <div className="flex items-center gap-3 mb-8"> 
+              <Button 
+                variant="primary" 
+                size="md" 
+                disabled={isLoadingTrailer} 
+                className="px-5 py-2.5 rounded-[10px]" 
+                onClick={handlePlayTrailer} 
+              > 
+                <Play size={15} className="fill-black text-black" /> 
+                <span>{isLoadingTrailer ? "Loading..." : "Trailer"}</span> 
+              </Button> 
+
+              <Button 
+                variant="outline" 
+                size="md" 
+                className="px-5 py-2.5 rounded-[10px] transition-all cursor-pointer hover:border-[#61F1AC]/50 hover:text-white" 
+                onClick={() => { 
+                  handleTabChange("Reviews"); 
+                }} 
+              > 
+                <Star size={15} className="text-[#61F1AC]" /> 
+                <span>Rate</span> 
+              </Button> 
+
+              <button 
+                type="button" 
+                aria-label={inCollection ? "Remove from collection" : "Add to collection"} 
+                disabled={collectionLoading} 
+                onClick={handleToggleCollection} 
+                className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${ 
+                  inCollection 
+                    ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" 
+                    : "border-[#1C1C1C] text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414]" 
+                }`} 
+              > 
+                <Bookmark size={15} className={inCollection ? "fill-[#61F1AC]" : ""} /> 
+              </button> 
+
+              <button 
+                type="button" 
+                aria-label="Share" 
+                onClick={() => { 
+                  navigator.clipboard?.writeText(window.location.href); 
+                  showToast({ message: "Link copied to clipboard." });  
+                }} 
+                className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer" 
+              > 
+                <Share2 size={15} /> 
+              </button> 
+            </div> 
             
             {/* Synopsis: dark blur appears ONLY if there is a See more button */}
             <div className="max-w-2xl text-[16px] leading-relaxed text-[#B5B5B5] font-light">
@@ -463,11 +505,14 @@ export function SeriesDetailsPage({
       
       {/* TAB CONTENT */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
-        {/* ======================================================== */}
-        {/* 1. EPISODES TAB CONTENT WITH EPISODE RATING              */}
-        {/* ======================================================== */}
         {activeTab === "Episodes" && ( 
-          <EpisodesSection seriesId={id} seriesData={seriesData} /> 
+          <EpisodesSection 
+            seriesId={id} 
+            seriesData={seriesData} 
+            inCollection={inCollection} 
+            onToggleCollection={handleToggleCollection} 
+            collectionLoading={collectionLoading} 
+          /> 
         )} 
         
         
@@ -566,7 +611,14 @@ export function SeriesDetailsPage({
             </div>
           </div>
         )}
-      </main>
-    </div>
-  );
-}
+      </main> 
+ 
+      <Trailer 
+        open={showTrailerModal} 
+        videoKey={activeTrailerKey || findTrailerKey(seriesData?.videos)} 
+        videoName={`${seriesData?.title || "Series"} Trailer`} 
+        onClose={() => setShowTrailerModal(false)} 
+      /> 
+    </div> 
+  ); 
+} 

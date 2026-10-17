@@ -252,7 +252,6 @@ export const reviewController = {
       } 
       
       if (parent_id) { 
-        let depthCount = 1; 
         let parentAuthor = "Member"; 
         
         const { data: directParent } = await supabaseAdmin 
@@ -272,27 +271,6 @@ export const reviewController = {
         if (directParent) { 
           const parsedDirect = parseReviewMetadata(directParent, null); 
           parentAuthor = parsedDirect.author; 
-          let currentParentId = directParent.parent_id; 
-          
-          while (currentParentId && depthCount < 10) { 
-            depthCount++; 
-            const { data: anc } = await supabaseAdmin 
-              .from("reviews") 
-              .select("parent_id") 
-              .eq("id", currentParentId) 
-              .maybeSingle(); 
-            if (anc && anc.parent_id) { 
-              currentParentId = anc.parent_id; 
-            } else { 
-              break; 
-            } 
-          } 
-        } 
-        
-        if (depthCount > 3) { 
-          return res.status(400).json({ 
-            error: { message: "Maximum reply nesting depth of 3 reached", code: "MAX_DEPTH_REACHED" } 
-          }); 
         } 
         
         let replyContent = content || ""; 

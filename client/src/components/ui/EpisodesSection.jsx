@@ -15,7 +15,11 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { getSeasonEpisodes } from "../../services/tmdb";
-import { API_BASE_URL, safeFetchJson } from "../../services/api";
+import api, { API_BASE_URL, safeFetchJson } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
+import { isGuestInCollection, toggleGuestCollection } from "../../utils/guestCollection";
+import { ReviewComposer, DEFAULT_AVATAR } from "../reviews/ReviewComposer";
 
 
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p";
@@ -69,7 +73,20 @@ export default function EpisodesSection({
   seriesId, 
   seriesData, 
   onRateEpisode, 
+  inCollection, 
+  onToggleCollection, 
+  collectionLoading, 
 }) { 
+  const { user, userProfile } = useAuth(); 
+  const { showToast, openAuthModal } = useToast(); 
+  const currentUserAvatar = userProfile?.profile_url || user?.user_metadata?.avatar_url || DEFAULT_AVATAR; 
+
+  const [internalInCollection, setInternalInCollection] = useState(false); 
+  const [internalColLoading, setInternalColLoading] = useState(false); 
+
+  const effectiveInCollection = inCollection !== undefined ? inCollection : internalInCollection; 
+  const effectiveColLoading = collectionLoading !== undefined ? collectionLoading : internalColLoading; 
+
   const [series, setSeries] = useState(seriesData || null); 
   const [seasons, setSeasons] = useState(() => { 
     if (seriesData?.seasons && Array.isArray(seriesData.seasons)) { 
@@ -81,19 +98,90 @@ export default function EpisodesSection({
   const [selectedSeason, setSelectedSeason] = useState(1); 
   const [selectedEpisodeNumber, setSelectedEpisodeNumber] = useState(1); 
 
+  const [sortBy, setSortBy] = useState("episode"); 
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false); 
+  const [loadingSeries, setLoadingSeries] = useState(true); 
+  const [loadingEpisodes, setLoadingEpisodes] = useState(false); 
+  const [error, setError] = useState(""); 
 
-  const [sortBy, setSortBy] = useState("episode");
-  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  const [loadingSeries, setLoadingSeries] = useState(true);
-  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
-  const [error, setError] = useState("");
+  const [savedEpisodes, setSavedEpisodes] = useState([]); 
+  const [userRatings, setUserRatings] = useState({}); 
+  const [showReviewComposer, setShowReviewComposer] = useState(false); 
+  const [reviewContent, setReviewContent] = useState(""); 
+  const [reviewScore, setReviewScore] = useState(8); 
+  const [isAnonymousReview, setIsAnonymousReview] = useState(false); 
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false); 
+  const ratingStripRef = useRef(null); 
 
-  const [savedEpisodes, setSavedEpisodes] = useState([]);
-  const [userRatings, setUserRatings] = useState({});
-  const [ratingEpisode, setRatingEpisode] = useState(null);
-  const [showRatingPicker, setShowRatingPicker] = useState(false);
+  useEffect(() => { 
+    if (inCollection !== undefined || !seriesId) return; 
+    let mounted = true; 
+    async function checkCol() { 
+      try { 
+        const token = localStorage.getItem("orgi_session"); 
+        if (!token) { 
+          if (mounted) setInternalInCollection(isGuestInCollection("tmdb", String(seriesId))); 
+          return; 
+        } 
+        const res = await api.get(`/collections/check/tmdb/${seriesId}`); 
+        if (mounted && res?.success) { 
+          setInternalInCollection(!!res.data?.inCollection); 
+        } 
+      } catch (err) { 
+        // ignore 
+      } 
+    } 
+    checkCol(); 
+    return () => { 
+      mounted = false; 
+    }; 
+  }, [inCollection, seriesId]); 
 
-  const ratingStripRef = useRef(null);
+  const handleCollectionClick = async () => { 
+    if (onToggleCollection) { 
+      onToggleCollection(); 
+      return; 
+    } 
+    const currentExternalId = String(seriesId); 
+    const token = localStorage.getItem("orgi_session"); 
+    const title = series?.name || seriesData?.title || "Series"; 
+    const coverUrl = series?.poster_path ? getImage(series.poster_path, "w500") : (seriesData?.poster || seriesData?.backdrop); 
+
+    if (!token) { 
+      const nextInCol = toggleGuestCollection({ 
+        external_id: currentExternalId, 
+        provider: "tmdb", 
+        type: "SERIES", 
+        title, 
+        cover_url: coverUrl, 
+      }); 
+      setInternalInCollection(nextInCol); 
+      showToast({ 
+        message: nextInCol ? "Added to local collection." : "Removed from local collection.", 
+        actionText: "Sign In to Sync", 
+        onAction: openAuthModal, 
+      }); 
+      return; 
+    } 
+
+    setInternalColLoading(true); 
+    try { 
+      const res = await api.post("/collections/toggle", { 
+        external_id: currentExternalId, 
+        provider: "tmdb", 
+        type: "SERIES", 
+        title, 
+        cover_url: coverUrl, 
+      }); 
+      if (res?.success) { 
+        setInternalInCollection(!!res.data?.inCollection); 
+      } 
+    } catch (err) { 
+      showToast({ message: err.message || "Failed to update collection." }); 
+    } finally { 
+      setInternalColLoading(false); 
+    } 
+  }; 
 
 
   // ----------------------------------------------------------
@@ -626,86 +714,112 @@ useEffect(() => {
 
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => toggleSaved(selectedEpisode.episode_number)}
-                className="inline-flex items-center gap-2 rounded-full border border-[#292D33] bg-[#13161A] px-4 py-2.5 text-xs font-medium transition hover:border-[#61F1AC]/50"
-              >
-                {savedEpisodes.includes(selectedEpisode.episode_number) ? (
-                  <Check size={14} className="text-[#61F1AC]" />
-                ) : (
-                  <Plus size={14} />
-                )}
-                {savedEpisodes.includes(selectedEpisode.episode_number)
-                  ? "In My List"
-                  : "My List"}
-              </button>
+            <div className="mt-5 flex flex-wrap gap-2"> 
+              <button 
+                type="button" 
+                onClick={handleCollectionClick} 
+                disabled={effectiveColLoading} 
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-medium transition cursor-pointer ${ 
+                  effectiveInCollection 
+                    ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" 
+                    : "border-[#292D33] bg-[#13161A] text-white hover:border-[#61F1AC]/50" 
+                }`} 
+              > 
+                {effectiveInCollection ? ( 
+                  <Check size={14} className="text-[#61F1AC]" /> 
+                ) : ( 
+                  <Plus size={14} /> 
+                )} 
+                <span>{effectiveInCollection ? "In collection" : "Add to collection"}</span> 
+              </button> 
 
-              <button
-                type="button"
-                onClick={() => {
-                  setRatingEpisode(selectedEpisode.episode_number);
-                  setShowRatingPicker((current) => !current);
-                }}
-                className="inline-flex items-center gap-2 rounded-full border border-[#292D33] bg-[#13161A] px-4 py-2.5 text-xs font-medium transition hover:border-[#61F1AC]/50"
-              >
-                <Star size={14} />
-                Rate
-              </button>
-            </div>
+              <button 
+                type="button" 
+                onClick={() => { 
+                  setShowReviewComposer((current) => !current); 
+                }} 
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-medium transition cursor-pointer ${ 
+                  showReviewComposer 
+                    ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" 
+                    : "border-[#292D33] bg-[#13161A] text-white hover:border-[#61F1AC]/50" 
+                }`} 
+              > 
+                <Star size={14} className={showReviewComposer ? "fill-[#61F1AC] text-[#61F1AC]" : ""} /> 
+                <span>Rate</span> 
+              </button> 
+            </div> 
 
-            {/* User rating: separate from the TMDB community rating */}
-            {showRatingPicker && (
-              <div className="mt-4 rounded-xl border border-[#292D33] bg-[#101317] p-3">
-                <p className="mb-2 text-xs text-[#929BA7]">
-                  Your rating
-                </p>
+            {showReviewComposer && ( 
+              <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-200"> 
+                <ReviewComposer 
+                  avatar={currentUserAvatar} 
+                  content={reviewContent} 
+                  onChangeContent={setReviewContent} 
+                  score={reviewScore} 
+                  onChangeScore={setReviewScore} 
+                  isAnonymous={isAnonymousReview} 
+                  onChangeAnonymous={setIsAnonymousReview} 
+                  isSubmitting={isSubmittingReview} 
+                  onSubmit={async () => { 
+                    if (!reviewContent.trim()) return; 
+                    const token = localStorage.getItem("orgi_session"); 
+                    if (!token) { 
+                      showToast({ 
+                        message: "Please sign in to rate and review.", 
+                        actionText: "Sign In", 
+                        onAction: openAuthModal, 
+                      }); 
+                      return; 
+                    } 
 
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((rating) => {
-                    const currentRating =
-                      userRatings[
-                        `${selectedSeason}-${ratingEpisode}`
-                      ] || 0;
+                    setIsSubmittingReview(true); 
+                    try { 
+                      const epNum = selectedEpisode?.episode_number || 1; 
+                      const epName = selectedEpisode?.name || `Episode ${epNum}`; 
+                      const seriesTitle = series?.name || seriesData?.title || "Series"; 
+                      const fullTitle = `${seriesTitle} - S${selectedSeason}E${epNum}: ${epName}`; 
+                      const stillUrl = selectedEpisode?.still_path ? getImage(selectedEpisode.still_path, "w500") : (seriesData?.poster || seriesData?.backdrop); 
 
-                    return (
-                      <button
-                        key={rating}
-                        type="button"
-                        onClick={() =>
-                          rateEpisode(ratingEpisode, rating)
-                        }
-                        aria-label={`Rate ${rating} out of 5`}
-                        className="p-1 text-[#656B73] transition hover:scale-110 hover:text-[#61F1AC]"
-                      >
-                        <Star
-                          size={21}
-                          fill={
-                            currentRating >= rating
-                              ? "currentColor"
-                              : "transparent"
-                          }
-                          className={
-                            currentRating >= rating
-                              ? "text-[#61F1AC]"
-                              : ""
-                          }
-                        />
-                      </button>
-                    );
-                  })}
+                      const res = await api.post("/reviews", { 
+                        external_id: `${seriesId}-s${selectedSeason}e${epNum}`, 
+                        provider: "tmdb", 
+                        type: "SERIES", 
+                        title: fullTitle, 
+                        cover_url: stillUrl, 
+                        score: reviewScore, 
+                        content: reviewContent.trim(), 
+                        is_anonymous: isAnonymousReview, 
+                      }); 
 
-                  <button
-                    type="button"
-                    onClick={() => setShowRatingPicker(false)}
-                    className="ml-auto text-xs text-[#929BA7] hover:text-white"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            )}
+                      if (res?.success) { 
+                        showToast({ message: "Review posted successfully!" }); 
+                        setReviewContent(""); 
+                        setIsAnonymousReview(false); 
+                        setShowReviewComposer(false); 
+                        setUserRatings((prev) => ({ 
+                          ...prev, 
+                          [`${selectedSeason}-${epNum}`]: reviewScore, 
+                        })); 
+                        onRateEpisode?.({ 
+                          seriesId, 
+                          seasonNumber: selectedSeason, 
+                          episodeNumber: epNum, 
+                          rating: reviewScore, 
+                        }); 
+                      } 
+                    } catch (err) { 
+                      console.error("Failed to post episode review:", err); 
+                      showToast({ message: err.message || "Failed to post review." }); 
+                    } finally { 
+                      setIsSubmittingReview(false); 
+                    } 
+                  }} 
+                  onCancel={() => setShowReviewComposer(false)} 
+                  placeholder={`Write your review for Season ${selectedSeason}, Episode ${selectedEpisode.episode_number}: ${selectedEpisode.name || ""}…`} 
+                /> 
+              </div> 
+            )} 
+
           </div>
         </div>
       ) : (

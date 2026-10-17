@@ -3,13 +3,14 @@ import { createExcerpt } from "./excerpt.js";
 const MANGADEX_BASE = "https://api.mangadex.org";
 const MANGADEX_COVERS = "https://uploads.mangadex.org/covers";
 
-let mangaDexCache = {
-  manga: null,
-  mangaExpiry: 0,
-  manhwa: null,
-  manhwaExpiry: 0,
-};
-
+let mangaDexCache = { 
+  manga: null, 
+  mangaExpiry: 0, 
+  manhwa: null, 
+  manhwaExpiry: 0, 
+}; 
+const mangaDexPromises = {}; 
+ 
 async function fetchMangaDexBatch(endpoint, params = {}) {
   const query = new URLSearchParams();
   for (const [key, val] of Object.entries(params)) {
@@ -57,96 +58,106 @@ export async function getMangaDexCards(category = "manga", limit = 30) {
   const cacheKey = category === "manhwa" ? "manhwa" : "manga";
   const expiryKey = category === "manhwa" ? "manhwaExpiry" : "mangaExpiry";
 
-  if (mangaDexCache[cacheKey] && now < mangaDexCache[expiryKey]) {
-    return mangaDexCache[cacheKey];
-  }
-
-  const lang = category === "manhwa" ? "ko" : "ja";
-  const mediaLabel = category === "manhwa" ? "Manhwa" : "Manga";
-
-  console.log(`📖 [MangaDex] Fetching ${category} items...`);
-
-  let mangaList = [];
-  try {
-    const data = await fetchMangaDexBatch("/manga", {
-      limit,
-      originalLanguage: [lang],
-      includes: ["cover_art"],
-      contentRating: ["safe", "suggestive"],
-      "order[followedCount]": "desc",
-    });
-    mangaList = data.data || [];
-  } catch (err) {
-    console.warn(`[MangaDex] Fetch failed for ${category}:`, err.message);
-    return [];
-  }
-
-  const ids = mangaList.map((m) => m.id);
-  const statsMap = await fetchMangaDexStatistics(ids);
-
-  const cards = [];
-  for (const item of mangaList) {
-    const attrs = item.attributes || {};
-    const title =
-      attrs.title?.en ||
-      attrs.title?.["ja-ro"] ||
-      attrs.title?.["ko-ro"] ||
-      Object.values(attrs.title || {})[0] ||
-      "Untitled";
-
-    const overview =
-      attrs.description?.en ||
-      Object.values(attrs.description || {})[0] ||
-      "";
-
-    const coverRel = item.relationships?.find((r) => r.type === "cover_art");
-    const coverFileName = coverRel?.attributes?.fileName;
-    const posterUrl = coverFileName
-      ? `${MANGADEX_COVERS}/${item.id}/${coverFileName}.256.jpg`
-      : undefined;
-
-    const stats = statsMap[item.id];
-    let ratingValue = stats?.rating?.bayesian || stats?.rating?.average;
-    if (ratingValue !== undefined && ratingValue !== null) {
-      ratingValue = Math.round(Number(ratingValue) * 10) / 10;
-    } else {
-      ratingValue = undefined;
-    }
-
-    const genres = (attrs.tags || [])
-      .filter((t) => t.attributes?.group === "genre")
-      .map((t) => t.attributes?.name?.en)
-      .filter(Boolean)
-      .slice(0, 3);
-
-    const year = attrs.year || undefined;
-
-    cards.push({
-      id: `mangadex:${item.id}:title`,
-      source: "mangadex",
-      category,
-      titleId: item.id,
-      title,
-      year: year ? parseInt(year, 10) : undefined,
-      mediaLabel,
-      posterUrl,
-      backdropUrl: undefined,
-      genres,
-      rating: ratingValue,
-      ratingKind: "community",
-      excerpt: createExcerpt(overview, 220),
-      rawContent: overview,
-      excerptKind: "synopsis",
-      author: undefined, // no reviewer
-      createdAt: attrs.createdAt || new Date().toISOString(),
-      containsSpoilers: false,
-      detailHref: `/reviews/mangadex/${item.id}`,
-    });
-  }
-
-  mangaDexCache[cacheKey] = cards;
-  mangaDexCache[expiryKey] = now + 45 * 60 * 1000; // 45 minutes
-  return cards;
+  if (mangaDexCache[cacheKey] && now < mangaDexCache[expiryKey]) { 
+    return mangaDexCache[cacheKey]; 
+  } 
+ 
+  if (mangaDexPromises[cacheKey]) { 
+    return mangaDexPromises[cacheKey]; 
+  } 
+ 
+  mangaDexPromises[cacheKey] = (async () => { 
+    try { 
+      const lang = category === "manhwa" ? "ko" : "ja"; 
+      const mediaLabel = category === "manhwa" ? "Manhwa" : "Manga"; 
+ 
+      let mangaList = []; 
+      try { 
+        const data = await fetchMangaDexBatch("/manga", { 
+          limit, 
+          originalLanguage: [lang], 
+          includes: ["cover_art"], 
+          contentRating: ["safe", "suggestive"], 
+          "order[followedCount]": "desc", 
+        }); 
+        mangaList = data.data || []; 
+      } catch (err) { 
+        console.warn(`[MangaDex] Fetch failed for ${category}:`, err.message); 
+        return []; 
+      } 
+ 
+      const ids = mangaList.map((m) => m.id); 
+      const statsMap = await fetchMangaDexStatistics(ids); 
+ 
+      const cards = []; 
+      for (const item of mangaList) { 
+        const attrs = item.attributes || {}; 
+        const title = 
+          attrs.title?.en || 
+          attrs.title?.["ja-ro"] || 
+          attrs.title?.["ko-ro"] || 
+          Object.values(attrs.title || {})[0] || 
+          "Untitled"; 
+ 
+        const overview = 
+          attrs.description?.en || 
+          Object.values(attrs.description || {})[0] || 
+          ""; 
+ 
+        const coverRel = item.relationships?.find((r) => r.type === "cover_art"); 
+        const coverFileName = coverRel?.attributes?.fileName; 
+        const posterUrl = coverFileName 
+          ? `${MANGADEX_COVERS}/${item.id}/${coverFileName}.256.jpg` 
+          : undefined; 
+ 
+        const stats = statsMap[item.id]; 
+        let ratingValue = stats?.rating?.bayesian || stats?.rating?.average; 
+        if (ratingValue !== undefined && ratingValue !== null) { 
+          ratingValue = Math.round(Number(ratingValue) * 10) / 10; 
+        } else { 
+          ratingValue = undefined; 
+        } 
+ 
+        const genres = (attrs.tags || []) 
+          .filter((t) => t.attributes?.group === "genre") 
+          .map((t) => t.attributes?.name?.en) 
+          .filter(Boolean) 
+          .slice(0, 3); 
+ 
+        const year = attrs.year || undefined; 
+ 
+        cards.push({ 
+          id: `mangadex:${item.id}:title`, 
+          source: "mangadex", 
+          category, 
+          titleId: item.id, 
+          title, 
+          year: year ? parseInt(year, 10) : undefined, 
+          mediaLabel, 
+          posterUrl, 
+          backdropUrl: undefined, 
+          genres, 
+          rating: ratingValue, 
+          ratingKind: "community", 
+          excerpt: createExcerpt(overview, 220), 
+          rawContent: overview, 
+          excerptKind: "synopsis", 
+          author: undefined, 
+          createdAt: attrs.createdAt || new Date().toISOString(), 
+          containsSpoilers: false, 
+          detailHref: `/reviews/mangadex/${item.id}`, 
+        }); 
+      } 
+ 
+      mangaDexCache[cacheKey] = cards; 
+      mangaDexCache[expiryKey] = Date.now() + 60 * 60 * 1000; 
+      return cards; 
+    } finally { 
+      delete mangaDexPromises[cacheKey]; 
+    } 
+  })(); 
+ 
+  return mangaDexPromises[cacheKey]; 
 }
 
 /**

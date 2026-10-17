@@ -83,15 +83,15 @@ async function getItemsForCategory(category, userId) {
           return await getTmdbAnimeCards(); 
         } 
         case "manga": 
-          return await getMangaDexCards("manga", 100); 
+          return await getMangaDexCards("manga", 35); 
         case "manhwa": 
-          return await getMangaDexCards("manhwa", 100); 
+          return await getMangaDexCards("manhwa", 35); 
         case "book": 
-          return await getOpenLibraryCards("book", 100); 
+          return await getOpenLibraryCards("book", 30); 
         case "novel": 
-          return await getOpenLibraryCards("novel", 100); 
+          return await getOpenLibraryCards("novel", 30); 
         case "light-novel": 
-          return await getOpenLibraryCards("light-novel", 100); 
+          return await getOpenLibraryCards("light-novel", 30); 
         default: 
           return await getTmdbReviewCards(); 
       } 

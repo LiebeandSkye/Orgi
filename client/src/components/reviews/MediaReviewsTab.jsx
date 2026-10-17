@@ -18,10 +18,11 @@ import { getMovieReviews, getSeriesReviews } from "../../services/tmdb";
 import { FormattedText } from "../common/FormattedText";
 import { CommentFormattingToolbar, handleFormattingKeyDown } from "../common/CommentFormattingToolbar";
 import { getReviewAuthor } from "../../utils/reviewUtils";
-import { CommentThread } from "./CommentThread";
+import { CommentThread } from "./CommentThread"; 
+import { ReviewComposer } from "./ReviewComposer"; 
 import { useToast } from "../../context/ToastContext"; 
-
-const NAVBAR_AVATAR =
+ 
+const NAVBAR_AVATAR = 
   "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
 
 export function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
@@ -675,83 +676,25 @@ export function MediaReviewsTab({
             </Button>
           </div>
         </div>
-      ) : (
-        <div className="bg-[#0B0B0B] border border-[#1C1C1C] rounded-[16px] p-5 mb-8 shadow-sm">
-          <div className="flex items-start gap-3.5 mb-4">
-            <ReviewAvatar
-              src={isAnonymous ? NAVBAR_AVATAR : currentUserAvatar}
-              alt="User Avatar"
-              size="w-9 h-9"
-            />
-            <div className="flex-1 min-w-0">
-              <textarea
-                ref={newThoughtRef}
-                value={newThought}
-                onChange={(e) => setNewThought(e.target.value)}
-                onKeyDown={(e) => handleFormattingKeyDown(e, newThoughtRef.current, newThought, setNewThought)}
-                placeholder={isEditingUserReview ? "Update your thought…" : "Add a thought…"}
-                rows={3}
-                className="w-full bg-transparent text-[#F5F5F5] placeholder-[#7A7A7A] text-sm resize-none focus:outline-none leading-relaxed"
-              />
-              <CommentFormattingToolbar
-                textareaRef={newThoughtRef}
-                value={newThought}
-                onChange={setNewThought}
-                className="mt-1"
-              />
-            </div>
-          </div>
-          
-          <div className="flex flex-col gap-3 pt-3 border-t border-[#1C1C1C]/60">
-            {/* Anonymous toggle: round checkbox, white tick, sits right above the slider */}
-            <label className="group flex items-center gap-2 cursor-pointer select-none text-xs text-[#8A8A8A] hover:text-[#F5F5F5] transition-colors w-fit">
-              <input
-                type="checkbox"
-                checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-                className="peer sr-only"
-              />
-              <span className="flex items-center justify-center w-4 h-4 rounded-full border border-[#2C2C2C] bg-[#141414] transition-all duration-200 group-hover:border-[#61F1AC]/50 peer-checked:bg-[#61F1AC] peer-checked:border-[#61F1AC] peer-focus-visible:ring-2 peer-focus-visible:ring-[#61F1AC]/40 [&>svg]:scale-0 peer-checked:[&>svg]:scale-100">
-                <Check
-                  size={10}
-                  strokeWidth={3.5}
-                  className="text-white transition-transform duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                />
-              </span>
-              <span>Post anonymously</span>
-            </label>
-            
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <ReviewSlider value={selectedScore} onChange={setSelectedScore} />
-              
-              <div className="flex items-center gap-3 self-end sm:self-center flex-wrap">
-                {isEditingUserReview && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setIsEditingUserReview(false);
-                      setNewThought("");
-                      setIsAnonymous(false);
-                    }}
-                    className="px-3.5 py-1.5 rounded-lg text-xs cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                )}
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={newThought.trim().length === 0 || isPostingReview}
-                  onClick={handlePostReview}
-                  className="px-4 py-1.5 rounded-lg text-xs cursor-pointer"
-                >
-                  {isPostingReview ? "Saving..." : isEditingUserReview ? "Publish" : "Post"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+      ) : ( 
+        <ReviewComposer 
+          avatar={currentUserAvatar} 
+          content={newThought} 
+          onChangeContent={setNewThought} 
+          score={selectedScore} 
+          onChangeScore={setSelectedScore} 
+          isAnonymous={isAnonymous} 
+          onChangeAnonymous={setIsAnonymous} 
+          isEditing={isEditingUserReview} 
+          isSubmitting={isPostingReview} 
+          onSubmit={handlePostReview} 
+          onCancel={isEditingUserReview ? () => { 
+            setIsEditingUserReview(false); 
+            setNewThought(""); 
+            setIsAnonymous(false); 
+          } : undefined} 
+          className="mb-8" 
+        /> 
       )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-[#1C1C1C]">
         <div className="flex items-center gap-1.5 flex-wrap">

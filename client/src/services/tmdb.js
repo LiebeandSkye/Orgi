@@ -6,7 +6,7 @@ import { API_BASE_URL as ROOT_API_BASE_URL } from "./api";
 const API_BASE_URL = `${ROOT_API_BASE_URL}/tmdb`;
 const TMDB_DIRECT_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
-const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY  ; 
+const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY || "e2a7d3e1dd95c5e71b164f3334a3628d"; 
 
 /**
  * Build a full TMDB image URL
@@ -330,6 +330,7 @@ export async function getMovieDetails(movieId = 157336) {
         name: v.name,
         site: v.site,
         type: v.type,
+        official: v.official,
       })),
     },
   };
@@ -440,6 +441,7 @@ export async function getSeriesDetails(seriesId) {
         name: v.name,
         site: v.site,
         type: v.type,
+        official: v.official,
       })),
     },
   };
@@ -560,5 +562,52 @@ export async function getMovieMedia(movieId) {
       }, 
     }; 
   } 
+} 
+
+export async function getMediaVideos(id, type = "movie") { 
+  if (!id) return []; 
+  const isTv = type === "tv" || type === "series" || type === "SERIES"; 
+  const resolvedId = id === "interstellar" ? 157336 : id; 
+  const endpoint = isTv ? `/tv/${resolvedId}/videos` : `/movie/${resolvedId}/videos`; 
+  try { 
+    const data = await fetchFromApi(endpoint, endpoint); 
+    return data?.results || (Array.isArray(data) ? data : []); 
+  } catch { 
+    return []; 
+  } 
+} 
+
+export function findTrailerKey(videos) { 
+  if (!videos) return null; 
+  const list = Array.isArray(videos) 
+    ? videos 
+    : Array.isArray(videos.results) 
+      ? videos.results 
+      : Array.isArray(videos.videos?.results) 
+        ? videos.videos.results 
+        : Array.isArray(videos.videos) 
+          ? videos.videos 
+          : []; 
+  if (!list.length) return null; 
+
+  const ytVideos = list.filter( 
+    (v) => (v.site === "YouTube" || v.site?.toLowerCase() === "youtube") && v.key 
+  ); 
+  if (!ytVideos.length) return null; 
+
+  const isTrailer = (v) => v.type === "Trailer" || v.type?.toLowerCase() === "trailer"; 
+  const isOfficial = (v) => v.official === true; 
+  const isMainTitle = (v) => /official\s+trailer|^trailer$/i.test(v.name || ""); 
+
+  const trailer = 
+    ytVideos.find((v) => isTrailer(v) && isOfficial(v) && isMainTitle(v)) || 
+    ytVideos.find((v) => isTrailer(v) && isMainTitle(v)) || 
+    ytVideos.find((v) => isTrailer(v) && isOfficial(v)) || 
+    ytVideos.find(isTrailer) || 
+    ytVideos.find((v) => (v.type === "Teaser" || v.type?.toLowerCase() === "teaser") && isOfficial(v)) || 
+    ytVideos.find((v) => v.type === "Teaser" || v.type?.toLowerCase() === "teaser") || 
+    ytVideos[0]; 
+
+  return trailer?.key || null; 
 } 
 

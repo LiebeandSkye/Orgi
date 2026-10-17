@@ -11,11 +11,14 @@ let genreMapExpiry = 0;
 let tmdbCandidatesCache = null;
 let tmdbCandidatesExpiry = 0;
 
-let tmdbReviewCardsCache = null;
-let tmdbReviewCardsExpiry = 0;
-
-let tmdbFeaturedReviewCache = null;
-let tmdbFeaturedReviewExpiry = 0;
+let tmdbReviewCardsCache = null; 
+let tmdbReviewCardsExpiry = 0; 
+let tmdbReviewCardsPromise = null; 
+let tmdbAnimeCardsPromise = null; 
+const tmdbDetailCache = new Map(); 
+ 
+let tmdbFeaturedReviewCache = null; 
+let tmdbFeaturedReviewExpiry = 0; 
 let tmdbFeaturedReviewPromise = null;
 
 /**
@@ -191,106 +194,115 @@ export async function getTmdbReviewCards() {
     return tmdbReviewCardsCache; 
   } 
  
-  const [candidates, genres] = await Promise.all([ 
-    fetchTmdbCandidates(), 
-    getTmdbGenres(), 
-  ]); 
+  if (tmdbReviewCardsPromise) { 
+    return tmdbReviewCardsPromise; 
+  } 
  
-  const topCandidates = candidates 
-    .slice() 
-    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) 
-    .slice(0, 35); 
+  tmdbReviewCardsPromise = (async () => { 
+    try { 
+      const [candidates, genres] = await Promise.all([ 
+        fetchTmdbCandidates(), 
+        getTmdbGenres(), 
+      ]); 
  
-  console.log(`🎬 [TMDB] Evaluating reviews for ${topCandidates.length} top candidates...`); 
+      const topCandidates = candidates 
+        .slice() 
+        .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) 
+        .slice(0, 35); 
  
-  const cards = await pMap( 
-    topCandidates, 
-    async (item) => { 
-      const mediaType = item.media_type === "tv" ? "tv" : "movie"; 
-      const isAnime = isAnimeItem(item); 
-
-
-      // Fetch reviews for this title
-      let reviewsData;
-      try {
-        reviewsData = await tmdbFetch(`/${mediaType}/${item.id}/reviews`);
-      } catch (err) {
-        return null;
-      }
-
-      const reviewsList = reviewsData.results || [];
-      if (reviewsList.length === 0) {
-        return null; // Drop titles with zero reviews
-      }
-
-      const scored = reviewsList
-        .map((rev) => ({ rev, score: scoreReview(rev) }))
-        .filter((entry) => entry.score > -20)
-        .sort((a, b) => b.score - a.score);
-
-      if (scored.length === 0) return null;
-
-      // Select up to 2 best quality reviews for this title
-      const topReviews = scored.slice(0, 2).map((entry) => entry.rev);
-
-      const titleYear =
-        item.release_date?.substring(0, 4) ||
-        item.first_air_date?.substring(0, 4) ||
-        undefined;
-
-      const itemGenres = (item.genre_ids || [])
-        .map((gid) => genres[gid])
-        .filter(Boolean)
-        .slice(0, 3);
-
-      const category = isAnime ? "anime" : mediaType === "tv" ? "series" : "movie";
-      const mediaLabel = isAnime ? "Anime" : mediaType === "tv" ? "Series" : "Movie";
-
-      return topReviews.map((rev) => {
-        const rawRating = rev.author_details?.rating;
-        const normalizedRating =
-          rawRating !== null && rawRating !== undefined && !Number.isNaN(Number(rawRating))
-            ? Math.round(Number(rawRating) * 10) / 10
-            : undefined;
-
-        return {
-          id: `tmdb:${item.id}:${rev.id}`,
-          source: "tmdb",
-          category,
-          titleId: String(item.id),
-          title: item.title || item.name || "Untitled",
-          year: titleYear ? parseInt(titleYear, 10) : undefined,
-          mediaLabel,
-          posterUrl: item.poster_path ? `${TMDB_IMAGE_BASE}/w342${item.poster_path}` : undefined,
-          backdropUrl: item.backdrop_path ? `${TMDB_IMAGE_BASE}/w780${item.backdrop_path}` : undefined,
-          genres: itemGenres,
-          rating: normalizedRating,
-          ratingKind: "review",
-          excerpt: createExcerpt(rev.content, 220),
-          excerptKind: "review",
-          rawContent: rev.content,
-          author: {
-            name: rev.author_details?.username || rev.author || "Anonymous",
-            avatarUrl: resolveAvatarUrl(rev.author_details?.avatar_path),
-          },
-          createdAt: rev.created_at || new Date().toISOString(),
-          containsSpoilers: /spoiler/i.test(rev.content),
-          detailHref: `/reviews/tmdb/${item.id}/${rev.id}`,
-          mediaType,
-          likes: item.vote_count || 0,
-          comments: reviewsData.total_results || reviewsList.length || 0,
-        };
-      });
-    },
-    12
-  );
-
-  const validCards = cards.filter(Boolean).flat();
-  console.log(`🎬 [TMDB] Successfully built ${validCards.length} review cards.`);
-
-  tmdbReviewCardsCache = validCards; 
-  tmdbReviewCardsExpiry = now + 60 * 60 * 1000; 
-  return validCards; 
+      console.log(`🎬 [TMDB] Evaluating reviews for ${topCandidates.length} top candidates...`); 
+ 
+      const cards = await pMap( 
+        topCandidates, 
+        async (item) => { 
+          const mediaType = item.media_type === "tv" ? "tv" : "movie"; 
+          const isAnime = isAnimeItem(item); 
+ 
+          let reviewsData; 
+          try { 
+            reviewsData = await tmdbFetch(`/${mediaType}/${item.id}/reviews`); 
+          } catch (err) { 
+            return null; 
+          } 
+ 
+          const reviewsList = reviewsData.results || []; 
+          if (reviewsList.length === 0) { 
+            return null; 
+          } 
+ 
+          const scored = reviewsList 
+            .map((rev) => ({ rev, score: scoreReview(rev) })) 
+            .filter((entry) => entry.score > -20) 
+            .sort((a, b) => b.score - a.score); 
+ 
+          if (scored.length === 0) return null; 
+ 
+          const topReviews = scored.slice(0, 2).map((entry) => entry.rev); 
+ 
+          const titleYear = 
+            item.release_date?.substring(0, 4) || 
+            item.first_air_date?.substring(0, 4) || 
+            undefined; 
+ 
+          const itemGenres = (item.genre_ids || []) 
+            .map((gid) => genres[gid]) 
+            .filter(Boolean) 
+            .slice(0, 3); 
+ 
+          const category = isAnime ? "anime" : mediaType === "tv" ? "series" : "movie"; 
+          const mediaLabel = isAnime ? "Anime" : mediaType === "tv" ? "Series" : "Movie"; 
+ 
+          return topReviews.map((rev) => { 
+            const rawRating = rev.author_details?.rating; 
+            const normalizedRating = 
+              rawRating !== null && rawRating !== undefined && !Number.isNaN(Number(rawRating)) 
+                ? Math.round(Number(rawRating) * 10) / 10 
+                : undefined; 
+ 
+            return { 
+              id: `tmdb:${item.id}:${rev.id}`, 
+              source: "tmdb", 
+              category, 
+              titleId: String(item.id), 
+              title: item.title || item.name || "Untitled", 
+              year: titleYear ? parseInt(titleYear, 10) : undefined, 
+              mediaLabel, 
+              posterUrl: item.poster_path ? `${TMDB_IMAGE_BASE}/w342${item.poster_path}` : undefined, 
+              backdropUrl: item.backdrop_path ? `${TMDB_IMAGE_BASE}/w780${item.backdrop_path}` : undefined, 
+              genres: itemGenres, 
+              rating: normalizedRating, 
+              ratingKind: "review", 
+              excerpt: createExcerpt(rev.content, 220), 
+              excerptKind: "review", 
+              rawContent: rev.content, 
+              author: { 
+                name: rev.author_details?.username || rev.author || "Anonymous", 
+                avatarUrl: resolveAvatarUrl(rev.author_details?.avatar_path), 
+              }, 
+              createdAt: rev.created_at || new Date().toISOString(), 
+              containsSpoilers: /spoiler/i.test(rev.content), 
+              detailHref: `/reviews/tmdb/${item.id}/${rev.id}`, 
+              mediaType, 
+              likes: item.vote_count || 0, 
+              comments: reviewsData.total_results || reviewsList.length || 0, 
+            }; 
+          }); 
+        }, 
+        12 
+      ); 
+ 
+      const validCards = cards.filter(Boolean).flat(); 
+      console.log(`🎬 [TMDB] Successfully built ${validCards.length} review cards.`); 
+ 
+      tmdbReviewCardsCache = validCards; 
+      tmdbReviewCardsExpiry = Date.now() + 60 * 60 * 1000; 
+      return validCards; 
+    } finally { 
+      tmdbReviewCardsPromise = null; 
+    } 
+  })(); 
+ 
+  return tmdbReviewCardsPromise; 
 }
 
 let tmdbAnimeCardsCache = null;
@@ -305,7 +317,13 @@ export async function getTmdbAnimeCards() {
     return tmdbAnimeCardsCache;
   }
 
-  console.log("🎌 [TMDB] Fetching anime candidates...");
+  if (tmdbAnimeCardsPromise) {
+    return tmdbAnimeCardsPromise;
+  }
+
+  tmdbAnimeCardsPromise = (async () => {
+    try {
+      console.log("🎌 [TMDB] Fetching anime candidates...");
 
   const [tvVoted, movieVoted, tvPopular] = await Promise.all([
     tmdbFetch("/discover/tv", {
@@ -424,9 +442,15 @@ export async function getTmdbAnimeCards() {
   const validCards = cards.filter(Boolean).flat();
   console.log(`🎌 [TMDB] Successfully built ${validCards.length} anime review cards.`);
 
-  tmdbAnimeCardsCache = validCards;
-  tmdbAnimeCardsExpiry = now + 60 * 60 * 1000;
-  return validCards;
+  tmdbAnimeCardsCache = validCards; 
+  tmdbAnimeCardsExpiry = Date.now() + 60 * 60 * 1000; 
+  return validCards; 
+    } finally { 
+      tmdbAnimeCardsPromise = null; 
+    } 
+  })(); 
+ 
+  return tmdbAnimeCardsPromise; 
 }
 
 /**
@@ -539,72 +563,79 @@ export async function searchTmdbReviews(query) {
 /**
  * Fetch detailed review for a specific title & reviewId
  */
-export async function getTmdbReviewDetail(titleId, reviewId) {
-  // First attempt movie, then tv
-  let movieDetail = null;
-  let isTv = false;
-
-  try {
-    movieDetail = await tmdbFetch(`/movie/${titleId}`, { append_to_response: "reviews" });
-  } catch {
-    try {
-      movieDetail = await tmdbFetch(`/tv/${titleId}`, { append_to_response: "reviews" });
-      isTv = true;
-    } catch (err) {
-      throw new Error(`Title not found: ${err.message}`);
-    }
-  }
-
-  const reviews = movieDetail.reviews?.results || [];
-  let matchingReview = reviews.find((r) => r.id === reviewId) || reviews[0];
-
-  if (!matchingReview) {
-    throw new Error(`Review not found for title ${titleId}`);
-  }
-
-  const rawRating = matchingReview.author_details?.rating;
-  const normalizedRating =
-    rawRating !== null && rawRating !== undefined && !Number.isNaN(Number(rawRating))
-      ? Math.round(Number(rawRating) * 10) / 10
-      : undefined;
-
-  const year =
-    movieDetail.release_date?.substring(0, 4) ||
-    movieDetail.first_air_date?.substring(0, 4) ||
-    "";
-
-  const isAnime = isAnimeItem(movieDetail);
-  const category = isAnime ? "anime" : isTv ? "series" : "movie";
-  const mediaLabel = isAnime ? "Anime" : isTv ? "Series" : "Movie";
-
-  return {
-    id: `tmdb:${titleId}:${matchingReview.id}`,
-    source: "tmdb",
-    category,
-    titleId: String(titleId),
-    title: movieDetail.title || movieDetail.name || "Untitled",
-    tagline: movieDetail.tagline || "",
-    year: year ? parseInt(year, 10) : undefined,
-    mediaLabel,
-    posterUrl: movieDetail.poster_path ? `${TMDB_IMAGE_BASE}/w780${movieDetail.poster_path}` : undefined,
-    backdropUrl: movieDetail.backdrop_path ? `${TMDB_IMAGE_BASE}/original${movieDetail.backdrop_path}` : undefined,
-    genres: (movieDetail.genres || []).map((g) => g.name).slice(0, 4),
-    rating: normalizedRating,
-    ratingKind: "review",
-    content: matchingReview.content,
-    excerpt: createExcerpt(matchingReview.content, 220),
-    excerptKind: "review",
-    author: {
-      name: matchingReview.author_details?.username || matchingReview.author || "Anonymous",
-      avatarUrl: resolveAvatarUrl(matchingReview.author_details?.avatar_path),
-    },
-    createdAt: matchingReview.created_at || new Date().toISOString(),
-    containsSpoilers: /spoiler/i.test(matchingReview.content),
-    externalUrl: matchingReview.url || `https://www.themoviedb.org/${isTv ? "tv" : "movie"}/${titleId}`,
-    mediaRoute: isTv ? `/series/${titleId}` : `/movie/${titleId}`,
-    likes: movieDetail.vote_count || 0,
-    comments: reviews.length || 0,
-  };
+export async function getTmdbReviewDetail(titleId, reviewId) { 
+  const cacheKey = `${titleId}:${reviewId}`; 
+  if (tmdbDetailCache.has(cacheKey)) { 
+    return tmdbDetailCache.get(cacheKey); 
+  } 
+ 
+  let movieDetail = null; 
+  let isTv = false; 
+ 
+  try { 
+    movieDetail = await tmdbFetch(`/movie/${titleId}`, { append_to_response: "reviews" }); 
+  } catch { 
+    try { 
+      movieDetail = await tmdbFetch(`/tv/${titleId}`, { append_to_response: "reviews" }); 
+      isTv = true; 
+    } catch (err) { 
+      throw new Error(`Title not found: ${err.message}`); 
+    } 
+  } 
+ 
+  const reviews = movieDetail.reviews?.results || []; 
+  let matchingReview = reviews.find((r) => r.id === reviewId) || reviews[0]; 
+ 
+  if (!matchingReview) { 
+    throw new Error(`Review not found for title ${titleId}`); 
+  } 
+ 
+  const rawRating = matchingReview.author_details?.rating; 
+  const normalizedRating = 
+    rawRating !== null && rawRating !== undefined && !Number.isNaN(Number(rawRating)) 
+      ? Math.round(Number(rawRating) * 10) / 10 
+      : undefined; 
+ 
+  const year = 
+    movieDetail.release_date?.substring(0, 4) || 
+    movieDetail.first_air_date?.substring(0, 4) || 
+    ""; 
+ 
+  const isAnime = isAnimeItem(movieDetail); 
+  const category = isAnime ? "anime" : isTv ? "series" : "movie"; 
+  const mediaLabel = isAnime ? "Anime" : isTv ? "Series" : "Movie"; 
+ 
+  const detail = { 
+    id: `tmdb:${titleId}:${matchingReview.id}`, 
+    source: "tmdb", 
+    category, 
+    titleId: String(titleId), 
+    title: movieDetail.title || movieDetail.name || "Untitled", 
+    tagline: movieDetail.tagline || "", 
+    year: year ? parseInt(year, 10) : undefined, 
+    mediaLabel, 
+    posterUrl: movieDetail.poster_path ? `${TMDB_IMAGE_BASE}/w780${movieDetail.poster_path}` : undefined, 
+    backdropUrl: movieDetail.backdrop_path ? `${TMDB_IMAGE_BASE}/original${movieDetail.backdrop_path}` : undefined, 
+    genres: (movieDetail.genres || []).map((g) => g.name).slice(0, 4), 
+    rating: normalizedRating, 
+    ratingKind: "review", 
+    content: matchingReview.content, 
+    excerpt: createExcerpt(matchingReview.content, 220), 
+    excerptKind: "review", 
+    author: { 
+      name: matchingReview.author_details?.username || matchingReview.author || "Anonymous", 
+      avatarUrl: resolveAvatarUrl(matchingReview.author_details?.avatar_path), 
+    }, 
+    createdAt: matchingReview.created_at || new Date().toISOString(), 
+    containsSpoilers: /spoiler/i.test(matchingReview.content), 
+    externalUrl: matchingReview.url || `https://www.themoviedb.org/${isTv ? "tv" : "movie"}/${titleId}`, 
+    mediaRoute: isTv ? `/series/${titleId}` : `/movie/${titleId}`, 
+    likes: movieDetail.vote_count || 0, 
+    comments: reviews.length || 0, 
+  }; 
+ 
+  tmdbDetailCache.set(cacheKey, detail); 
+  return detail; 
 }
 
 /**

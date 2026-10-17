@@ -311,7 +311,7 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
     }); 
     
     function attachReplies(node, currentDepth = 0) { 
-      if (currentDepth >= 3) { 
+      if (currentDepth >= 50) { 
         node.replies = []; 
         node.repliesCount = 0; 
         return node; 

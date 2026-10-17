@@ -248,22 +248,22 @@ export function CommentThread({
         };
     }, []);
 
-    const toggleReplies = async (id) => {
-        if (loading[id]) return;
-        if (expanded[id]) {
-            setExpanded((p) => ({ ...p, [id]: false }));
-            return;
-        }
-        setLoading((p) => ({ ...p, [id]: true }));
-        try {
-            // Always show the spinner briefly so the expand never feels like a jump.
-            await Promise.all([onLoadReplies ? onLoadReplies(id) : null, wait(350)]);
-        } catch {
-            /* fall through and expand whatever we already have */
-        }
-        if (!mounted.current) return;
-        setLoading((p) => ({ ...p, [id]: false }));
-        setExpanded((p) => ({ ...p, [id]: true }));
+    const toggleReplies = async (id) => { 
+        if (loading[id]) return; 
+        if (expanded[id]) { 
+            setExpanded((p) => ({ ...p, [id]: false })); 
+            return; 
+        } 
+        if (onLoadReplies) { 
+            setLoading((p) => ({ ...p, [id]: true })); 
+            try { 
+                await onLoadReplies(id); 
+            } catch { 
+            } 
+            if (!mounted.current) return; 
+            setLoading((p) => ({ ...p, [id]: false })); 
+        } 
+        setExpanded((p) => ({ ...p, [id]: true })); 
     };
 
     const openReply = (comment, rootId) => {

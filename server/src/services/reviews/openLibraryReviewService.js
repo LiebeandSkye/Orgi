@@ -12,159 +12,183 @@ const olCache = {
   "light-novelExpiry": 0,
 };
 
-const workDescCache = new Map();
-
-/**
- * Fetch work description with in-memory caching
- */
-async function getWorkDescription(cleanWorkId) {
-  if (workDescCache.has(cleanWorkId)) {
-    return workDescCache.get(cleanWorkId);
-  }
-
-  try {
-    const res = await fetch(`${OPEN_LIBRARY_BASE}/works/${cleanWorkId}.json`, {
-      headers: { "User-Agent": "Orgi/1.0 (reviews-feed)" },
-    });
-    if (!res.ok) {
-      workDescCache.set(cleanWorkId, "");
-      return "";
-    }
-    const data = await res.json();
-    let desc = "";
-    if (typeof data.description === "string") {
-      desc = data.description;
-    } else if (data.description && typeof data.description.value === "string") {
-      desc = data.description.value;
-    }
-    workDescCache.set(cleanWorkId, desc);
-    return desc;
-  } catch {
-    workDescCache.set(cleanWorkId, "");
-    return "";
-  }
-}
-
-/**
- * Fetch and build cards for Books, Novels, or Light Novels
- * @param {'book' | 'novel' | 'light-novel'} category
- * @param {number} [limit=25]
- */
-export async function getOpenLibraryCards(category = "book", limit = 25) {
-  const now = Date.now();
-  const cacheKey = category;
-  const expiryKey = `${category}Expiry`;
-
-  if (olCache[cacheKey] && now < olCache[expiryKey]) {
-    return olCache[cacheKey];
-  }
-
-  console.log(`📚 [OpenLibrary] Fetching ${category} items...`);
-
-  let q = "subject:fiction";
-  let mediaLabel = "Novel";
-  if (category === "book") {
-    q = "bestsellers OR fiction OR literature";
-    mediaLabel = "Book";
-  } else if (category === "novel") {
-    q = "subject:fiction";
-    mediaLabel = "Novel";
-  } else if (category === "light-novel") {
-    q = "subject:\"light novel\" OR subject:\"light novels\" OR \"light novel\"";
-    mediaLabel = "Light Novel";
-  }
-
-  const searchUrl = `${OPEN_LIBRARY_BASE}/search.json?q=${encodeURIComponent(
-    q
-  )}&fields=key,title,author_name,cover_i,first_publish_year,ratings_average,ratings_count,subject,first_sentence&limit=${limit}&sort=rating`;
-
-  let docs = [];
-  try {
-    const res = await fetch(searchUrl, {
-      headers: { "User-Agent": "Orgi/1.0 (reviews-feed)" },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      docs = data.docs || [];
-    }
-  } catch (err) {
-    console.warn(`[OpenLibrary] Search failed for ${category}:`, err.message);
-    return [];
-  }
-
-  const cards = [];
-  for (const doc of docs) {
-    const rawKey = doc.key || "";
-    const cleanId = rawKey.replace("/works/", "");
-    if (!cleanId) continue;
-
-    // Cover
-    const coverId = doc.cover_i;
-    const posterUrl = coverId ? `${COVERS_BASE}/${coverId}-M.jpg` : undefined;
-
-    // Rating: ratings_average (0-5) -> 0-10 scale. Require ratings_count >= 3.
-    let ratingValue = undefined;
-    if (
-      typeof doc.ratings_average === "number" &&
-      typeof doc.ratings_count === "number" &&
-      doc.ratings_count >= 3
-    ) {
-      ratingValue = Math.round(doc.ratings_average * 2 * 10) / 10;
-    }
-
-    // Work description / first_sentence
-    let desc = "";
-    if (doc.first_sentence) {
-      if (typeof doc.first_sentence === "string") {
-        desc = doc.first_sentence;
-      } else if (Array.isArray(doc.first_sentence) && doc.first_sentence.length > 0) {
-        desc = doc.first_sentence[0];
-      }
-    }
-
-    if (!desc || desc.length < 50) {
-      const fetchedDesc = await getWorkDescription(cleanId);
-      if (fetchedDesc) desc = fetchedDesc;
-    }
-
-    // If neither description nor first_sentence, skip title per spec
-    if (!desc || desc.trim().length === 0) {
-      continue;
-    }
-
-    const year = doc.first_publish_year || undefined;
-    const genres = Array.isArray(doc.subject)
-      ? doc.subject.slice(0, 3)
-      : [category === "light-novel" ? "Light Novel" : category === "novel" ? "Fiction" : "Literature"];
-
-    const authorNames = Array.isArray(doc.author_name) ? doc.author_name.join(", ") : undefined;
-
-    cards.push({
-      id: `openlibrary:${cleanId}:title`,
-      source: "openlibrary",
-      category,
-      titleId: cleanId,
-      title: doc.title || "Untitled",
-      year: year ? parseInt(year, 10) : undefined,
-      mediaLabel,
-      posterUrl,
-      backdropUrl: undefined,
-      genres,
-      rating: ratingValue,
-      ratingKind: "community",
-      excerpt: createExcerpt(desc, 220),
-      rawContent: desc,
-      excerptKind: "synopsis",
-      author: authorNames ? { name: authorNames } : undefined,
-      createdAt: year ? `${year}-01-01T00:00:00Z` : new Date().toISOString(),
-      containsSpoilers: false,
-      detailHref: `/reviews/openlibrary/${cleanId}`,
-    });
-  }
-
-  olCache[cacheKey] = cards;
-  olCache[expiryKey] = now + 45 * 60 * 1000; // 45 minutes
-  return cards;
+const workDescCache = new Map(); 
+const inFlightPromises = {}; 
+ 
+async function pMap(items, mapper, concurrency = 4) { 
+  const results = new Array(items.length); 
+  let index = 0; 
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => { 
+    while (index < items.length) { 
+      const i = index++; 
+      try { 
+        results[i] = await mapper(items[i], i); 
+      } catch { 
+        results[i] = null; 
+      } 
+    } 
+  }); 
+  await Promise.all(workers); 
+  return results; 
+} 
+ 
+async function getWorkDescription(cleanWorkId) { 
+  if (workDescCache.has(cleanWorkId)) { 
+    return workDescCache.get(cleanWorkId); 
+  } 
+ 
+  try { 
+    const controller = new AbortController(); 
+    const timeout = setTimeout(() => controller.abort(), 2000); 
+    const res = await fetch(`${OPEN_LIBRARY_BASE}/works/${cleanWorkId}.json`, { 
+      headers: { "User-Agent": "Orgi/1.0 (reviews-feed)" }, 
+      signal: controller.signal, 
+    }); 
+    clearTimeout(timeout); 
+    if (!res.ok) { 
+      workDescCache.set(cleanWorkId, ""); 
+      return ""; 
+    } 
+    const data = await res.json(); 
+    let desc = ""; 
+    if (typeof data.description === "string") { 
+      desc = data.description; 
+    } else if (data.description && typeof data.description.value === "string") { 
+      desc = data.description.value; 
+    } 
+    workDescCache.set(cleanWorkId, desc); 
+    return desc; 
+  } catch { 
+    workDescCache.set(cleanWorkId, ""); 
+    return ""; 
+  } 
+} 
+ 
+export async function getOpenLibraryCards(category = "book", limit = 30) { 
+  const now = Date.now(); 
+  const cacheKey = category; 
+  const expiryKey = `${category}Expiry`; 
+ 
+  if (olCache[cacheKey] && now < olCache[expiryKey]) { 
+    return olCache[cacheKey]; 
+  } 
+ 
+  if (inFlightPromises[cacheKey]) { 
+    return inFlightPromises[cacheKey]; 
+  } 
+ 
+  inFlightPromises[cacheKey] = (async () => { 
+    try { 
+      let q = "subject:fiction"; 
+      let mediaLabel = "Novel"; 
+      if (category === "book") { 
+        q = "bestsellers OR fiction OR literature"; 
+        mediaLabel = "Book"; 
+      } else if (category === "novel") { 
+        q = "subject:fiction"; 
+        mediaLabel = "Novel"; 
+      } else if (category === "light-novel") { 
+        q = "subject:\"light novel\" OR subject:\"light novels\" OR \"light novel\""; 
+        mediaLabel = "Light Novel"; 
+      } 
+ 
+      const searchUrl = `${OPEN_LIBRARY_BASE}/search.json?q=${encodeURIComponent( 
+        q 
+      )}&fields=key,title,author_name,cover_i,first_publish_year,ratings_average,ratings_count,subject,first_sentence&limit=${limit}&sort=rating`; 
+ 
+      let docs = []; 
+      try { 
+        const res = await fetch(searchUrl, { 
+          headers: { "User-Agent": "Orgi/1.0 (reviews-feed)" }, 
+        }); 
+        if (res.ok) { 
+          const data = await res.json(); 
+          docs = data.docs || []; 
+        } 
+      } catch (err) { 
+        console.warn(`[OpenLibrary] Search failed for ${category}:`, err.message); 
+        return []; 
+      } 
+ 
+      const mapped = await pMap( 
+        docs, 
+        async (doc) => { 
+          const rawKey = doc.key || ""; 
+          const cleanId = rawKey.replace("/works/", ""); 
+          if (!cleanId) return null; 
+ 
+          const coverId = doc.cover_i; 
+          const posterUrl = coverId ? `${COVERS_BASE}/${coverId}-M.jpg` : undefined; 
+ 
+          let ratingValue = undefined; 
+          if ( 
+            typeof doc.ratings_average === "number" && 
+            typeof doc.ratings_count === "number" && 
+            doc.ratings_count >= 3 
+          ) { 
+            ratingValue = Math.round(doc.ratings_average * 2 * 10) / 10; 
+          } 
+ 
+          let desc = ""; 
+          if (doc.first_sentence) { 
+            if (typeof doc.first_sentence === "string") { 
+              desc = doc.first_sentence; 
+            } else if (Array.isArray(doc.first_sentence) && doc.first_sentence.length > 0) { 
+              desc = doc.first_sentence[0]; 
+            } 
+          } 
+ 
+          if (!desc || desc.length < 50) { 
+            const fetchedDesc = await getWorkDescription(cleanId); 
+            if (fetchedDesc) desc = fetchedDesc; 
+          } 
+ 
+          if (!desc || desc.trim().length === 0) { 
+            return null; 
+          } 
+ 
+          const year = doc.first_publish_year || undefined; 
+          const genres = Array.isArray(doc.subject) 
+            ? doc.subject.slice(0, 3) 
+            : [category === "light-novel" ? "Light Novel" : category === "novel" ? "Fiction" : "Literature"]; 
+ 
+          const authorNames = Array.isArray(doc.author_name) ? doc.author_name.join(", ") : undefined; 
+ 
+          return { 
+            id: `openlibrary:${cleanId}:title`, 
+            source: "openlibrary", 
+            category, 
+            titleId: cleanId, 
+            title: doc.title || "Untitled", 
+            year: year ? parseInt(year, 10) : undefined, 
+            mediaLabel, 
+            posterUrl, 
+            backdropUrl: undefined, 
+            genres, 
+            rating: ratingValue, 
+            ratingKind: "community", 
+            excerpt: createExcerpt(desc, 220), 
+            rawContent: desc, 
+            excerptKind: "synopsis", 
+            author: authorNames ? { name: authorNames } : undefined, 
+            createdAt: year ? `${year}-01-01T00:00:00Z` : new Date().toISOString(), 
+            containsSpoilers: false, 
+            detailHref: `/reviews/openlibrary/${cleanId}`, 
+          }; 
+        }, 
+        5 
+      ); 
+ 
+      const cards = mapped.filter(Boolean); 
+      olCache[cacheKey] = cards; 
+      olCache[expiryKey] = Date.now() + 60 * 60 * 1000; 
+      return cards; 
+    } finally { 
+      delete inFlightPromises[cacheKey]; 
+    } 
+  })(); 
+ 
+  return inFlightPromises[cacheKey]; 
 }
 
 /**
