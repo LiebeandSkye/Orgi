@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Clock3,
   CalendarDays,
@@ -18,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  MessageSquare,
 } from "lucide-react";
 import {
   getMovieDetails,
@@ -26,6 +28,7 @@ import {
   getSeriesDetails,
 } from "../../services/tmdb";
 import { fetchMediaDetails } from "../../services/mediaApi";
+import { getSeasonDiscussionCounts } from "../../services/discussionApi.js";
 import api from "../../services/api";
 import { CastCarousel } from "./CastCarousel";
 import MetaItem from "./MetaItem";
@@ -227,6 +230,7 @@ export default function OverviewTab({
   onCommunityDataChange,
   onOpenReviews,
 }) {
+  const navigate = useNavigate();
   const [movieData, setMovieData] = useState(
     initialMovieData || seriesData || null,
   );
@@ -248,6 +252,7 @@ export default function OverviewTab({
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedEpisodeNumber, setSelectedEpisodeNumber] = useState(1);
   const [seasonEpisodes, setSeasonEpisodes] = useState([]);
+  const [discussionCounts, setDiscussionCounts] = useState({});
   const [seasonLoading, setSeasonLoading] = useState(false);
   const [episodeMessage, setEpisodeMessage] = useState("");
   const [canScrollEpisodesLeft, setCanScrollEpisodesLeft] = useState(false);
@@ -424,6 +429,23 @@ export default function OverviewTab({
   }, [id, isSeries, selectedSeason, seasons.length, seriesTmdbId]);
 
   useEffect(() => {
+    if (!isSeries || !seriesTmdbId || !selectedSeason) return;
+    let active = true;
+
+    getSeasonDiscussionCounts(seriesTmdbId, selectedSeason)
+      .then((counts) => {
+        if (active && counts) {
+          setDiscussionCounts(counts);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [isSeries, seriesTmdbId, selectedSeason]);
+
+  useEffect(() => {
     // Detail pages already fetch and pass this data, so avoid a second identical request.
     if (initialCommunityData) {
       setReviewsLoading(false);
@@ -547,13 +569,22 @@ export default function OverviewTab({
     : backdrop
       ? `${TMDB_IMAGE}${backdrop}`
       : "";
-  const videos = mediaData.videos?.results || details.videos?.results || [];
+  const videoList = Array.isArray(mediaData.videos)
+    ? mediaData.videos
+    : Array.isArray(mediaData.videos?.results)
+    ? mediaData.videos.results
+    : Array.isArray(details.videos)
+    ? details.videos
+    : Array.isArray(details.videos?.results)
+    ? details.videos.results
+    : [];
   const trailer =
-    videos.find(
+    videoList.find(
       (video) =>
-        video.site === "YouTube" &&
-        (video.type === "Trailer" || video.type === "Teaser"),
-    ) || videos.find((video) => video.site === "YouTube");
+        (!video.site || video.site.toLowerCase() === "youtube") &&
+        (String(video.type).toLowerCase() === "trailer" || String(video.type).toLowerCase() === "teaser"),
+    ) || videoList.find((video) => !video.site || video.site.toLowerCase() === "youtube");
+  const trailerKey = trailer?.key || trailer?.videoId || trailer?.id;
   const releaseDate =
     details.release_date || details.first_air_date || details.year;
   const year = releaseDate ? String(releaseDate).slice(0, 4) : "Not available";
@@ -721,9 +752,9 @@ export default function OverviewTab({
             <button
               type="button"
               onClick={() =>
-                trailer?.key &&
+                trailerKey &&
                 window.open(
-                  `https://www.youtube.com/watch?v=${trailer.key}`,
+                  `https://www.youtube.com/watch?v=${trailerKey}`,
                   "_blank",
                   "noopener,noreferrer",
                 )
@@ -1011,6 +1042,35 @@ export default function OverviewTab({
                         <CalendarDays size={13} className="text-[#61F1AC]" />
                         Episode {episode.episode_number}
                       </span>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate(
+                            `/series/${seriesTmdbId}/season/${selectedSeason}/episode/${episode.episode_number}/discussion`,
+                            {
+                              state: {
+                                seriesId: seriesTmdbId,
+                                seriesTitle: details?.name || details?.title || seriesData?.title,
+                                seasonNumber: selectedSeason,
+                                episode,
+                              },
+                            }
+                          );
+                        }}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#292D33] bg-[#13161A] px-4 py-2 text-xs font-medium text-[#F5F5F5] transition hover:border-[#61F1AC]/50 hover:text-[#61F1AC] cursor-pointer"
+                      >
+                        <MessageSquare size={14} />
+                        <span>Discussion</span>
+                        {discussionCounts[episode.episode_number] !== undefined &&
+                          discussionCounts[episode.episode_number] > 0 && (
+                            <span className="rounded-full bg-[#1C1C1C] px-1.5 py-0.5 text-[10px] font-semibold text-[#61F1AC]">
+                              {discussionCounts[episode.episode_number]}
+                            </span>
+                          )}
+                      </button>
                     </div>
                   </div>
                 </div>

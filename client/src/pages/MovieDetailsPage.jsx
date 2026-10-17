@@ -629,7 +629,9 @@ export function MovieDetailsPage({
               movieData={{
                 ...movieData,
                 images: mediaData.images?.backdrops?.length || mediaData.images?.posters?.length ? mediaData.images : movieData.images,
-                videos: mediaData.videos?.results?.length ? mediaData.videos : movieData.videos,
+                videos: (Array.isArray(mediaData.videos) && mediaData.videos.length > 0)
+                  ? mediaData.videos
+                  : (mediaData.videos?.results?.length ? mediaData.videos : movieData?.videos),
               }}
             />
           </div>

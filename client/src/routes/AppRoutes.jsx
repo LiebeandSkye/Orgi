@@ -4,6 +4,7 @@ import { Layout } from "../components/layout/Layout";
 import { HomePage } from "../pages/HomePage"; 
 import { MovieDetailsPage } from "../pages/MovieDetailsPage"; 
 import { SeriesDetailsPage } from "../pages/SeriesDetailsPage"; 
+import { EpisodeDiscussionPage } from "../pages/EpisodeDiscussionPage"; 
 import { ReviewsPage } from "../pages/ReviewsPage"; 
 import { SearchPage } from "../pages/SearchPage"; 
 import { ManhwaPage } from "../pages/ManhwaPage"; 
@@ -31,7 +32,32 @@ export function AppRoutes() {
 
                 <Route path="/series" element={<Navigate to="/" replace />} /> 
                 <Route path="/series/breaking-bad" element={<Navigate to="/series/1396" replace />} /> 
+                <Route 
+                    path="/series/:id/season/:seasonNumber/episode/:episodeNumber/discussion" 
+                    element={<EpisodeDiscussionPage />} 
+                /> 
+                <Route 
+                    path="/series/:id/episode/:episodeNumber/discussion" 
+                    element={<EpisodeDiscussionPage />} 
+                /> 
+                <Route 
+                    path="/series/:id/discussion" 
+                    element={<EpisodeDiscussionPage />} 
+                /> 
                 <Route path="/series/:id" element={<SeriesDetailsPage />} /> 
+
+                <Route 
+                    path="/anime/:id/season/:seasonNumber/episode/:episodeNumber/discussion" 
+                    element={<EpisodeDiscussionPage />} 
+                /> 
+                <Route 
+                    path="/anime/:id/episode/:episodeNumber/discussion" 
+                    element={<EpisodeDiscussionPage />} 
+                /> 
+                <Route 
+                    path="/anime/:id/discussion" 
+                    element={<EpisodeDiscussionPage />} 
+                /> 
                 <Route path="/anime/:id" element={<SeriesDetailsPage />} /> 
 
                 <Route path="/feed" element={<ReviewsPage />} /> 

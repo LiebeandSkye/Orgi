@@ -1,5 +1,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,9 +14,11 @@ import {
   Tag,
   Play,
   ArrowUpDown,
+  MessageSquare,
 } from "lucide-react";
 import { getSeasonEpisodes } from "../../services/tmdb";
 import { API_BASE_URL, safeFetchJson } from "../../services/api";
+import { getSeasonDiscussionCounts } from "../../services/discussionApi";
 
 
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p";
@@ -70,6 +73,7 @@ export default function EpisodesSection({
   seriesData, 
   onRateEpisode, 
 }) { 
+  const navigate = useNavigate();
   const [series, setSeries] = useState(seriesData || null); 
   const [seasons, setSeasons] = useState(() => { 
     if (seriesData?.seasons && Array.isArray(seriesData.seasons)) { 
@@ -92,8 +96,26 @@ export default function EpisodesSection({
   const [userRatings, setUserRatings] = useState({});
   const [ratingEpisode, setRatingEpisode] = useState(null);
   const [showRatingPicker, setShowRatingPicker] = useState(false);
+  const [discussionCounts, setDiscussionCounts] = useState({});
 
   const ratingStripRef = useRef(null);
+
+  useEffect(() => {
+    if (!seriesId || !selectedSeason) return;
+    let active = true;
+
+    getSeasonDiscussionCounts(seriesId, selectedSeason)
+      .then((counts) => {
+        if (active && counts) {
+          setDiscussionCounts(counts);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [seriesId, selectedSeason]);
 
 
   // ----------------------------------------------------------
@@ -648,10 +670,36 @@ useEffect(() => {
                   setRatingEpisode(selectedEpisode.episode_number);
                   setShowRatingPicker((current) => !current);
                 }}
-                className="inline-flex items-center gap-2 rounded-full border border-[#292D33] bg-[#13161A] px-4 py-2.5 text-xs font-medium transition hover:border-[#61F1AC]/50"
+                className="inline-flex items-center gap-2 rounded-full border border-[#292D33] bg-[#13161A] px-4 py-2.5 text-xs font-medium transition hover:border-[#61F1AC]/50 cursor-pointer"
               >
                 <Star size={14} />
                 Rate
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigate(
+                    `/series/${seriesId}/season/${selectedSeason}/episode/${selectedEpisode.episode_number}/discussion`,
+                    {
+                      state: {
+                        seriesId,
+                        seriesTitle: series?.name || series?.title || seriesData?.title,
+                        seasonNumber: selectedSeason,
+                        episode: selectedEpisode,
+                      },
+                    }
+                  );
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-[#292D33] bg-[#13161A] px-4 py-2.5 text-xs font-medium text-[#F5F5F5] transition hover:border-[#61F1AC]/50 hover:text-[#61F1AC] cursor-pointer"
+              >
+                <MessageSquare size={14} />
+                <span>Discussion</span>
+                {discussionCounts[selectedEpisode.episode_number] !== undefined && discussionCounts[selectedEpisode.episode_number] > 0 && (
+                  <span className="rounded-full bg-[#1C1C1C] px-1.5 py-0.5 text-[10px] text-[#61F1AC] font-semibold">
+                    {discussionCounts[selectedEpisode.episode_number]}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -791,13 +839,19 @@ useEffect(() => {
               episode.episode_number === selectedEpisodeNumber;
 
             return (
-              <button
+              <div
                 key={episode.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() =>
                   setSelectedEpisodeNumber(episode.episode_number)
                 }
-                className={`group flex w-full min-w-0 items-center gap-3 border-l-[3px] px-3 py-3 text-left transition sm:gap-4 sm:px-4 ${
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setSelectedEpisodeNumber(episode.episode_number);
+                  }
+                }}
+                className={`group flex w-full min-w-0 items-center gap-3 border-l-[3px] px-3 py-3 text-left transition sm:gap-4 sm:px-4 cursor-pointer select-none ${
                   isSelected
                     ? "border-l-[#61F1AC] bg-[#0B0B0B]"
                     : "border-l-transparent hover:bg-[#0B0B0B]"
@@ -846,11 +900,40 @@ useEffect(() => {
                   {getRating(episode.vote_average)}
                 </span>
 
+                {/* Discussion button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(
+                      `/series/${seriesId}/season/${selectedSeason}/episode/${episode.episode_number}/discussion`,
+                      {
+                        state: {
+                          seriesId,
+                          seriesTitle: series?.name || series?.title || seriesData?.title,
+                          seasonNumber: selectedSeason,
+                          episode,
+                        },
+                      }
+                    );
+                  }}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#252525] bg-[#141414] px-2.5 py-1 text-xs font-medium text-[#B5B5B5] transition hover:border-[#61F1AC]/60 hover:text-[#61F1AC] cursor-pointer"
+                  title={`Discussion for Episode ${episode.episode_number}`}
+                >
+                  <MessageSquare size={12} />
+                  <span className="hidden sm:inline">Discussion</span>
+                  {discussionCounts[episode.episode_number] !== undefined && discussionCounts[episode.episode_number] > 0 && (
+                    <span className="text-[10px] font-semibold text-[#61F1AC]">
+                      {discussionCounts[episode.episode_number]}
+                    </span>
+                  )}
+                </button>
+
                 <ChevronRight
                   size={17}
                   className="shrink-0 text-[#7A7A7A] transition group-hover:translate-x-0.5 group-hover:text-white"
                 />
-              </button>
+              </div>
             );
           })}
         </div>
