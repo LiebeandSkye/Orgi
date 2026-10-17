@@ -79,6 +79,7 @@ export function MediaCarousel({
   items = [],
   isLoading = false,
   showRank = false,
+  showTopScore = false,
   subtitle = null,
 }) {
   const rowRef = useRef(null);
@@ -195,11 +196,24 @@ export function MediaCarousel({
                   {/* Rank number for Top 10 */}
                   {showRank && <RankNumber rank={idx + 1} />}
 
-                  {item.poster ? (
+                  {/* Top-Right Status Badge (e.g. Completed) or Score Pill */}
+                  {item.statusBadge ? (
+                    <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 rounded-full bg-[#61F1AC] text-black text-[10px] font-bold tracking-tight shadow-md">
+                      {item.statusBadge}
+                    </div>
+                  ) : showTopScore ? (
+                    <div className="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-[#61F1AC] text-black text-[10px] font-bold font-tabular flex items-center gap-0.5 shadow-md">
+                      <Star size={9} className="fill-black text-black" />
+                      <span>{item.rating || item.score || "8.8"}</span>
+                    </div>
+                  ) : null}
+
+                  {item.poster || item.cover ? (
                     <img
-                      src={item.poster}
+                      src={item.poster || item.cover}
                       alt={item.title}
                       loading="lazy"
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
                     />
                   ) : (
@@ -217,8 +231,8 @@ export function MediaCarousel({
                     {item.title}
                   </span>
                   <div className="flex items-center justify-between mt-1 text-xs">
-                    <span className="text-[#7A7A7A] font-tabular">
-                      {item.year || "—"}
+                    <span className="text-[#7A7A7A] font-tabular truncate max-w-[105px]">
+                      {item.year || item.chapters || item.author || "—"}
                     </span>
                     <div className="flex items-center gap-1 text-[#61F1AC] font-medium font-tabular">
                       <Star size={11} className="fill-[#61F1AC]" />

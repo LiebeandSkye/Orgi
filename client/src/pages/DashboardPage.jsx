@@ -24,7 +24,7 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext"; 
 import { Button } from "../components/ui/Button"; 
 import { ReviewSlider } from "../components/ui/ReviewSlider"; 
-import { CommentThreadItem } from "../components/reviews/MediaReviewsTab"; 
+import { CommentThread } from "../components/reviews/CommentThread"; 
 import { FormattedText } from "../components/common/FormattedText"; 
 import { CommentFormattingToolbar, handleFormattingKeyDown } from "../components/common/CommentFormattingToolbar"; 
 
@@ -376,7 +376,7 @@ export function DashboardPage() {
         <div className="flex items-center gap-4"> 
           <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#61F1AC]/40 bg-[#141414] flex-shrink-0 shadow-lg"> 
             <img 
-              src={userProfile?.profile_url || user?.user_metadata?.avatar_url || DEFAULT_AVATAR} 
+              src={userProfile?.profile_url || user?.profile_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || DEFAULT_AVATAR} 
               alt="Profile" 
               onError={(e) => { 
                 if (e.currentTarget.src !== DEFAULT_AVATAR) { 
@@ -389,7 +389,7 @@ export function DashboardPage() {
           <div> 
             <div className="flex items-center gap-2.5"> 
               <h1 className="text-xl sm:text-2xl font-bold text-[#F5F5F5] tracking-tight"> 
-                {userProfile?.user_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Orgi Explorer"} 
+                {userProfile?.user_name || user?.user_name || user?.user_metadata?.custom_claims?.global_name || user?.user_metadata?.global_name || user?.user_metadata?.name || user?.user_metadata?.user_name || user?.user_metadata?.login || user?.email?.split("@")[0] || "Orgi Explorer"} 
               </h1> 
               {isModerator && ( 
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#61F1AC]/10 text-[#61F1AC] border border-[#61F1AC]/20"> 
@@ -677,15 +677,13 @@ export function DashboardPage() {
                                 <div className="h-14 rounded-xl bg-white/[0.03] animate-pulse" /> 
                               </div> 
                             ) : (reviewRepliesData[review.id] || []).length > 0 ? ( 
-                              <div className="space-y-2.5"> 
-                                {reviewRepliesData[review.id].map((rep) => ( 
-                                  <CommentThreadItem 
-                                    key={rep.id} 
-                                    comment={rep} 
-                                    depth={1} 
-                                    allowReply={false} 
-                                  /> 
-                                ))} 
+                              <div className="pt-2"> 
+                                <CommentThread 
+                                  comments={reviewRepliesData[review.id] || []} 
+                                  currentUserAvatar={user?.profile_url || userProfile?.profile_url || DEFAULT_AVATAR} 
+                                  currentUserName={userProfile?.user_name || user?.user_name || "You"} 
+                                  allowReply={false} 
+                                /> 
                               </div> 
                             ) : ( 
                               <div className="text-xs text-[#666666] py-3 text-center bg-[#090909] rounded-xl border border-[#161616]"> 
@@ -838,15 +836,13 @@ export function DashboardPage() {
                                 <div className="h-14 rounded-xl bg-white/[0.03] animate-pulse" /> 
                               </div> 
                             ) : (reviewRepliesData[rev.id] || []).length > 0 ? ( 
-                              <div className="space-y-2.5"> 
-                                {reviewRepliesData[rev.id].map((rep) => ( 
-                                  <CommentThreadItem 
-                                    key={rep.id} 
-                                    comment={rep} 
-                                    depth={1} 
-                                    allowReply={false} 
-                                  /> 
-                                ))} 
+                              <div className="pt-2"> 
+                                <CommentThread 
+                                  comments={reviewRepliesData[rev.id] || []} 
+                                  currentUserAvatar={user?.profile_url || userProfile?.profile_url || DEFAULT_AVATAR} 
+                                  currentUserName={userProfile?.user_name || user?.user_name || "You"} 
+                                  allowReply={false} 
+                                /> 
                               </div> 
                             ) : ( 
                               <div className="text-xs text-[#666666] py-3 text-center bg-[#090909] rounded-xl border border-[#161616]"> 

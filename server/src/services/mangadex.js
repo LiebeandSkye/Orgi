@@ -82,7 +82,7 @@ async getPopularManhwa(limit = 20) {
 async getPopularManhua(limit = 20) {
     const data = await fetchFromMangaDex("/manga", {
     limit,
-    "originalLanguage": ["zh"], // 'zh' is Chinese
+    "originalLanguage": ["zh", "zh-hk"], // Chinese comics (Simplified & Traditional)
     "includes": ["cover_art"],
     "order[followedCount]": "desc",
     "contentRating": ["safe", "suggestive"],
@@ -100,6 +100,7 @@ async search(query, type = "all", limit = 20) {
     };
     if (type === "manhwa") params["originalLanguage"] = ["ko"];
     if (type === "manga") params["originalLanguage"] = ["ja"];
+    if (type === "manhua") params["originalLanguage"] = ["zh", "zh-hk"];
     const data = await fetchFromMangaDex("/manga", params);
     return data.data.map(formatMangaDexItem);
 },

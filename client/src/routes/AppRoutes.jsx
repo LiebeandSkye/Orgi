@@ -7,7 +7,7 @@ import { SeriesDetailsPage } from "../pages/SeriesDetailsPage";
 import { EpisodeDiscussionPage } from "../pages/EpisodeDiscussionPage"; 
 import { ReviewsPage } from "../pages/ReviewsPage"; 
 import { SearchPage } from "../pages/SearchPage"; 
-import { ManhwaPage } from "../pages/ManhwaPage"; 
+import { BooksDashboard } from "../pages/BooksDashboard"; 
 import { NotFoundPage } from "../pages/NotFoundPage"; 
 import { ProfilePage } from "../pages/ProfilePage"; 
 import { CollectionPage } from "../pages/CollectionPage"; 
@@ -67,8 +67,9 @@ export function AppRoutes() {
 
                 <Route path="/search" element={<SearchPage />} /> 
 
-                <Route path="/books" element={<ManhwaPage />} /> 
-                <Route path="/books/:category" element={<ManhwaPage />} /> 
+                {/* Books: Main Dashboard + Subcategories + Details */} 
+                <Route path="/books" element={<BooksDashboard />} /> 
+                <Route path="/books/:category" element={<Navigate to="/books" replace />} /> 
                 <Route path="/books/:category/:id" element={<MovieDetailsPage initialTab="Cast" />} /> 
 
                 <Route path="/login" element={<LoginPage />} /> 
@@ -84,3 +85,4 @@ export function AppRoutes() {
         </Routes> 
     ); 
 } 
+

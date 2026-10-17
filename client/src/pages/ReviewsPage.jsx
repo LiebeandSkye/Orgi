@@ -386,6 +386,8 @@ export function ReviewsPage() {
         item={selectedReview}
         isOpen={detailModalOpen}
         onClose={handleCloseDetail}
+        isLiked={selectedReview ? isLiked(selectedReview.id) : false}
+        onToggleLike={() => selectedReview && toggleLike(selectedReview)}
       />
 
       {/* Floating Bookmark Toast */}

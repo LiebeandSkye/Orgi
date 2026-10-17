@@ -16,6 +16,13 @@ import api from "../services/api";
 import { Button } from "../components/ui/Button"; 
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton"; 
 import { useAuth } from "../context/AuthContext"; 
+import { useToast } from "../context/ToastContext"; 
+import { 
+  getGuestCollection, 
+  updateGuestCollectionStatus, 
+  removeGuestCollectionItem 
+} from "../utils/guestCollection"; 
+import { GuestCollectionWarningBanner } from "../components/layout/GuestCollectionWarningBanner"; 
 
 const STATUS_LABELS = { 
   plan: "Plan", 
@@ -47,6 +54,7 @@ const SORT_OPTIONS = [
 
 export function CollectionPage() { 
   const { session } = useAuth(); 
+  const { showToast } = useToast(); 
   const [items, setItems] = useState([]); 
   const [isLoading, setIsLoading] = useState(Boolean(session)); 
   const [errorMessage, setErrorMessage] = useState(null); 
@@ -69,6 +77,7 @@ export function CollectionPage() {
     } catch {} 
 
     if (!session || !token) { 
+      setItems(getGuestCollection()); 
       setIsLoading(false); 
       return; 
     } 
@@ -87,12 +96,16 @@ export function CollectionPage() {
   }, [session]); 
 
   useEffect(() => { 
-    if (session) { 
-      loadCollections(); 
-    } else { 
-      setItems([]); 
-      setIsLoading(false); 
-    } 
+    loadCollections(); 
+    const handleGuestChange = () => { 
+      if (!session) { 
+        setItems(getGuestCollection()); 
+      } 
+    }; 
+    window.addEventListener("orgi_guest_collection_changed", handleGuestChange); 
+    return () => { 
+      window.removeEventListener("orgi_guest_collection_changed", handleGuestChange); 
+    }; 
   }, [session, loadCollections]); 
 
   useEffect(() => { 
@@ -122,6 +135,21 @@ export function CollectionPage() {
   const handleUpdateStatus = async (itemId, newStatus) => { 
     setStatusMenuOpen(null); 
     setIsUpdating((prev) => ({ ...prev, [itemId]: true })); 
+
+    if (!session) { 
+      const target = items.find((i) => i.itemId === itemId || i.id === itemId); 
+      if (target) { 
+        updateGuestCollectionStatus(target.externalId, target.provider, newStatus); 
+        setItems((prev) => 
+          prev.map((item) => 
+            (item.itemId === itemId || item.id === itemId) ? { ...item, status: newStatus } : item 
+          ) 
+        ); 
+      } 
+      setIsUpdating((prev) => ({ ...prev, [itemId]: false })); 
+      return; 
+    } 
+
     try { 
       const res = await api.patch(`/collections/${itemId}/status`, { 
         status: newStatus, 
@@ -135,7 +163,7 @@ export function CollectionPage() {
       } 
     } catch (err) { 
       console.error("Failed to update item status:", err); 
-      alert(err.message || "Failed to update status"); 
+      showToast({ message: err.message || "Failed to update status" }); 
     } finally { 
       setIsUpdating((prev) => ({ ...prev, [itemId]: false })); 
     } 
@@ -145,6 +173,15 @@ export function CollectionPage() {
     if (!confirm(`Remove "${item.title}" from your collection?`)) return; 
 
     setIsUpdating((prev) => ({ ...prev, [item.itemId]: true })); 
+
+    if (!session) { 
+      removeGuestCollectionItem(item.externalId, item.provider); 
+      setItems((prev) => prev.filter((i) => i.itemId !== item.itemId && i.id !== item.id)); 
+      setIsUpdating((prev) => ({ ...prev, [item.itemId]: false })); 
+      showToast({ message: `Removed "${item.title}" from local collection.` }); 
+      return; 
+    } 
+
     try { 
       const res = await api.post("/collections/toggle", { 
         external_id: item.externalId, 
@@ -159,7 +196,7 @@ export function CollectionPage() {
       } 
     } catch (err) { 
       console.error("Failed to remove collection item:", err); 
-      alert(err.message || "Failed to remove item"); 
+      showToast({ message: err.message || "Failed to remove item" }); 
     } finally { 
       setIsUpdating((prev) => ({ ...prev, [item.itemId]: false })); 
     } 
@@ -226,7 +263,7 @@ export function CollectionPage() {
     (typeof localStorage !== "undefined" && localStorage.getItem("orgi_session")?.includes("access_token")) 
   ); 
 
-  if (!session || !hasValidToken) { 
+  if ((!session || !hasValidToken) && items.length === 0) { 
     return ( 
       <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center"> 
         <div className="w-16 h-16 rounded-2xl bg-[#0E0E0E] border border-[#1C1C1C] flex items-center justify-center text-[#61F1AC] mb-6 shadow-xl"> 
@@ -255,8 +292,9 @@ export function CollectionPage() {
   const activeSortLabel = `Sort: ${activeSortObj?.label || "Recently Added"}`; 
 
   return ( 
-    <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24 pt-8"> 
-      <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px]"> 
+    <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24"> 
+      <GuestCollectionWarningBanner /> 
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-8"> 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-[#1C1C1C]"> 
           <div> 
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#61F1AC] mb-2"> 

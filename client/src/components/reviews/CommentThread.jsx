@@ -6,10 +6,11 @@ import { FormattedText } from "../common/FormattedText";
 import { handleFormattingKeyDown } from "../common/CommentFormattingToolbar";
 import { Button } from "../ui/Button";
 import { getReviewAuthor } from "../../utils/reviewUtils";
+import { useAuth } from "../../context/AuthContext"; 
+import { useToast } from "../../context/ToastContext"; 
 
-/* ------------------------------------------------------------------ */
-/* Helpers                                                             */
-/* ------------------------------------------------------------------ */
+const DEFAULT_AVATAR = 
+    "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -146,11 +147,12 @@ function InlineComposer({ avatar, replyingTo, submitting, onSubmit, onCancel, cu
 function CommentRow({ comment, replyTo, small = false, liked, onToggleLike, onReply, allowReply }) {
     const { name, avatar } = getAuthor(comment);
     const time = timeAgo(comment.createdAt || comment.created_at || comment.time);
-    const likes = (comment.likes ?? comment.likesCount ?? 0) + (liked ? 1 : 0);
-    const content = comment.content || comment.rawContent || comment.excerpt;
+    const baseLikes = comment.likes ?? comment.likesCount ?? 0; 
+    const likes = Math.max(0, baseLikes + (liked && !comment.isLiked ? 1 : !liked && comment.isLiked ? -1 : 0)); 
+    const content = comment.content || comment.rawContent || comment.excerpt; 
 
-    return (
-        <div className="flex gap-3">
+    return ( 
+        <div id={comment?.id ? `review-${comment.id}` : undefined} className="flex gap-3"> 
             <Avatar src={avatar} name={name} size={small ? "w-7 h-7" : "w-9 h-9"} />
 
             <div className="min-w-0 flex-1">
@@ -214,6 +216,25 @@ export function CommentThread({
     onLoadReplies,
     allowReply = true,
 }) {
+    const { user, userProfile } = useAuth(); 
+    const { showToast, openAuthModal } = useToast(); 
+    const effectiveAvatar = 
+        currentUserAvatar || 
+        userProfile?.profile_url || 
+        user?.profile_url || 
+        user?.user_metadata?.avatar_url || 
+        user?.user_metadata?.picture || 
+        DEFAULT_AVATAR; 
+    const effectiveName = 
+        currentUserName && currentUserName !== "You" 
+            ? currentUserName 
+            : (userProfile?.user_name || 
+               user?.user_name || 
+               user?.user_metadata?.user_name || 
+               user?.user_metadata?.full_name || 
+               user?.user_metadata?.name || 
+               "You"); 
+
     const [expanded, setExpanded] = useState({});
     const [loading, setLoading] = useState({});
     const [target, setTarget] = useState(null); // { id, rootId, author }
@@ -227,25 +248,34 @@ export function CommentThread({
         };
     }, []);
 
-    const toggleReplies = async (id) => {
-        if (loading[id]) return;
-        if (expanded[id]) {
-            setExpanded((p) => ({ ...p, [id]: false }));
-            return;
-        }
-        setLoading((p) => ({ ...p, [id]: true }));
-        try {
-            // Always show the spinner briefly so the expand never feels like a jump.
-            await Promise.all([onLoadReplies ? onLoadReplies(id) : null, wait(350)]);
-        } catch {
-            /* fall through and expand whatever we already have */
-        }
-        if (!mounted.current) return;
-        setLoading((p) => ({ ...p, [id]: false }));
-        setExpanded((p) => ({ ...p, [id]: true }));
+    const toggleReplies = async (id) => { 
+        if (loading[id]) return; 
+        if (expanded[id]) { 
+            setExpanded((p) => ({ ...p, [id]: false })); 
+            return; 
+        } 
+        if (onLoadReplies) { 
+            setLoading((p) => ({ ...p, [id]: true })); 
+            try { 
+                await onLoadReplies(id); 
+            } catch { 
+            } 
+            if (!mounted.current) return; 
+            setLoading((p) => ({ ...p, [id]: false })); 
+        } 
+        setExpanded((p) => ({ ...p, [id]: true })); 
     };
 
     const openReply = (comment, rootId) => {
+        const token = localStorage.getItem("orgi_session");
+        if (!token) {
+            showToast({ 
+                message: "Please sign in to reply.", 
+                actionText: "Sign In", 
+                onAction: openAuthModal, 
+            }); 
+            return;
+        }
         setTarget((current) =>
             current?.id === comment.id
                 ? null
@@ -272,8 +302,8 @@ export function CommentThread({
         target?.id === id ? (
             <InlineComposer
                 key={id}
-                avatar={currentUserAvatar}
-                currentUserName={currentUserName}
+                avatar={effectiveAvatar}
+                currentUserName={effectiveName}
                 replyingTo={target.author}
                 submitting={submitting}
                 onSubmit={submitReply}
@@ -340,7 +370,7 @@ export function CommentThread({
                                             />
                                             {/* Reply-to-a-reply composer sits right under that reply. */}
                                             {composerFor(comment.id) && (
-                                                <div className="ml-10">{composerFor(comment.id)}</div>
+                                                <div className="mt-2">{composerFor(comment.id)}</div>
                                             )}
                                         </div>
                                     ))}

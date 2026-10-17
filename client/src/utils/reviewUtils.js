@@ -16,30 +16,36 @@ export function getReviewAuthor(item, fallbackName = "Anonymous") {
   const isAuthorObj = typeof rawAuthor === "object" && rawAuthor !== null;
 
   const name =
-    (isAuthorString ? rawAuthor.trim() : null) ||
-    (isAuthorObj ? (rawAuthor.name || rawAuthor.username || rawAuthor.user_name) : null) ||
-    item.authorName ||
-    item.author_name ||
-    item.username ||
-    item.user_name ||
-    item.users?.user_name ||
-    item.user?.user_name ||
-    item.user_metadata?.user_name ||
-    item.user_metadata?.full_name ||
-    item.user_metadata?.name ||
-    fallbackName;
+    (isAuthorString ? rawAuthor.trim() : null) || 
+    (isAuthorObj ? (rawAuthor.name || rawAuthor.username || rawAuthor.user_name || rawAuthor.global_name) : null) || 
+    item.authorName || 
+    item.author_name || 
+    item.username || 
+    item.user_name || 
+    item.users?.user_name || 
+    item.user?.user_name || 
+    item.user_metadata?.custom_claims?.global_name || 
+    item.user_metadata?.global_name || 
+    item.user_metadata?.full_name || 
+    item.user_metadata?.name || 
+    item.user_metadata?.preferred_username || 
+    item.user_metadata?.user_name || 
+    item.user_metadata?.username || 
+    item.user_metadata?.login || 
+    fallbackName; 
 
   const avatar =
-    (isAuthorObj ? (rawAuthor.avatarUrl || rawAuthor.avatar || rawAuthor.profile_url) : null) ||
-    item.avatar ||
-    item.avatarUrl ||
-    item.authorAvatar ||
-    item.author_avatar ||
-    item.profile_url ||
-    item.users?.profile_url ||
-    item.user?.profile_url ||
-    item.user_metadata?.avatar_url ||
-    item.user_metadata?.picture ||
+    (isAuthorObj ? (rawAuthor.avatarUrl || rawAuthor.avatar || rawAuthor.profile_url) : null) || 
+    item.avatar || 
+    item.avatarUrl || 
+    item.authorAvatar || 
+    item.author_avatar || 
+    item.profile_url || 
+    item.users?.profile_url || 
+    item.user?.profile_url || 
+    item.user_metadata?.avatar_url || 
+    item.user_metadata?.picture || 
+    item.user_metadata?.avatar || 
     undefined;
 
   return {

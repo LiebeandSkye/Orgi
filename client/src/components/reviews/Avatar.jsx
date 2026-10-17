@@ -50,6 +50,7 @@ export function Avatar({ src, name, size = "w-6 h-6", textSize = "text-[10px]" }
         alt={name || "Avatar"}
         loading="lazy"
         decoding="async"
+        referrerPolicy="no-referrer"
         onError={() => setHasError(true)}
         className="w-full h-full object-cover"
       />

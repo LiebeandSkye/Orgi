@@ -207,4 +207,79 @@ export const collectionController = {
       next(err); 
     } 
   }, 
+
+  async mergeCollection(req, res, next) { 
+    try { 
+      const userId = req.user.id; 
+      const { items } = req.body; 
+      
+      if (!Array.isArray(items) || items.length === 0) { 
+        return res.json({ success: true, count: 0 }); 
+      } 
+      
+      let mergedCount = 0; 
+      for (const entry of items) { 
+        const externalId = entry.externalId || entry.external_id; 
+        const rawProvider = entry.provider || "tmdb"; 
+        const provider = rawProvider === "open_library" ? "openlibrary" : rawProvider; 
+        const type = entry.type || "MOVIE"; 
+        const title = entry.title || "Untitled"; 
+        const coverUrl = entry.coverUrl || entry.cover_url || null; 
+        const status = ["plan", "progress", "completed"].includes(entry.status) ? entry.status : "plan"; 
+        
+        if (!externalId) continue; 
+        
+        let { data: item } = await supabase 
+          .from("items") 
+          .select("id") 
+          .eq("type", type) 
+          .eq("provider", provider) 
+          .eq("external_id", String(externalId)) 
+          .maybeSingle(); 
+        
+        if (!item) { 
+          const { data: newItem, error: itemError } = await supabase 
+            .from("items") 
+            .insert({ 
+              external_id: String(externalId), 
+              provider, 
+              type, 
+              title, 
+              cover_url: coverUrl, 
+            }) 
+            .select("id") 
+            .single(); 
+          
+          if (!itemError && newItem) { 
+            item = newItem; 
+          } 
+        } 
+        
+        if (!item) continue; 
+        
+        const { data: existingEntry } = await supabase 
+          .from("user_collections") 
+          .select("id") 
+          .eq("user_id", userId) 
+          .eq("item_id", item.id) 
+          .maybeSingle(); 
+        
+        if (!existingEntry) { 
+          await supabase 
+            .from("user_collections") 
+            .insert({ 
+              user_id: userId, 
+              item_id: item.id, 
+              status, 
+            }); 
+          mergedCount++; 
+        } 
+      } 
+      
+      res.json({ success: true, count: mergedCount }); 
+    } catch (err) { 
+      next(err); 
+    } 
+  }, 
 }; 
+

@@ -333,6 +333,7 @@ export async function getMovieDetails(movieId = 157336) {
         name: v.name,
         site: v.site,
         type: v.type,
+        official: v.official,
       })),
     },
   };
@@ -455,6 +456,7 @@ export async function getSeriesDetails(seriesId) {
         name: v.name,
         site: v.site,
         type: v.type,
+        official: v.official,
       })),
     },
   };
@@ -657,5 +659,52 @@ export async function getEpisodeDetails(seriesId, seasonNumber = 1, episodeNumbe
     voteCount: data.vote_count ?? 0, 
     vote_count: data.vote_count ?? 0, 
   }; 
+}
+
+export async function getMediaVideos(id, type = "movie") { 
+  if (!id) return []; 
+  const isTv = type === "tv" || type === "series" || type === "SERIES"; 
+  const resolvedId = id === "interstellar" ? 157336 : id; 
+  const endpoint = isTv ? `/tv/${resolvedId}/videos` : `/movie/${resolvedId}/videos`; 
+  try { 
+    const data = await fetchFromApi(endpoint, endpoint); 
+    return data?.results || (Array.isArray(data) ? data : []); 
+  } catch { 
+    return []; 
+  } 
+} 
+
+export function findTrailerKey(videos) { 
+  if (!videos) return null; 
+  const list = Array.isArray(videos) 
+    ? videos 
+    : Array.isArray(videos.results) 
+      ? videos.results 
+      : Array.isArray(videos.videos?.results) 
+        ? videos.videos.results 
+        : Array.isArray(videos.videos) 
+          ? videos.videos 
+          : []; 
+  if (!list.length) return null; 
+
+  const ytVideos = list.filter( 
+    (v) => (v.site === "YouTube" || v.site?.toLowerCase() === "youtube") && v.key 
+  ); 
+  if (!ytVideos.length) return null; 
+
+  const isTrailer = (v) => v.type === "Trailer" || v.type?.toLowerCase() === "trailer"; 
+  const isOfficial = (v) => v.official === true; 
+  const isMainTitle = (v) => /official\s+trailer|^trailer$/i.test(v.name || ""); 
+
+  const trailer = 
+    ytVideos.find((v) => isTrailer(v) && isOfficial(v) && isMainTitle(v)) || 
+    ytVideos.find((v) => isTrailer(v) && isMainTitle(v)) || 
+    ytVideos.find((v) => isTrailer(v) && isOfficial(v)) || 
+    ytVideos.find(isTrailer) || 
+    ytVideos.find((v) => (v.type === "Teaser" || v.type?.toLowerCase() === "teaser") && isOfficial(v)) || 
+    ytVideos.find((v) => v.type === "Teaser" || v.type?.toLowerCase() === "teaser") || 
+    ytVideos[0]; 
+
+  return trailer?.key || null; 
 } 
 

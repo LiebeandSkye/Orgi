@@ -5,64 +5,69 @@ import {
   Plus,
   Check,
   Share2,
+  ChevronDown,
   ThumbsUp,
   Reply,
   MoreHorizontal,
-  ChevronDown, 
-  X, 
-} from "lucide-react"; 
-import { getMovieDetails, getMovieMedia } from "../services/tmdb"; 
-import { DetailScoreRings } from "../components/ui/DetailScoreRings"; 
-import { Button } from "../components/ui/Button"; 
-import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab"; 
-import MediaItems from "../components/ui/MediaItems"; 
+  X,
+  Play,
+  Bookmark,
+} from "lucide-react";
+import { getMovieDetails, getMovieMedia, getMediaVideos, findTrailerKey } from "../services/tmdb";
+import { DetailScoreRings } from "../components/ui/DetailScoreRings";
+import { Button } from "../components/ui/Button";
+import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab";
+import MediaItems from "../components/ui/MediaItems";
+import Trailer from "../components/ui/Trailer";
 import { fetchMediaDetails } from "../services/mediaApi"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import { useAuth } from "../context/AuthContext"; 
+import { useToast } from "../context/ToastContext"; 
+import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection"; 
 import api from "../services/api"; 
 import OverviewTab from "../components/ui/OverviewTab";
 
 
 
-const formatReviewDate = (dateStr) => { 
-  if (!dateStr) return ""; 
-  try { 
-    const d = new Date(dateStr); 
-    if (isNaN(d.getTime())) return dateStr; 
-    return d.toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      year: "numeric", 
-    }); 
-  } catch { 
-    return dateStr; 
-  } 
-}; 
+const formatReviewDate = (dateStr) => {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+};
 
-const NAVBAR_AVATAR = 
-  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
+const NAVBAR_AVATAR =
+  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
 
-function ReviewAvatar({ src, alt, size = "w-9 h-9" }) { 
-  const [errorSrc, setErrorSrc] = useState(null); 
-  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src; 
-  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR; 
-  
-  return ( 
-    <div 
-      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`} 
-    > 
-      <img 
-        key={src} 
-        src={effectiveSrc} 
-        alt={alt || "Avatar"} 
-        onError={() => setErrorSrc(src)} 
-        className={`w-full h-full object-cover ${ 
-          isNavbarAvatar ? "scale-125" : "" 
-        }`} 
-      /> 
-    </div> 
-  ); 
-} 
+function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
+  const [errorSrc, setErrorSrc] = useState(null);
+  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src;
+  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR;
+
+  return (
+    <div
+      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`}
+    >
+      <img
+        key={src}
+        src={effectiveSrc}
+        alt={alt || "Avatar"}
+        onError={() => setErrorSrc(src)}
+        className={`w-full h-full object-cover ${
+          isNavbarAvatar ? "scale-125" : ""
+        }`}
+      />
+    </div>
+  );
+}
 
 
 export function MovieDetailsPage({
@@ -71,6 +76,7 @@ export function MovieDetailsPage({
 }) {
   const location = useLocation(); 
   const navigate = useNavigate(); 
+  const { showToast, openAuthModal } = useToast(); 
   const { category, id } = useParams(); 
   const { user, userProfile } = useAuth(); 
   const isReviewsUrl = location.pathname.includes("/reviews"); 
@@ -80,6 +86,9 @@ export function MovieDetailsPage({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTabOverride, setSelectedTabOverride] = useState(null);
   const [cropHeroOverride, setCropHeroOverride] = useState(null);
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
+  const [activeTrailerKey, setActiveTrailerKey] = useState(null);
+  const [isLoadingTrailer, setIsLoadingTrailer] = useState(false);
   
   useEffect(() => {
     let mounted = true;
@@ -173,6 +182,32 @@ export function MovieDetailsPage({
     !movieData.synopsis.includes("dust storms")
       ? " As mankind faces extinction through dust storms and famine, a team of astronauts embarks on humanity's farthest journey across the galaxy."
       : "");
+
+  const handlePlayTrailer = async () => { 
+    const immediateKey = activeTrailerKey || findTrailerKey(mediaData?.videos) || findTrailerKey(movieData?.videos); 
+    if (immediateKey) { 
+      setActiveTrailerKey(immediateKey); 
+      setShowTrailerModal(true); 
+      return; 
+    } 
+
+    setIsLoadingTrailer(true); 
+    try { 
+      const targetId = id || 157336; 
+      const fetchedVideos = await getMediaVideos(targetId, "movie"); 
+      const fetchedKey = findTrailerKey(fetchedVideos); 
+      if (fetchedKey) { 
+        setActiveTrailerKey(fetchedKey); 
+        setShowTrailerModal(true); 
+      } else { 
+        showToast({ message: "No official trailer available for this movie." }); 
+      } 
+    } catch { 
+      showToast({ message: "Unable to load trailer right now." }); 
+    } finally { 
+      setIsLoadingTrailer(false); 
+    } 
+  }; 
   
   useEffect(() => { 
     const checkOverflow = () => { 
@@ -206,8 +241,15 @@ export function MovieDetailsPage({
     let mounted = true; 
     async function loadCollectionAndReviews() { 
       try { 
+        const token = localStorage.getItem("orgi_session"); 
+        if (!token) { 
+          if (mounted) { 
+            setInCollection(isGuestInCollection(currentProvider, currentExternalId)); 
+          } 
+        } 
+ 
         const [colRes, revRes] = await Promise.allSettled([ 
-          api.get(`/collections/check/${currentProvider}/${currentExternalId}`), 
+          token ? api.get(`/collections/check/${currentProvider}/${currentExternalId}`) : Promise.resolve(null), 
           api.get(`/reviews/${currentProvider}/${currentExternalId}`), 
         ]); 
  
@@ -238,17 +280,29 @@ export function MovieDetailsPage({
  
   const handleToggleCollection = async () => { 
     if (!movieData) return; 
-    const token = localStorage.getItem("orgi_session"); 
-    if (!token) { 
-      alert("Please sign in to add items to your collection."); 
-      return; 
-    } 
- 
     const currentProvider = category 
       ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
       : "tmdb"; 
     const currentExternalId = String(category ? id : (id || 157336)); 
     const currentType = category ? category.toUpperCase() : "MOVIE"; 
+    const token = localStorage.getItem("orgi_session"); 
+
+    if (!token) { 
+      const nextInCol = toggleGuestCollection({ 
+        external_id: currentExternalId, 
+        provider: currentProvider, 
+        type: currentType, 
+        title: movieData.title, 
+        cover_url: movieData.poster || movieData.backdrop, 
+      }); 
+      setInCollection(nextInCol); 
+      showToast({ 
+        message: nextInCol ? "Added to local collection." : "Removed from local collection.", 
+        actionText: "Sign In to Sync", 
+        onAction: openAuthModal, 
+      }); 
+      return; 
+    } 
  
     setCollectionLoading(true); 
     try { 
@@ -265,7 +319,7 @@ export function MovieDetailsPage({
       } 
     } catch (err) { 
       console.error("Failed to toggle collection:", err); 
-      alert(err.message || "Failed to update collection."); 
+      showToast({ message: err.message || "Failed to update collection." }); 
     } finally { 
       setCollectionLoading(false); 
     } 
@@ -410,47 +464,99 @@ export function MovieDetailsPage({
               blendedScore={blendedScore} 
               totalVotesLabel={totalVotesLabel} 
               communityScore={communityScore !== null ? communityScore : movieData.communityRating} 
-              communityVotesLabel={communityVotesCount > 0 ? `${communityVotesCount} Orgi votes` : movieData.communityVotes} 
             /> 
- 
-            <div className="flex items-center gap-3.5 mb-8"> 
-              <Button 
-                variant="primary" 
-                size="md" 
-                className="px-5 py-2.5 rounded-[10px]" 
-                onClick={() => { 
-                  handleTabChange("Reviews"); 
-                }} 
-              > 
-                <Star size={15} className="fill-black text-black" /> 
-                <span>Rate this</span> 
-              </Button> 
- 
-              <Button 
-                variant={inCollection ? "mintGhost" : "outline"} 
-                size="md" 
-                disabled={collectionLoading} 
-                className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${ 
-                  inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : "" 
-                }`} 
-                onClick={handleToggleCollection} 
-              > 
-                {inCollection ? <Check size={15} /> : <Plus size={15} />} 
-                <span>{inCollection ? "In collection" : "Add to collection"}</span> 
-              </Button>
-              
-              <button
-                type="button"
-                aria-label="Share"
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  alert("Link copied to clipboard");
-                }}
-                className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer"
-              >
-                <Share2 size={15} />
-              </button>
-            </div>
+
+            {category ? ( 
+              <div className="flex items-center gap-3.5 mb-8"> 
+                <Button 
+                  variant="primary" 
+                  size="md" 
+                  className="px-5 py-2.5 rounded-[10px]" 
+                  onClick={() => { 
+                    handleTabChange("Reviews"); 
+                  }} 
+                > 
+                  <Star size={15} className="fill-black text-black" /> 
+                  <span>Rate this</span> 
+                </Button> 
+
+                <Button 
+                  variant={inCollection ? "mintGhost" : "outline"} 
+                  size="md" 
+                  disabled={collectionLoading} 
+                  className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${ 
+                    inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : "" 
+                  }`} 
+                  onClick={handleToggleCollection} 
+                > 
+                  {inCollection ? <Check size={15} /> : <Plus size={15} />} 
+                  <span>{inCollection ? "In collection" : "Add to collection"}</span> 
+                </Button> 
+
+                <button 
+                  type="button" 
+                  aria-label="Share" 
+                  onClick={() => { 
+                    navigator.clipboard?.writeText(window.location.href); 
+                    showToast({ message: "Link copied to clipboard." }); 
+                  }} 
+                  className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer" 
+                > 
+                  <Share2 size={15} /> 
+                </button> 
+              </div> 
+            ) : ( 
+              <div className="flex items-center gap-3.5 mb-8"> 
+                <Button 
+                  variant="primary" 
+                  size="md" 
+                  disabled={isLoadingTrailer} 
+                  className="px-5 py-2.5 rounded-[10px]" 
+                  onClick={handlePlayTrailer} 
+                > 
+                  <Play size={15} className="fill-black text-black" /> 
+                  <span>{isLoadingTrailer ? "Loading..." : "Trailer"}</span> 
+                </Button> 
+
+                <Button 
+                  variant="outline" 
+                  size="md" 
+                  className="px-5 py-2.5 rounded-[10px] transition-all cursor-pointer hover:border-[#61F1AC]/50 hover:text-white" 
+                  onClick={() => { 
+                    handleTabChange("Reviews"); 
+                  }} 
+                > 
+                  <Star size={15} className="text-[#61F1AC]" /> 
+                  <span>Rate</span> 
+                </Button> 
+
+                <button 
+                  type="button" 
+                  aria-label={inCollection ? "Remove from collection" : "Add to collection"} 
+                  disabled={collectionLoading} 
+                  onClick={handleToggleCollection} 
+                  className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${ 
+                    inCollection 
+                      ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" 
+                      : "border-[#1C1C1C] text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414]" 
+                  }`} 
+                > 
+                  <Bookmark size={15} className={inCollection ? "fill-[#61F1AC]" : ""} /> 
+                </button> 
+
+                <button 
+                  type="button" 
+                  aria-label="Share" 
+                  onClick={() => { 
+                    navigator.clipboard?.writeText(window.location.href); 
+                    showToast({ message: "Link copied to clipboard." });  
+                  }} 
+                  className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer" 
+                > 
+                  <Share2 size={15} /> 
+                </button> 
+              </div> 
+            )} 
             
             {/* 3-line synopsis in #B5B5B5 at 16px with mint "Read more" link */}
             
@@ -602,25 +708,24 @@ export function MovieDetailsPage({
             )}
           </div>
         )}
-        
-        {activeTab === "Reviews" && ( 
-          <MediaReviewsTab 
-            mediaId={category ? id : (id || 157336)} 
-            mediaType={category ? category.toUpperCase() : "MOVIE"} 
-            mediaTitle={movieData.title} 
-            coverUrl={movieData.poster || movieData.backdrop} 
-            provider={ 
-              category 
-                ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
-                : "tmdb" 
-            } 
-            category={category} 
-            initialProviderReviews={movieData.reviews} 
-            initialProviderPage={movieData.reviewsPage || 1} 
-            initialTotalPages={movieData.reviewsTotalPages || 1} 
-            communityData={communityData} 
-            onCommunityDataChange={setCommunityData} 
-          /> 
+        {activeTab === "Reviews" && (
+          <MediaReviewsTab
+            mediaId={category ? id : (id || 157336)}
+            mediaType={category ? category.toUpperCase() : "MOVIE"}
+            mediaTitle={movieData.title}
+            coverUrl={movieData.poster || movieData.backdrop}
+            provider={
+              category
+                ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary")
+                : "tmdb"
+            }
+            category={category}
+            initialProviderReviews={movieData.reviews}
+            initialProviderPage={movieData.reviewsPage || 1}
+            initialTotalPages={movieData.reviewsTotalPages || 1}
+            communityData={communityData}
+            onCommunityDataChange={setCommunityData}
+          />
         )} 
         
         {activeTab === "Media" && (
@@ -692,6 +797,15 @@ export function MovieDetailsPage({
           </div> 
         )} 
       </main> 
+ 
+      {!category && ( 
+        <Trailer 
+          open={showTrailerModal} 
+          videoKey={activeTrailerKey || findTrailerKey(mediaData?.videos) || findTrailerKey(movieData?.videos)} 
+          videoName={`${movieData?.title || "Movie"} Trailer`} 
+          onClose={() => setShowTrailerModal(false)} 
+        /> 
+      )} 
     </div> 
   ); 
 } 

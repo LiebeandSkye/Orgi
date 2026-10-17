@@ -7,6 +7,7 @@ const router = express.Router();
 router.get("/", requireAuth, collectionController.getCollection); 
 router.get("/check/:provider/:externalId", optionalAuth, collectionController.checkStatus); 
 router.post("/toggle", requireAuth, collectionController.toggleItem); 
+router.post("/merge", requireAuth, collectionController.mergeCollection); 
 router.patch("/:itemId/status", requireAuth, collectionController.updateStatus); 
  
 export default router; 

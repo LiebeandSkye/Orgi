@@ -8,6 +8,8 @@ function parseReviewMetadata(rev, currentUserId) {
   let content = rev.content || ""; 
   let isAnonymous = false; 
   
+  let providerReviewId = null; 
+  
   const anonMatch = content.match(/^<!--anon:([^>]+)-->/); 
   if (anonMatch) { 
     isAnonymous = true; 
@@ -16,7 +18,11 @@ function parseReviewMetadata(rev, currentUserId) {
     content = content.replace(/^<!--anon:[^>]+-->\s*/, ""); 
   } 
   
-  content = content.replace(/^<!--prov:[^>]+-->\s*/, ""); 
+  const provMatch = content.match(/^<!--prov:([^>]+)-->/); 
+  if (provMatch) { 
+    providerReviewId = provMatch[1]; 
+    content = content.replace(/^<!--prov:[^>]+-->\s*/, ""); 
+  } 
   
   const isAuthor = currentUserId && rev.user_id === currentUserId; 
   const safeUserId = isAuthor ? rev.user_id : isAnonymous ? null : rev.user_id; 
@@ -27,6 +33,7 @@ function parseReviewMetadata(rev, currentUserId) {
     content, 
     isAnonymous, 
     userId: safeUserId, 
+    providerReviewId, 
   }; 
 } 
 
@@ -157,7 +164,7 @@ export const reviewController = {
       }); 
       
       function countTotalDescendants(node, currentDepth = 0) { 
-        if (currentDepth >= 3) return 0; 
+        if (currentDepth >= 50) return 0; 
         const directIds = childrenByParent[node.id] || []; 
         return directIds.reduce((acc, cid) => { 
           const child = nodeMap[cid]; 
@@ -166,7 +173,7 @@ export const reviewController = {
       } 
       
       function attachReplies(node, currentDepth = 0) { 
-        if (currentDepth >= 3) { 
+        if (currentDepth >= 50) { 
           node.replies = []; 
           node.repliesCount = 0; 
           return node; 
@@ -245,7 +252,6 @@ export const reviewController = {
       } 
       
       if (parent_id) { 
-        let depthCount = 1; 
         let parentAuthor = "Member"; 
         
         const { data: directParent } = await supabaseAdmin 
@@ -265,27 +271,6 @@ export const reviewController = {
         if (directParent) { 
           const parsedDirect = parseReviewMetadata(directParent, null); 
           parentAuthor = parsedDirect.author; 
-          let currentParentId = directParent.parent_id; 
-          
-          while (currentParentId && depthCount < 10) { 
-            depthCount++; 
-            const { data: anc } = await supabaseAdmin 
-              .from("reviews") 
-              .select("parent_id") 
-              .eq("id", currentParentId) 
-              .maybeSingle(); 
-            if (anc && anc.parent_id) { 
-              currentParentId = anc.parent_id; 
-            } else { 
-              break; 
-            } 
-          } 
-        } 
-        
-        if (depthCount > 3) { 
-          return res.status(400).json({ 
-            error: { message: "Maximum reply nesting depth of 3 reached", code: "MAX_DEPTH_REACHED" } 
-          }); 
         } 
         
         let replyContent = content || ""; 
@@ -565,12 +550,13 @@ export const reviewController = {
         score, 
       } = req.body; 
       
-      if (!external_id || !provider || !content) { 
+      if (!external_id || !provider) { 
         return res.status(400).json({ 
           error: { message: "Missing required review fields", code: "VALIDATION_ERROR" } 
         }); 
       } 
       
+      const safeContent = (content && content.trim()) ? content.trim() : "Review for " + (title || "this title"); 
       const normProvider = provider === "open_library" ? "openlibrary" : provider; 
       
       let { data: item } = await supabaseAdmin 
@@ -578,6 +564,7 @@ export const reviewController = {
         .select("id") 
         .in("provider", [normProvider, provider]) 
         .eq("external_id", String(external_id)) 
+        .limit(1) 
         .maybeSingle(); 
       
       if (!item) { 
@@ -586,42 +573,64 @@ export const reviewController = {
           .insert({ 
             external_id: String(external_id), 
             provider: normProvider, 
-            type: type || "MOVIE", 
+            type: (type || "movie").toLowerCase(), 
             title: title || "Untitled Media", 
             cover_url: cover_url || null, 
           }) 
           .select("id") 
           .single(); 
         
-        if (itemError) throw itemError; 
-        item = newItem; 
+        if (itemError) { 
+          const { data: retryItem } = await supabaseAdmin 
+            .from("items") 
+            .select("id") 
+            .in("provider", [normProvider, provider]) 
+            .eq("external_id", String(external_id)) 
+            .limit(1) 
+            .maybeSingle(); 
+          if (retryItem) { 
+            item = retryItem; 
+          } else { 
+            throw itemError; 
+          } 
+        } else { 
+          item = newItem; 
+        } 
       } 
       
       const safeAuthor = (author_name && author_name.trim()) ? author_name.trim() : "Provider Reviewer"; 
       const userHash = crypto 
         .createHash("md5") 
-        .update(`prov_user:${normProvider}:${provider_review_id || content.slice(0, 50)}`) 
+        .update(`prov_user:${normProvider}:${provider_review_id || safeContent.slice(0, 50)}`) 
         .digest("hex"); 
       const provUserId = `${userHash.slice(0, 8)}-${userHash.slice(8, 12)}-4${userHash.slice(13, 16)}-a${userHash.slice(17, 20)}-${userHash.slice(20, 32)}`; 
       
-      await supabaseAdmin 
+      const { data: existingProvUser } = await supabaseAdmin 
         .from("users") 
-        .upsert({ 
-          id: provUserId, 
-          public_id: `PROV_${userHash.slice(0, 8)}`, 
-          user_name: safeAuthor, 
-          profile_url: author_avatar || null, 
-        }, { onConflict: "id" }); 
+        .select("id") 
+        .eq("id", provUserId) 
+        .maybeSingle(); 
+      
+      if (!existingProvUser) { 
+        await supabaseAdmin 
+          .from("users") 
+          .insert({ 
+            id: provUserId, 
+            public_id: helperGenerateRandomId(), 
+            user_name: safeAuthor, 
+            profile_url: author_avatar || null, 
+          }); 
+      } 
       
       const revHash = crypto 
         .createHash("md5") 
-        .update(`prov_rev:${normProvider}:${item.id}:${provider_review_id || content.slice(0, 80)}`) 
+        .update(`prov_rev:${normProvider}:${item.id}:${provider_review_id || safeContent.slice(0, 80)}`) 
         .digest("hex"); 
       const provReviewId = `${revHash.slice(0, 8)}-${revHash.slice(8, 12)}-4${revHash.slice(13, 16)}-a${revHash.slice(17, 20)}-${revHash.slice(20, 32)}`; 
       
       const parsedScore = score !== undefined && score !== null ? parseInt(score, 10) : null; 
       const validScore = (typeof parsedScore === "number" && !isNaN(parsedScore) && parsedScore >= 1 && parsedScore <= 10) ? parsedScore : null; 
-      const provContent = provider_review_id ? `<!--prov:${provider_review_id}-->${content}` : content; 
+      const provContent = provider_review_id ? `<!--prov:${provider_review_id}-->${safeContent}` : safeContent; 
       
       const { data: existingRev } = await supabaseAdmin 
         .from("reviews") 
@@ -629,24 +638,45 @@ export const reviewController = {
         .eq("id", provReviewId) 
         .maybeSingle(); 
       
+      let actualReviewId = provReviewId; 
       if (!existingRev) { 
-        await supabaseAdmin 
+        const { data: existingUserRev } = await supabaseAdmin 
           .from("reviews") 
-          .insert({ 
-            id: provReviewId, 
-            item_id: item.id, 
-            user_id: provUserId, 
-            score: validScore, 
-            content: provContent, 
-            is_edited: false, 
-          }); 
+          .select("id") 
+          .eq("user_id", provUserId) 
+          .eq("item_id", item.id) 
+          .is("parent_id", null) 
+          .maybeSingle(); 
+        
+        if (existingUserRev) { 
+          actualReviewId = existingUserRev.id; 
+        } else { 
+          const { error: insError } = await supabaseAdmin 
+            .from("reviews") 
+            .insert({ 
+              id: provReviewId, 
+              item_id: item.id, 
+              user_id: provUserId, 
+              score: validScore, 
+              content: provContent, 
+              is_edited: false, 
+            }); 
+          if (insError) { 
+            const { data: retryRev } = await supabaseAdmin 
+              .from("reviews") 
+              .select("id") 
+              .eq("id", provReviewId) 
+              .maybeSingle(); 
+            if (retryRev) actualReviewId = retryRev.id; 
+          } 
+        } 
       } 
       
       const { data: existingLike } = await supabaseAdmin 
         .from("review_likes") 
         .select("id") 
         .eq("user_id", userId) 
-        .eq("review_id", provReviewId) 
+        .eq("review_id", actualReviewId) 
         .maybeSingle(); 
       
       let liked = false; 
@@ -662,7 +692,7 @@ export const reviewController = {
           .from("review_likes") 
           .insert({ 
             user_id: userId, 
-            review_id: provReviewId, 
+            review_id: actualReviewId, 
           }); 
         if (insError) throw insError; 
         liked = true; 
@@ -671,14 +701,14 @@ export const reviewController = {
       const { count } = await supabaseAdmin 
         .from("review_likes") 
         .select("*", { count: "exact", head: true }) 
-        .eq("review_id", provReviewId); 
+        .eq("review_id", actualReviewId); 
       
       res.json({ 
         success: true, 
         data: { 
           liked, 
           likesCount: count || 0, 
-          reviewId: provReviewId, 
+          reviewId: actualReviewId, 
         } 
       }); 
     } catch (err) { 
@@ -787,6 +817,7 @@ export const reviewController = {
             review: { 
               ...item.reviews, 
               content: parsed.content, 
+              providerReviewId: parsed.providerReviewId, 
               users: { 
                 ...item.reviews.users, 
                 user_name: parsed.author, 
@@ -903,7 +934,7 @@ export const reviewController = {
       }); 
       
       function countTotalDescendants(node, currentDepth = 0) { 
-        if (currentDepth >= 3) return 0; 
+        if (currentDepth >= 50) return 0; 
         const directIds = childrenByParent[node.id] || []; 
         return directIds.reduce((acc, cid) => { 
           const child = nodeMap[cid]; 
@@ -912,7 +943,7 @@ export const reviewController = {
       } 
       
       function attachReplies(node, currentDepth = 0) { 
-        if (currentDepth >= 3) { 
+        if (currentDepth >= 50) { 
           node.replies = []; 
           node.repliesCount = 0; 
           return node; 

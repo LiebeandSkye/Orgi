@@ -108,51 +108,55 @@ function FloatingInput({ id, label, type = "text", value, onChange, disabled, re
 
 /* ---------- Form ---------- */
 
-export function AuthForm() {
-    const navigate = useNavigate();
-    const { saveSession } = useAuth();
-    const [isSignUp, setIsSignUp] = useState(false);
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [userName, setUserName] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [message, setMessage] = useState(null); // { type: "error" | "success", text }
-    const [shakeKey, setShakeKey] = useState(0);
-    const [loading, setLoading] = useState(false);
+export function AuthForm({ onSuccess }) { 
+    const navigate = useNavigate(); 
+    const { saveSession } = useAuth(); 
+    const [isSignUp, setIsSignUp] = useState(false); 
+    const [email, setEmail] = useState(""); 
+    const [password, setPassword] = useState(""); 
+    const [userName, setUserName] = useState(""); 
+    const [showPassword, setShowPassword] = useState(false); 
+    const [message, setMessage] = useState(null); 
+    const [shakeKey, setShakeKey] = useState(0); 
+    const [loading, setLoading] = useState(false); 
 
-    const showError = (text) => {
-        setMessage({ type: "error", text });
-        setShakeKey((k) => k + 1);
-    };
+    const showError = (text) => { 
+        setMessage({ type: "error", text }); 
+        setShakeKey((k) => k + 1); 
+    }; 
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setMessage(null);
-        setLoading(true);
-        try {
-            const normalizedEmail = email.trim().toLowerCase();
-            let res;
-            if (isSignUp) {
-                res = await authApi.signup({ email: normalizedEmail, password, user_name: userName });
-                if (!res.data?.session) {
-                    setMessage({
-                        type: "success",
-                        text: "Account created! Please check your email to confirm your account before logging in.",
-                    });
-                    setIsSignUp(false);
-                    return;
-                }
-            } else {
-                res = await authApi.login({ email: normalizedEmail, password });
-            }
-            saveSession(res.data?.session || res.data);
-            navigate("/");
-        } catch (err) {
-            showError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const handleSubmit = async (e) => { 
+        e.preventDefault(); 
+        setMessage(null); 
+        setLoading(true); 
+        try { 
+            const normalizedEmail = email.trim().toLowerCase(); 
+            let res; 
+            if (isSignUp) { 
+                res = await authApi.signup({ email: normalizedEmail, password, user_name: userName }); 
+                if (!res.data?.session) { 
+                    setMessage({ 
+                        type: "success", 
+                        text: "Account created! Please check your email to confirm your account before logging in.", 
+                    }); 
+                    setIsSignUp(false); 
+                    return; 
+                } 
+            } else { 
+                res = await authApi.login({ email: normalizedEmail, password }); 
+            } 
+            saveSession(res.data?.session || res.data); 
+            if (onSuccess) { 
+                onSuccess(); 
+            } else { 
+                navigate("/"); 
+            } 
+        } catch (err) { 
+            showError(err.message); 
+        } finally { 
+            setLoading(false); 
+        } 
+    }; 
 
     const handleOAuth = async (provider) => {
         setMessage(null);

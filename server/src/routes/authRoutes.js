@@ -143,31 +143,82 @@ router.post('/oauth-session', async(req, res, next) => {
             .eq('id', authUser.id)
             .maybeSingle(); 
         
+        let identityData = {}; 
+        if (Array.isArray(authUser.identities)) { 
+            for (const idn of authUser.identities) { 
+                if (idn && typeof idn.identity_data === "object" && idn.identity_data !== null) { 
+                    identityData = { ...identityData, ...idn.identity_data }; 
+                } 
+            } 
+        } 
+        const meta = { 
+            ...identityData, 
+            ...(authUser.raw_user_meta_data || {}), 
+            ...(authUser.user_metadata || {}), 
+        }; 
+        const userName = meta.custom_claims?.global_name || 
+            meta.global_name || 
+            meta.full_name || 
+            meta.name || 
+            meta.preferred_username || 
+            meta.user_name || 
+            meta.username || 
+            meta.login || 
+            (authUser.email ? authUser.email.split("@")[0] : null) || 
+            ("Unnamed Orgi " + helperGenerateRandomId(4)); 
+        let profileUrl = meta.avatar_url || meta.picture || null; 
+        if (!profileUrl && meta.avatar) { 
+            if (typeof meta.avatar === "string" && meta.avatar.startsWith("http")) { 
+                profileUrl = meta.avatar; 
+            } else if (typeof meta.avatar === "string") { 
+                const discordId = meta.provider_id || meta.id || meta.sub || authUser.id; 
+                profileUrl = `https://cdn.discordapp.com/avatars/${discordId}/${meta.avatar}.png`; 
+            } 
+        } 
+        const email = (authUser.email || meta.email) ? (authUser.email || meta.email).toLowerCase() : null; 
+        
         let profile = existingUser; 
         if (!existingUser) { 
-            const meta = authUser.user_metadata || {}; 
-            const userName = meta.custom_claims?.global_name || 
-                meta.full_name || 
-                meta.name || 
-                meta.user_name || 
-                meta.preferred_username || 
-                'Unnamed Orgi ' + helperGenerateRandomId(4); 
-            const profileUrl = meta.avatar_url || meta.picture || null; 
-            const email = authUser.email ? authUser.email.toLowerCase() : null; 
-            
-            const { data: newUser, error: insertError } = await supabaseAdmin
-                .from('users')
+            const { data: newUser, error: insertError } = await supabaseAdmin 
+                .from('users') 
                 .insert({ 
                     id: authUser.id, 
                     public_id: helperGenerateRandomId(), 
                     user_name: userName, 
                     email, 
                     profile_url: profileUrl, 
-                })
-                .select()
+                    last_login_at: new Date().toISOString(), 
+                }) 
+                .select() 
                 .single(); 
             if (insertError) throw insertError; 
             profile = newUser; 
+        } else { 
+            const updates = {}; 
+            const isDefaultOrEmptyName = !existingUser.user_name || 
+                existingUser.user_name.startsWith('Unnamed Orgi') || 
+                existingUser.user_name.trim() === ''; 
+            if (isDefaultOrEmptyName && userName && !userName.startsWith('Unnamed Orgi')) { 
+                updates.user_name = userName; 
+            } 
+            if (!existingUser.profile_url && profileUrl) { 
+                updates.profile_url = profileUrl; 
+            } 
+            if (!existingUser.email && email) { 
+                updates.email = email; 
+            } 
+            updates.last_login_at = new Date().toISOString(); 
+            if (Object.keys(updates).length > 0) { 
+                const { data: updatedUser, error: updateError } = await supabaseAdmin 
+                    .from('users') 
+                    .update(updates) 
+                    .eq('id', authUser.id) 
+                    .select() 
+                    .single(); 
+                if (!updateError && updatedUser) { 
+                    profile = updatedUser; 
+                } 
+            } 
         }
         
         res.status(200).json({ 

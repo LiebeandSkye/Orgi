@@ -235,6 +235,32 @@ router.get("/movie/:id/reviews", async (req, res, next) => {
   } 
 }); 
 
+router.get("/movie/:id/videos", async (req, res, next) => { 
+  try { 
+    const { id } = req.params; 
+    const cacheKey = `tmdb:movie:${id}:videos`; 
+    const data = await getOrSetCache(cacheKey, 24 * 3600, () => 
+      fetchTmdbApi(`/movie/${id}/videos`) 
+    ); 
+    res.json({ success: true, data }); 
+  } catch (err) { 
+    next(err); 
+  } 
+}); 
+
+router.get("/tv/:id/videos", async (req, res, next) => { 
+  try { 
+    const { id } = req.params; 
+    const cacheKey = `tmdb:tv:${id}:videos`; 
+    const data = await getOrSetCache(cacheKey, 24 * 3600, () => 
+      fetchTmdbApi(`/tv/${id}/videos`) 
+    ); 
+    res.json({ success: true, data }); 
+  } catch (err) { 
+    next(err); 
+  } 
+}); 
+
 router.get("/tv/:id/reviews", async (req, res, next) => { 
   try { 
     const { id } = req.params; 
