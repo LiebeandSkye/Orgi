@@ -140,7 +140,7 @@ export function MediaReviewsTab({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   useEffect(() => {
-    if (Array.isArray(initialProviderReviews) && initialProviderReviews.length > 0) {
+    if (Array.isArray(initialProviderReviews)) {
       setProviderReviews(initialProviderReviews);
     }
     if (initialProviderPage) setProviderPage(initialProviderPage);
@@ -819,7 +819,17 @@ export function MediaReviewsTab({
           </div>
         </div>
       </div>
-      
+
+      {sortedReviews.length === 0 && (
+        <div className="py-12 px-6 text-center rounded-[16px] border border-dashed border-[#1C1C1C] bg-[#0B0B0B]/50">
+          <p className="text-sm text-[#E0E0E0] font-medium mb-1">
+            No reviews yet for this title. Be the first to share your thoughts!
+          </p>
+          <p className="text-xs text-[#7A7A7A] font-light">
+            Write a review above to start the community discussion.
+          </p>
+        </div>
+      )}
       <div className="flex flex-col divide-y divide-[#1C1C1C]">
         {sortedReviews.slice(0, visibleReviews).map((rev) => {
           const isLiked = Boolean(likedReviews[rev.id]);

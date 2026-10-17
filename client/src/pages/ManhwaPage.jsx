@@ -25,7 +25,7 @@ export function ManhwaPage() {
   const filterToolbarRef = useRef(null);
   const prevCategoryRef = useRef(category);
 
-  // Restore filters from URL params or sessionStorage so they never unexpectedly reset
+
   const [selectedGenres, setSelectedGenres] = useState(() => {
     const fromUrl = searchParams.get("genres") || searchParams.get("genre");
     if (fromUrl && fromUrl !== "All") {
@@ -70,7 +70,7 @@ export function ManhwaPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setisLoading] = useState(true);
 
-  // Persist filter selections to sessionStorage so navigation preserves them
+
   useEffect(() => {
     try {
       sessionStorage.setItem("orgi_books_genres", JSON.stringify(selectedGenres));
@@ -95,7 +95,6 @@ export function ManhwaPage() {
     } catch {}
   }, [viewMode]);
 
-  // Synchronize state with URL search params cleanly without losing active filters
   useEffect(() => {
     setSearchParams(
       (prev) => {
@@ -186,7 +185,7 @@ export function ManhwaPage() {
     if (currentPage !== 1) setCurrentPage(1);
   };
 
-  // Close dropdowns when clicking outside the filter toolbar
+
   useEffect(() => {
     function handleClickOutside(e) {
       if (filterToolbarRef.current && !filterToolbarRef.current.contains(e.target)) {
@@ -233,9 +232,7 @@ export function ManhwaPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, debouncedQuery, currentPage, setSearchParams]);
 
-  // When switching categories (Manga, Manhwa, Manhua, Books/Novels):
-  // Preserve selected genres, status, and sort!
-  // Only reset search query and page for the new category.
+
   useEffect(() => {
     if (prevCategoryRef.current !== category) {
       prevCategoryRef.current = category;
@@ -348,7 +345,7 @@ export function ManhwaPage() {
       return true;
     });
 
-    // 3. Client-side sort fallback / consistency
+
     if (selectedSort === "Top rated") {
       result = [...result].sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
     } else if (selectedSort === "Most popular") {

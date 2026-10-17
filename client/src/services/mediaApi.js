@@ -106,9 +106,12 @@ export async function fetchMangaDexByCategory(
     const offset = (page - 1) * ITEMS_PER_PAGE;
 
     const params = new URLSearchParams();
-    params.append("limit", ITEMS_PER_PAGE);
-    params.append("offset", offset);
-    params.append("originalLanguage[]", lang);
+    if (category === "manhua") {
+        params.append("originalLanguage[]", "zh");
+        params.append("originalLanguage[]", "zh-hk");
+    } else {
+        params.append("originalLanguage[]", lang);
+    }
     params.append("includes[]", "cover_art");
     params.append("includes[]", "author");
 
@@ -186,6 +189,9 @@ export async function fetchMangaDexByCategory(
             cover: fileName
                 ? `${MANGADEX_COVERS}/${item.id}/${fileName}.512.jpg`
                 : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover",
+            backdrop: fileName
+                ? `${MANGADEX_COVERS}/${item.id}/${fileName}`
+                : null,
             rating,
             chapters:
                 chText || volText || (attrs.status ? attrs.status.charAt(0).toUpperCase() + attrs.status.slice(1) : "Ongoing"),
@@ -194,6 +200,10 @@ export async function fetchMangaDexByCategory(
                 : "Ongoing",
             genres: genreList,
             genre: genreList.join(", "),
+            synopsis:
+                attrs.description?.en ||
+                Object.values(attrs.description || {})[0] ||
+                "",
             follows: statsMap[item.id]?.follows || 0,
             updatedAt: attrs.updatedAt || attrs.createdAt || "",
         };
@@ -209,6 +219,158 @@ export async function fetchMangaDexByCategory(
     }
     results.totalPages = Math.max(1, totalPages);
     return results;
+}
+
+// Multi-tier client cache (Memory + SessionStorage)
+const MEMORY_FEED_CACHE = new Map();
+const DASHBOARD_CACHE_KEY = "orgi_books_dashboard_feeds_v4";
+const POPULAR_BOOKS_CACHE_KEY = "orgi_popular_books_cache_v4";
+const DASHBOARD_CACHE_TTL = 20 * 60 * 1000; // 20 minutes
+const POPULAR_BOOKS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+export function getCachedBooksDashboardFeeds() {
+    // 1. In-memory check (0ms)
+    const mem = MEMORY_FEED_CACHE.get(DASHBOARD_CACHE_KEY);
+    if (mem && Date.now() - mem.timestamp < DASHBOARD_CACHE_TTL && mem.data) {
+        return mem.data;
+    }
+    // 2. SessionStorage check (0ms)
+    try {
+        const raw = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Date.now() - parsed.timestamp < DASHBOARD_CACHE_TTL && parsed.data) {
+                MEMORY_FEED_CACHE.set(DASHBOARD_CACHE_KEY, parsed);
+                return parsed.data;
+            }
+        }
+    } catch {}
+    return null;
+}
+
+export function setCachedBooksDashboardFeeds(data) {
+    if (!data) return;
+    const entry = { data, timestamp: Date.now() };
+    MEMORY_FEED_CACHE.set(DASHBOARD_CACHE_KEY, entry);
+    try {
+        sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(entry));
+    } catch {}
+}
+
+export async function fetchBooksDashboardFeeds(onProgress) {
+    const cached = getCachedBooksDashboardFeeds();
+    if (cached) {
+        if (typeof onProgress === "function") {
+            onProgress(cached);
+        }
+    }
+
+    // 1. Try fast server-aggregated Redis cache endpoint
+    try {
+        const serverRes = await fetch(`${API_BASE_URL}/dashboard-feeds`).catch(() => null);
+        if (serverRes && serverRes.ok) {
+            const serverJson = await serverRes.json();
+            if (serverJson.success && serverJson.data) {
+                setCachedBooksDashboardFeeds(serverJson.data);
+                if (typeof onProgress === "function") {
+                    onProgress(serverJson.data);
+                }
+                return serverJson.data;
+            }
+        }
+    } catch {
+        // Fall back to progressive client-side fetching below
+    }
+
+    const formatRoute = (item, cat) => {
+        const image = item.cover || item.poster || null;
+        return {
+            ...item,
+            cover: image,
+            poster: image,
+            backdrop: item.backdrop || image,
+            route: `/books/${cat}/${item.id}`,
+            score: item.rating || "8.5",
+            type: (item.type || cat).toUpperCase(),
+        };
+    };
+
+    let aggregated = cached
+        ? { ...cached }
+        : {
+              trendingManhwa: [],
+              trendingManga: [],
+              trendingManhua: [],
+              trendingBooks: [],
+              fanFavorites: [],
+          };
+
+    // 2. Fast track: MangaDex feeds (Manhwa, Manga, Manhua, Fan Favorites resolve in ~0.8s)
+    const mangaDexPromise = Promise.all([
+        fetchMangaDexByCategory("manhwa", 1, "", "All", "All", "Most popular").catch(() => []),
+        fetchMangaDexByCategory("manga", 1, "", "All", "All", "Most popular").catch(() => []),
+        fetchMangaDexByCategory("manhua", 1, "", "All", "All", "Most popular").catch(() => []),
+        fetchMangaDexByCategory("manhwa", 1, "", "All", "All", "Top rated").catch(() => []),
+        fetchMangaDexByCategory("manga", 1, "", "All", "All", "Top rated").catch(() => []),
+    ]).then(([tManhwa, tManga, tManhua, fvManhwa, fvManga]) => {
+        const fanFavorites = [];
+        const maxLen = Math.max(fvManhwa.length, fvManga.length);
+        for (let i = 0; i < maxLen; i++) {
+            if (fvManhwa[i]) fanFavorites.push(formatRoute(fvManhwa[i], "manhwa"));
+            if (fvManga[i]) fanFavorites.push(formatRoute(fvManga[i], "manga"));
+        }
+
+        const mangaUpdate = {
+            trendingManhwa: (tManhwa || []).map((m) => formatRoute(m, "manhwa")),
+            trendingManga: (tManga || []).map((m) => formatRoute(m, "manga")),
+            trendingManhua: (tManhua || []).map((m) => formatRoute(m, "manhua")),
+            fanFavorites: fanFavorites.slice(0, 16),
+        };
+
+        aggregated = { ...aggregated, ...mangaUpdate };
+        if (typeof onProgress === "function") {
+            onProgress(aggregated);
+        }
+        return mangaUpdate;
+    });
+
+    // 3. Books track: Check local cache first so Open Library takes 0ms
+    const booksPromise = (async () => {
+        try {
+            const raw = sessionStorage.getItem(POPULAR_BOOKS_CACHE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Date.now() - parsed.timestamp < POPULAR_BOOKS_CACHE_TTL && Array.isArray(parsed.data)) {
+                    const booksUpdate = { trendingBooks: parsed.data.map((b) => formatRoute(b, "novels")) };
+                    aggregated = { ...aggregated, ...booksUpdate };
+                    if (typeof onProgress === "function") {
+                        onProgress(aggregated);
+                    }
+                    return booksUpdate;
+                }
+            }
+        } catch {}
+
+        const popularBooks = await fetchBooks(1, "").catch(() => []);
+        if (Array.isArray(popularBooks) && popularBooks.length > 0) {
+            try {
+                sessionStorage.setItem(
+                    POPULAR_BOOKS_CACHE_KEY,
+                    JSON.stringify({ data: popularBooks, timestamp: Date.now() })
+                );
+            } catch {}
+        }
+        const booksUpdate = { trendingBooks: (popularBooks || []).map((b) => formatRoute(b, "novels")) };
+        aggregated = { ...aggregated, ...booksUpdate };
+        if (typeof onProgress === "function") {
+            onProgress(aggregated);
+        }
+        return booksUpdate;
+    })();
+
+    await Promise.allSettled([mangaDexPromise, booksPromise]);
+    setCachedBooksDashboardFeeds(aggregated);
+    return aggregated;
 }
 
 export async function fetchBooks(page = 1, query = "") {
@@ -227,18 +389,18 @@ export async function fetchBooks(page = 1, query = "") {
         // Fall back to direct Open Library call below
     }
     const offset = (page - 1) * ITEMS_PER_PAGE;
-    const url = query.trim()
-        ? `${OPEN_LIBRARY_BASE}/search.json?q=${encodeURIComponent(query.trim())}&limit=${ITEMS_PER_PAGE}&page=${page}`
-        : `${OPEN_LIBRARY_BASE}/subjects/fiction.json?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+    const searchQ = query.trim() ? encodeURIComponent(query.trim()) : "subject%3Afiction";
+    const url = `${OPEN_LIBRARY_BASE}/search.json?q=${searchQ}&limit=${ITEMS_PER_PAGE}&page=${page}&fields=key,title,author_name,cover_i,ratings_average,ratings_count,first_publish_year,subject`;
 
     const res = await fetch(url);
     const json = await res.json();
-    const rawItems = json.docs || json.works || [];
+    const rawItems = json.docs || [];
 
     const results = rawItems.map((item) => {
-        const coverId = item.cover_id || item.cover_i;
-        const authorName =
-            item.author_name?.[0] || item.authors?.[0]?.name || "Unknown Author";
+        const coverId = item.cover_i;
+        const authorName = item.author_name?.[0] || "Unknown Author";
+        const rawScore = typeof item.ratings_average === "number" ? item.ratings_average * 2 : null;
+        const rating = rawScore ? rawScore.toFixed(1) : "8.4";
         return {
             id: (item.key || "").replace("/works/", ""),
             title: item.title || "Untitled",
@@ -246,10 +408,12 @@ export async function fetchBooks(page = 1, query = "") {
             cover: coverId
                 ? `${OPEN_LIBRARY_COVERS}/${coverId}-L.jpg`
                 : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover",
-            rating: "8.6",
+            rating,
+            score: rating,
+            voteCount: item.ratings_count || 0,
             chapters: item.first_publish_year ? `${item.first_publish_year}` : "Novel",
             status: "Completed",
-            genres: Array.isArray(item.subject) ? item.subject : Array.isArray(item.subjects) ? item.subjects : ["Fiction"],
+            genres: Array.isArray(item.subject) ? item.subject : ["Fiction"],
             genre: Array.isArray(item.subject) ? item.subject.slice(0, 5).join(", ") : "Fiction",
         };
     });
@@ -270,7 +434,321 @@ export async function fetchBooks(page = 1, query = "") {
     return results;
 }
 
+export async function searchMangaDex(query, category = "all", limit = 18) {
+    if (!query?.trim()) return [];
+    const params = new URLSearchParams();
+    params.append("limit", limit);
+    params.append("title", query.trim());
+    params.append("includes[]", "cover_art");
+    params.append("includes[]", "author");
+    params.append("order[relevance]", "desc");
+    params.append("contentRating[]", "safe");
+    params.append("contentRating[]", "suggestive");
+
+    if (category === "manhwa") params.append("originalLanguage[]", "ko");
+    else if (category === "manga") params.append("originalLanguage[]", "ja");
+    else if (category === "manhua") {
+        params.append("originalLanguage[]", "zh");
+        params.append("originalLanguage[]", "zh-hk");
+    }
+
+    const res = await fetch(`${MANGADEX_BASE}/manga?${params.toString()}`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    const list = json.data || [];
+
+    return list.map((item) => {
+        const attrs = item.attributes || {};
+        const title = getEnglishTitle(attrs);
+        const coverRel = item.relationships?.find((r) => r.type === "cover_art");
+        const authorRel = item.relationships?.find((r) => r.type === "author");
+        const fileName = coverRel?.attributes?.fileName;
+        const origLang = attrs.originalLanguage;
+        const type = origLang === "ko" ? "manhwa" : origLang === "zh" ? "manhua" : "manga";
+
+        return {
+            id: item.id,
+            title,
+            author: authorRel?.attributes?.name || "MangaDex",
+            cover: fileName
+                ? `${MANGADEX_COVERS}/${item.id}/${fileName}.512.jpg`
+                : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover",
+            rating: "8.8",
+            chapters: attrs.lastChapter ? `Ch. ${attrs.lastChapter}` : "Ongoing",
+            type,
+        };
+    });
+}
+
+export async function searchBooks(query, page = 1) {
+    return fetchBooks(page, query);
+}
+
+function formatReviewContent(rawText) {
+    if (!rawText) return "";
+    let text = rawText
+        .replace(/~{3}[\s\S]*?~{3}/g, "")
+        .replace(/#+\s*/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/[_*~`]/g, "")
+        .replace(/\n\s*\n+/g, "\n\n")
+        .trim();
+    if (text.length > 900) {
+        text = text.slice(0, 900) + "...";
+    }
+    return text;
+}
+
+export async function fetchBooksBySubject(subject = "fantasy", limit = 16) {
+    const cacheKey = `orgi_books_subj_v1_${subject}`;
+    try {
+        const raw = sessionStorage.getItem(cacheKey);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Date.now() - parsed.timestamp < POPULAR_BOOKS_CACHE_TTL && Array.isArray(parsed.data)) {
+                return parsed.data;
+            }
+        }
+    } catch {}
+
+    const cleanSubj = encodeURIComponent(subject.toLowerCase());
+
+    // 1. Try server endpoint backed by Upstash Redis
+    try {
+        const proxyRes = await fetch(`${API_BASE_URL}/books/subject/${cleanSubj}?limit=${limit}`);
+        if (proxyRes.ok) {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success && Array.isArray(proxyJson.data) && proxyJson.data.length > 0) {
+                try {
+                    sessionStorage.setItem(cacheKey, JSON.stringify({ data: proxyJson.data, timestamp: Date.now() }));
+                } catch {}
+                return proxyJson.data;
+            }
+        }
+    } catch {
+        // Fall back to direct Open Library below
+    }
+
+    // 2. Direct Open Library fallback
+    try {
+        const res = await fetch(`${OPEN_LIBRARY_BASE}/subjects/${cleanSubj}.json?limit=${limit}`);
+        if (res.ok) {
+            const json = await res.json();
+            const works = json.works || [];
+            if (works.length > 0) {
+                const items = works.map((item, idx) => {
+                    const coverId = item.cover_id;
+                    const authorName = item.authors?.[0]?.name || "Unknown Author";
+                    const baseScore = 8.4 + ((idx * 3) % 12) * 0.1;
+                    const rating = Math.min(9.6, baseScore).toFixed(1);
+                    const id = (item.key || "").replace("/works/", "");
+                    const cover = coverId
+                        ? `${OPEN_LIBRARY_COVERS}/${coverId}-L.jpg`
+                        : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover";
+                    return {
+                        id,
+                        title: item.title || "Untitled",
+                        author: authorName,
+                        cover,
+                        poster: cover,
+                        backdrop: cover,
+                        rating,
+                        score: rating,
+                        voteCount: item.edition_count ? item.edition_count * 120 : 1400,
+                        chapters: item.first_publish_year ? `${item.first_publish_year}` : "Novel",
+                        year: item.first_publish_year || "Classic",
+                        status: "Completed",
+                        statusBadge: "Completed",
+                        route: `/books/novels/${id}`,
+                        type: "NOVELS",
+                    };
+                });
+                try {
+                    sessionStorage.setItem(cacheKey, JSON.stringify({ data: items, timestamp: Date.now() }));
+                } catch {}
+                return items;
+            }
+        }
+    } catch {
+        // Fallback to fetchBooks below
+    }
+
+    const fallback = await fetchBooks(1, subject).catch(() => []);
+    return (fallback || []).map((b) => ({
+        ...b,
+        cover: b.cover || b.poster,
+        poster: b.poster || b.cover,
+        backdrop: b.cover || b.poster,
+        route: `/books/novels/${b.id}`,
+        score: b.rating || "8.5",
+        type: "NOVELS",
+    }));
+}
+
+const HUB_CACHE_PREFIX = "orgi_cat_hub_v3_";
+
+export function getCachedCategoryHubFeeds(category) {
+    if (!category || category === "all") return null;
+    const key = `${HUB_CACHE_PREFIX}${category}`;
+    const mem = MEMORY_FEED_CACHE.get(key);
+    if (mem && Date.now() - mem.timestamp < DASHBOARD_CACHE_TTL && mem.data) {
+        return mem.data;
+    }
+    try {
+        const raw = sessionStorage.getItem(key);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Date.now() - parsed.timestamp < DASHBOARD_CACHE_TTL && parsed.data) {
+                MEMORY_FEED_CACHE.set(key, parsed);
+                return parsed.data;
+            }
+        }
+    } catch {}
+    return null;
+}
+
+export async function fetchCategoryHubFeeds(category, onProgress) {
+    if (!category || category === "all") return null;
+    const key = `${HUB_CACHE_PREFIX}${category}`;
+    const cached = getCachedCategoryHubFeeds(category);
+    if (cached && typeof onProgress === "function") {
+        onProgress(cached);
+    }
+
+    // 1. Try fast server category hub endpoint backed by Upstash Redis cache
+    try {
+        const proxyRes = await fetch(`${API_BASE_URL}/hub/${encodeURIComponent(category.toLowerCase())}`);
+        if (proxyRes.ok) {
+            const proxyJson = await proxyRes.json();
+            if (proxyJson.success && proxyJson.data) {
+                const hubData = proxyJson.data;
+                const entry = { data: hubData, timestamp: Date.now() };
+                MEMORY_FEED_CACHE.set(key, entry);
+                try {
+                    sessionStorage.setItem(key, JSON.stringify(entry));
+                } catch {}
+                if (typeof onProgress === "function") {
+                    onProgress(hubData);
+                }
+                return hubData;
+            }
+        }
+    } catch {
+        // Fall back to progressive client-side fetching below
+    }
+
+    const formatItem = (item, cat, extra = {}) => {
+        const image = item.cover || item.poster || null;
+        return {
+            ...item,
+            ...extra,
+            cover: image,
+            poster: image,
+            backdrop: item.backdrop || image,
+            route: `/books/${cat}/${item.id}`,
+            score: item.rating || item.score || "8.6",
+            rating: item.rating || item.score || "8.6",
+            type: (item.type || cat).toUpperCase(),
+        };
+    };
+
+    let hubData = cached
+        ? { ...cached }
+        : {
+              trending: [],
+              masterpieces: [],
+              completed: [],
+              darkFantasy: [],
+              action: [],
+              psychological: [],
+          };
+
+    const emit = (patch) => {
+        hubData = { ...hubData, ...patch };
+        if (typeof onProgress === "function") {
+            onProgress(hubData);
+        }
+    };
+
+    if (category === "novels") {
+        const tasks = [
+            fetchBooksBySubject("fiction", 16).then((res) => emit({ trending: res })),
+            fetchBooksBySubject("classic_literature", 16).then((res) => emit({ masterpieces: res })),
+            fetchBooksBySubject("fantasy", 16).then((res) =>
+                emit({ completed: res.map((i) => ({ ...i, statusBadge: "Completed" })), darkFantasy: res })
+            ),
+            fetchBooksBySubject("science_fiction", 16).then((res) => emit({ action: res })),
+            fetchBooksBySubject("thriller", 16).then((res) => emit({ psychological: res })),
+        ];
+        await Promise.allSettled(tasks);
+    } else {
+        const psychOrMartialGenre = category === "manga" ? "Psychological" : "Martial Arts";
+        const tasks = [
+            fetchMangaDexByCategory(category, 1, "", "All", "All", "Most popular")
+                .then((res) => emit({ trending: (res || []).map((m) => formatItem(m, category)) }))
+                .catch(() => {}),
+            fetchMangaDexByCategory(category, 1, "", "All", "All", "Top rated")
+                .then((res) => emit({ masterpieces: (res || []).map((m) => formatItem(m, category)) }))
+                .catch(() => {}),
+            fetchMangaDexByCategory(category, 1, "", "All", "Completed", "Top rated")
+                .then((res) =>
+                    emit({
+                        completed: (res || []).map((m) =>
+                            formatItem(m, category, { statusBadge: "Completed", status: "Completed" })
+                        ),
+                    })
+                )
+                .catch(() => {}),
+            fetchMangaDexByCategory(category, 1, "", "Fantasy", "All", "Top rated")
+                .then((res) => emit({ darkFantasy: (res || []).map((m) => formatItem(m, category)) }))
+                .catch(() => {}),
+            fetchMangaDexByCategory(category, 1, "", "Action", "All", "Most popular")
+                .then((res) => emit({ action: (res || []).map((m) => formatItem(m, category)) }))
+                .catch(() => {}),
+            fetchMangaDexByCategory(category, 1, "", psychOrMartialGenre, "All", "Top rated")
+                .then((res) => emit({ psychological: (res || []).map((m) => formatItem(m, category)) }))
+                .catch(() => {}),
+        ];
+        await Promise.allSettled(tasks);
+    }
+
+    const entry = { data: hubData, timestamp: Date.now() };
+    MEMORY_FEED_CACHE.set(key, entry);
+    try {
+        sessionStorage.setItem(key, JSON.stringify(entry));
+    } catch {}
+    return hubData;
+}
+
+const DETAIL_CACHE = new Map();
+const DETAIL_TTL = 30 * 60 * 1000; // 30 mins
+
+function cacheAndReturnDetail(key, data) {
+    if (data) {
+        DETAIL_CACHE.set(key, data);
+        try {
+            sessionStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+        } catch {}
+    }
+    return data;
+}
+
 export async function fetchMediaDetails(category, id) {
+    const cacheKey = `orgi_detail_v2_${category}_${id}`;
+    if (DETAIL_CACHE.has(cacheKey)) {
+        return DETAIL_CACHE.get(cacheKey);
+    }
+    try {
+        const raw = sessionStorage.getItem(cacheKey);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Date.now() - parsed.timestamp < DETAIL_TTL && parsed.data) {
+                DETAIL_CACHE.set(cacheKey, parsed.data);
+                return parsed.data;
+            }
+        }
+    } catch {}
+
     try {
         const proxyRes = await fetch(`${API_BASE_URL}/detail/${encodeURIComponent(category)}/${encodeURIComponent(id)}`);
         if (proxyRes.ok) {
@@ -283,15 +761,31 @@ export async function fetchMediaDetails(category, id) {
                         avatar: c.avatar || getFallbackAuthorAvatar(c.name, ""),
                     }));
                 }
-                return data;
+                return cacheAndReturnDetail(cacheKey, data);
             }
         }
     } catch {
         // Fall back to direct fetching below
     }
     if (category === "novels" || category === "books" || category === "light-novels") {
-        const res = await fetch(`${OPEN_LIBRARY_BASE}/works/${id}.json`);
+        const [res, ratingsRes] = await Promise.all([
+            fetch(`${OPEN_LIBRARY_BASE}/works/${id}.json`),
+            fetch(`${OPEN_LIBRARY_BASE}/works/${id}/ratings.json`).catch(() => null),
+        ]);
         const data = await res.json();
+        let bookRating = 8.5;
+        let bookVotes = "1.2k ratings";
+        if (ratingsRes && ratingsRes.ok) {
+            try {
+                const ratingsJson = await ratingsRes.json();
+                if (ratingsJson?.summary?.average) {
+                    bookRating = Number((ratingsJson.summary.average * 2).toFixed(1));
+                }
+                if (ratingsJson?.summary?.count) {
+                    bookVotes = `${ratingsJson.summary.count.toLocaleString()} ratings`;
+                }
+            } catch {}
+        }
         const coverId = data.covers?.[0];
         const coverUrl = coverId
             ? `${OPEN_LIBRARY_COVERS}/${coverId}-L.jpg`
@@ -363,7 +857,7 @@ export async function fetchMediaDetails(category, id) {
             // keep rawCovers fallback
         }
 
-        return {
+        return cacheAndReturnDetail(cacheKey, {
             id,
             type: "BOOK / NOVEL",
             title: data.title || "Untitled",
@@ -373,10 +867,10 @@ export async function fetchMediaDetails(category, id) {
             certificate: "All Ages",
             poster: coverUrl,
             backdrop: coverUrl,
-            tmdbRating: 8.6,
-            tmdbVotes: "1.2k ratings",
-            communityRating: 8.8,
-            communityVotes: "340 ratings",
+            tmdbRating: bookRating,
+            tmdbVotes: bookVotes,
+            communityRating: bookRating,
+            communityVotes: bookVotes,
             synopsis:
                 typeof data.description === "string"
                     ? data.description
@@ -385,6 +879,25 @@ export async function fetchMediaDetails(category, id) {
                 { id: "author", name: authorName, character: "Author", avatar: authorAvatar }
             ],
             volumes: volumeCovers,
+            artworks: volumeCovers.map((v) => ({
+                id: v.id,
+                title: v.title,
+                subtitle: v.subtitle,
+                type: "Edition Cover",
+                file_path: v.cover,
+                url: v.cover,
+                format: "poster",
+            })),
+            images: {
+                backdrops: [],
+                posters: volumeCovers.map((v) => ({
+                    id: v.id,
+                    file_path: v.cover,
+                    title: v.title,
+                    subtitle: v.subtitle,
+                    format: "poster",
+                })),
+            },
             reviews: [],
             details: {
                 director: authorName,
@@ -395,7 +908,7 @@ export async function fetchMediaDetails(category, id) {
                 aspectRatio: "Book",
                 studio: "Open Library",
             },
-        };
+        });
     }
 
     const [res, statRes, aggRes, coversRes] = await Promise.all([
@@ -462,6 +975,7 @@ export async function fetchMediaDetails(category, id) {
         : "https://via.placeholder.com/300x450/0B0B0B/7A7A7A?text=No+Cover";
 
     let volumeCovers = [];
+    let promoArtworks = [];
     if (coversRes && coversRes.ok) {
         try {
             const coversJson = await coversRes.json();
@@ -484,6 +998,17 @@ export async function fetchMediaDetails(category, id) {
                         subtitle: chCountForVol
                             ? `${chCountForVol} ${chCountForVol === 1 ? "Chapter" : "Chapters"}`
                             : cAttrs.description || (volNum !== "Main" ? `Vol. ${volNum}` : "Key Visual"),
+                    });
+                }
+                if (!cAttrs.volume || cAttrs.volume === "none" || (cAttrs.description && cAttrs.description.trim().length > 0)) {
+                    promoArtworks.push({
+                        id: cItem.id,
+                        title: cAttrs.description || "Official Illustration",
+                        subtitle: cAttrs.locale ? `Locale: ${cAttrs.locale.toUpperCase()}` : "Special Art",
+                        type: "Official Illustration",
+                        file_path: `${MANGADEX_COVERS}/${data.id}/${cFile}.512.jpg`,
+                        url: `${MANGADEX_COVERS}/${data.id}/${cFile}.512.jpg`,
+                        format: "poster",
                     });
                 }
             });
@@ -515,16 +1040,107 @@ export async function fetchMediaDetails(category, id) {
         volumeCount = volumeCovers.length;
     }
 
-    const genres = (attrs.tags || [])
-        .filter((t) => t.attributes?.group === "genre")
-        .slice(0, 3)
-        .map((t) => t.attributes?.name?.en)
-        .join(", ");
+    // Fetch official banner and art from AniList / Kitsu
+    let officialArtworks = [];
+    let officialBanner = null;
+    const mangaReviews = [];
+
+    const alId = attrs.links?.al;
+    try {
+        const aniQuery = `
+          query ($id: Int, $search: String) {
+            Media(id: $id, search: $search, type: MANGA) {
+              bannerImage
+              coverImage {
+                extraLarge
+                large
+              }
+            }
+          }
+        `;
+        const aniRes = await fetch("https://graphql.anilist.co", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                query: aniQuery,
+                variables: alId ? { id: parseInt(alId, 10) } : { search: title },
+            }),
+        }).catch(() => null);
+
+        if (aniRes && aniRes.ok) {
+            const aniJson = await aniRes.json();
+            const media = aniJson?.data?.Media;
+            if (media?.bannerImage) {
+                officialBanner = media.bannerImage;
+                officialArtworks.push({
+                    id: "official-banner-anilist",
+                    title: "Official Banner Art",
+                    subtitle: "AniList Official Media",
+                    type: "Official Banner",
+                    file_path: media.bannerImage,
+                    url: media.bannerImage,
+                    format: "backdrop",
+                });
+            }
+            if (media?.coverImage?.extraLarge && media.coverImage.extraLarge !== coverUrl) {
+                officialArtworks.push({
+                    id: "official-key-art",
+                    title: "Key Visual Artwork",
+                    subtitle: "Original High-Res Key Visual",
+                    type: "Key Visual",
+                    file_path: media.coverImage.extraLarge,
+                    url: media.coverImage.extraLarge,
+                    format: "poster",
+                });
+            }
+        }
+    } catch {
+        // Fallback gracefully
+    }
+
+    if (!officialBanner) {
+        try {
+            const ktRes = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(title)}&page[limit]=1`).catch(() => null);
+            if (ktRes && ktRes.ok) {
+                const ktJson = await ktRes.json();
+                const ktCover = ktJson?.data?.[0]?.attributes?.coverImage;
+                const ktBanner = ktCover?.original || ktCover?.large;
+                if (ktBanner) {
+                    officialBanner = ktBanner;
+                    officialArtworks.unshift({
+                        id: "official-banner-kitsu",
+                        title: "Official Header Artwork",
+                        subtitle: "Kitsu Official Media",
+                        type: "Official Banner",
+                        file_path: ktBanner,
+                        url: ktBanner,
+                        format: "backdrop",
+                    });
+                }
+            }
+        } catch {
+            // Fallback gracefully
+        }
+    }
+
+    if (promoArtworks.length > 0) {
+        promoArtworks.forEach((art) => {
+            if (!officialArtworks.some((a) => a.file_path === art.file_path)) {
+                officialArtworks.push(art);
+            }
+        });
+    }
 
     const authorName = authorRel?.attributes?.name || "Unknown Author";
     const artistName = artistRel?.attributes?.name || authorName;
     const authorBio = authorRel?.attributes?.biography?.en || "";
     const artistBio = artistRel?.attributes?.biography?.en || "";
+
+    const genres = (attrs.tags || [])
+        .filter((t) => t.attributes?.group === "genre")
+        .slice(0, 3)
+        .map((t) => t.attributes?.name?.en)
+        .join(", ");
 
     const isSameCreator =
         authorRel?.id === artistRel?.id ||
@@ -561,7 +1177,7 @@ export async function fetchMediaDetails(category, id) {
         .filter(Boolean)
         .join(" · ") || (attrs.status || "Ongoing").toUpperCase();
 
-    return {
+    return cacheAndReturnDetail(cacheKey, {
         id: data.id,
         type: (category || "manhwa").toUpperCase(),
         title,
@@ -570,7 +1186,7 @@ export async function fetchMediaDetails(category, id) {
         runtime: volAndChapSummary,
         certificate: (attrs.contentRating || "safe").toUpperCase(),
         poster: coverUrl,
-        backdrop: coverUrl,
+        backdrop: officialBanner || coverUrl,
         tmdbRating: liveRating,
         tmdbVotes: liveFollows,
         communityRating: liveRating,
@@ -581,7 +1197,18 @@ export async function fetchMediaDetails(category, id) {
             "No synopsis available.",
         cast: creatorCards,
         volumes: volumeCovers,
-        reviews: [],
+        artworks: officialArtworks,
+        images: {
+            backdrops: officialArtworks.filter((a) => a.format === "backdrop"),
+            posters: volumeCovers.map((v) => ({
+                id: v.id,
+                file_path: v.cover,
+                title: v.title,
+                subtitle: v.subtitle,
+                format: "poster",
+            })),
+        },
+        reviews: mangaReviews,
         details: {
             director: authorName,
             writers: authorName,
@@ -591,5 +1218,5 @@ export async function fetchMediaDetails(category, id) {
             aspectRatio: chapterCount ? `${chapterCount} Chapters` : (category || "manhwa").toUpperCase(),
             studio: "MangaDex",
         },
-    };
+    });
 }

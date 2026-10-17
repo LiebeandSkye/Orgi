@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation, useParams, Link, useNavigate } from "react-router-dom";
+import { useLocation, useParams, Link } from "react-router-dom";
 import {
   Star,
   Plus,
   Check,
   Share2,
+  ChevronDown,
   ThumbsUp,
   Reply,
   MoreHorizontal,
@@ -24,45 +25,45 @@ import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollec
 import api from "../services/api"; 
 
 
-const formatReviewDate = (dateStr) => { 
-  if (!dateStr) return ""; 
-  try { 
-    const d = new Date(dateStr); 
-    if (isNaN(d.getTime())) return dateStr; 
-    return d.toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      year: "numeric", 
-    }); 
-  } catch { 
-    return dateStr; 
-  } 
-}; 
+const formatReviewDate = (dateStr) => {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+};
 
-const NAVBAR_AVATAR = 
-  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
+const NAVBAR_AVATAR =
+  "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
 
-function ReviewAvatar({ src, alt, size = "w-9 h-9" }) { 
-  const [errorSrc, setErrorSrc] = useState(null); 
-  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src; 
-  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR; 
-  
-  return ( 
-    <div 
-      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`} 
-    > 
-      <img 
-        key={src} 
-        src={effectiveSrc} 
-        alt={alt || "Avatar"} 
-        onError={() => setErrorSrc(src)} 
-        className={`w-full h-full object-cover ${ 
-          isNavbarAvatar ? "scale-125" : "" 
-        }`} 
-      /> 
-    </div> 
-  ); 
-} 
+function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
+  const [errorSrc, setErrorSrc] = useState(null);
+  const effectiveSrc = !src || errorSrc === src ? NAVBAR_AVATAR : src;
+  const isNavbarAvatar = effectiveSrc === NAVBAR_AVATAR;
+
+  return (
+    <div
+      className={`${size} rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#1C1C1C] shrink-0 flex items-center justify-center`}
+    >
+      <img
+        key={src}
+        src={effectiveSrc}
+        alt={alt || "Avatar"}
+        onError={() => setErrorSrc(src)}
+        className={`w-full h-full object-cover ${
+          isNavbarAvatar ? "scale-125" : ""
+        }`}
+      />
+    </div>
+  );
+}
 
 export function MovieDetailsPage({
   initialTab = "Cast",
@@ -609,25 +610,24 @@ export function MovieDetailsPage({
             )}
           </div>
         )}
-        
-        {activeTab === "Reviews" && ( 
-          <MediaReviewsTab 
-            mediaId={category ? id : (id || 157336)} 
-            mediaType={category ? category.toUpperCase() : "MOVIE"} 
-            mediaTitle={movieData.title} 
-            coverUrl={movieData.poster || movieData.backdrop} 
-            provider={ 
-              category 
-                ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
-                : "tmdb" 
-            } 
-            category={category} 
-            initialProviderReviews={movieData.reviews} 
-            initialProviderPage={movieData.reviewsPage || 1} 
-            initialTotalPages={movieData.reviewsTotalPages || 1} 
-            communityData={communityData} 
-            onCommunityDataChange={setCommunityData} 
-          /> 
+        {activeTab === "Reviews" && (
+          <MediaReviewsTab
+            mediaId={category ? id : (id || 157336)}
+            mediaType={category ? category.toUpperCase() : "MOVIE"}
+            mediaTitle={movieData.title}
+            coverUrl={movieData.poster || movieData.backdrop}
+            provider={
+              category
+                ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary")
+                : "tmdb"
+            }
+            category={category}
+            initialProviderReviews={movieData.reviews}
+            initialProviderPage={movieData.reviewsPage || 1}
+            initialTotalPages={movieData.reviewsTotalPages || 1}
+            communityData={communityData}
+            onCommunityDataChange={setCommunityData}
+          />
         )} 
         
         {activeTab === "Media" && (
