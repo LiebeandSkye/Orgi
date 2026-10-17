@@ -375,7 +375,16 @@ export async function getSeriesDetails(seriesId) {
     genres: data.genres?.map((g) => g.name).slice(0, 3).join(", ") || "Drama",
     seasonsCount: `${data.number_of_seasons || 1} ${data.number_of_seasons === 1 ? "season" : "seasons"}`,
     episodesCount: `${data.number_of_episodes || episodes.length} episodes`,
-    seasons: (data.seasons || []).filter((s) => s.season_number > 0).map((s) => `Season ${s.season_number}`),
+    seasons: (data.seasons || [])
+      .filter((season) => season.season_number > 0)
+      .map((season) => ({
+        id: season.id,
+        season_number: season.season_number,
+        name: season.name,
+        episode_count: season.episode_count,
+        air_date: season.air_date,
+        poster_path: season.poster_path,
+      })),
     tmdbRating: data.vote_average ? data.vote_average.toFixed(1) : "—",
     tmdbVotes: data.vote_count
       ? data.vote_count >= 1000
