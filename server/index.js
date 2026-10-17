@@ -10,6 +10,7 @@ import collectionRoutes from "./src/routes/collectionRoutes.js";
 import reviewRoutes from "./src/routes/reviewRoutes.js"; 
 import reportRoutes from "./src/routes/reportRoutes.js"; 
 import dashboardRoutes from "./src/routes/dashboardRoutes.js"; 
+import discussionRoutes from "./src/routes/discussionRoutes.js"; 
 import { errorHandler } from "./src/middlewares/errorHandler.js"; 
 
 const app = express(); 
@@ -26,6 +27,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/media", mediaRoutes); 
 app.use("/api/collections", collectionRoutes); 
 app.use("/api/reviews", reviewRoutes); 
+app.use("/api/discussions", discussionRoutes); 
 app.use("/api/reports", reportRoutes); 
 app.use("/api/dashboard", dashboardRoutes); 
 

@@ -25,6 +25,8 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext"; 
 import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection"; 
 import api from "../services/api"; 
+import OverviewTab from "../components/ui/OverviewTab";
+
 
 
 const formatReviewDate = (dateStr) => {
@@ -67,8 +69,9 @@ function ReviewAvatar({ src, alt, size = "w-9 h-9" }) {
   );
 }
 
+
 export function MovieDetailsPage({
-  initialTab = "Cast",
+  initialTab = "Overview",
   initialCropHero = false,
 }) {
   const location = useLocation(); 
@@ -609,7 +612,7 @@ export function MovieDetailsPage({
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
           <div className="flex items-center gap-8 h-12">
-            {["Cast", "Reviews", "Media", "Details"].map((tab) => {
+            {["Overview", "Cast", "Reviews", "Media", "Details"].map((tab) => {
               const isActive = activeTab === tab;
               const tabLabel = tab === "Cast" && category ? "Author" : tab;
               return (
@@ -636,6 +639,18 @@ export function MovieDetailsPage({
       
       {/* TAB CONTENT (Only the active tab's content is shown, never all at once) */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
+        {activeTab === "Overview" && (
+          <OverviewTab
+            id={category ? id : id || 157336}
+            category={category}
+            mediaType={movieData.type}
+            movieData={movieData}
+            communityData={communityData}
+            onCommunityDataChange={setCommunityData}
+            onOpenReviews={() => handleTabChange("Reviews")}
+          />
+        )}
+
         {/* ======================================================== */}
         {/* 1. CAST / AUTHOR TAB CONTENT                             */}
         {/* ======================================================== */}
@@ -719,7 +734,9 @@ export function MovieDetailsPage({
               movieData={{
                 ...movieData,
                 images: mediaData.images?.backdrops?.length || mediaData.images?.posters?.length ? mediaData.images : movieData.images,
-                videos: mediaData.videos?.results?.length ? mediaData.videos : movieData.videos,
+                videos: (Array.isArray(mediaData.videos) && mediaData.videos.length > 0)
+                  ? mediaData.videos
+                  : (mediaData.videos?.results?.length ? mediaData.videos : movieData?.videos),
               }}
             />
           </div>
