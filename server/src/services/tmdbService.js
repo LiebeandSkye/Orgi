@@ -4,7 +4,8 @@ const TMDB_BASE_URL="https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
 async function fetchFromTMDB(endpoint, params = {}) {
-    const apiKey = process.env.TMDB_API_KEY;
+    const rawKey = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY || "e2a7d3e1dd95c5e71b164f3334a3628d";
+    const apiKey = rawKey.toLowerCase().trim();
     if(!apiKey){
         throw new Error("TMDB_API_KEY is not configured in .env");
     }

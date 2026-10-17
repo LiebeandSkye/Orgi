@@ -8,7 +8,7 @@ import {
   ThumbsUp,
   Reply,
   MoreHorizontal,
-  ChevronDown,
+  ChevronDown,  
 } from "lucide-react";
 import api from "../services/api";
 import { getSeriesDetails, getSeasonEpisodes } from "../services/tmdb"; 
@@ -18,10 +18,11 @@ import { Button } from "../components/ui/Button";
 import MediaItems from "../components/ui/MediaItems"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import EpisodesSection from "../components/ui/EpisodesSection"; 
+import OverviewTab from "../components/ui/OverviewTab";
 
 
 export function SeriesDetailsPage({
-  initialTab = "Episodes",
+  initialTab = "Overview",
   initialCropHero = false,
 }) {
   const location = useLocation();
@@ -415,7 +416,7 @@ export function SeriesDetailsPage({
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
           <div className="flex items-center gap-8 h-12">
-            {["Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
+            {["Overview", "Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
@@ -441,6 +442,17 @@ export function SeriesDetailsPage({
       
       {/* TAB CONTENT */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
+        {activeTab === "Overview" && (
+          <OverviewTab
+            id={id}
+            mediaType="SERIES"
+            seriesData={seriesData}
+            communityData={communityData}
+            onCommunityDataChange={setCommunityData}
+            onOpenReviews={() => handleTabChange("Reviews")}
+          />
+        )}
+
         {/* ======================================================== */}
         {/* 1. EPISODES TAB CONTENT WITH EPISODE RATING              */}
         {/* ======================================================== */}

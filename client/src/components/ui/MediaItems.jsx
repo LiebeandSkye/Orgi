@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from "react"; 
-import { Play, ChevronLeft, ChevronRight, BookOpen, X } from "lucide-react"; 
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { Play, ChevronLeft, ChevronRight, BookOpen, X, ExternalLink } from "lucide-react"; 
 import { getTmdbImageUrl } from "../../services/tmdb"; 
 
 function ArrowButton({ direction, visible, onClick, label }) { 
@@ -112,6 +112,22 @@ function ScrollRow({ children, label }) {
   ); 
 } 
 
+function getVideoKey(video) {
+  if (!video) return "";
+  const rawKey = video.key || video.videoId || video.video_id || (typeof video === "string" ? video : "");
+  if (rawKey) {
+    const match = String(rawKey).match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+    if (match) return match[1];
+    return String(rawKey).trim();
+  }
+  const url = video.url || video.link || video.trailer;
+  if (typeof url === "string") {
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+    if (match) return match[1];
+  }
+  return "";
+}
+
 function VideoModal({ videoKey, videoName, onClose }) { 
   useEffect(() => { 
     const handleKey = (e) => { 
@@ -128,6 +144,12 @@ function VideoModal({ videoKey, videoName, onClose }) {
     }; 
   }, []); 
 
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const cleanKey = typeof videoKey === "string" ? videoKey.trim() : "";
+  const embedUrl = cleanKey
+    ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(cleanKey)}?autoplay=1&rel=0&enablejsapi=1${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`
+    : null;
+
   return ( 
     <div 
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 cursor-pointer" 
@@ -135,18 +157,51 @@ function VideoModal({ videoKey, videoName, onClose }) {
     > 
       <div className="absolute inset-0 bg-black/85 backdrop-blur-sm animate-backdrop-fade" /> 
       <div 
-        className="relative z-10 w-[92vw] max-w-[960px] rounded-2xl border-2 border-white/20 bg-black overflow-hidden shadow-2xl animate-modal-pop cursor-default" 
+        className="relative z-10 w-[92vw] max-w-[960px] rounded-2xl border-2 border-white/20 bg-black overflow-hidden shadow-2xl animate-modal-pop cursor-default flex flex-col" 
         onClick={(e) => e.stopPropagation()} 
       > 
+        <div className="flex items-center justify-between px-4 py-3 bg-[#0B0B0B] border-b border-white/10"> 
+          <p className="text-sm font-medium text-[#F5F5F5] truncate pr-4"> 
+            {videoName || "Video Player"} 
+          </p> 
+          <div className="flex items-center gap-2"> 
+            {cleanKey && ( 
+              <a 
+                href={`https://www.youtube.com/watch?v=${cleanKey}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="inline-flex items-center gap-1.5 text-xs text-[#9A9A9A] hover:text-[#61F1AC] transition-colors px-2.5 py-1 rounded bg-[#141414] border border-white/10" 
+              > 
+                <span>YouTube</span> 
+                <ExternalLink size={12} /> 
+              </a> 
+            )} 
+            <button 
+              type="button" 
+              onClick={onClose} 
+              aria-label="Close modal" 
+              className="w-8 h-8 rounded-full bg-[#141414] border border-white/10 flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 transition-colors cursor-pointer" 
+            > 
+              <X size={16} /> 
+            </button> 
+          </div> 
+        </div> 
         <div className="relative w-full" style={{ paddingBottom: "56.25%" }}> 
-          <iframe 
-            className="absolute inset-0 w-full h-full" 
-            src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&rel=0`} 
-            title={videoName || "Video"} 
-            frameBorder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowFullScreen 
-          /> 
+          {embedUrl ? ( 
+            <iframe 
+              className="absolute inset-0 w-full h-full" 
+              src={embedUrl} 
+              title={videoName || "YouTube Video"} 
+              frameBorder="0" 
+              referrerPolicy="strict-origin-when-cross-origin" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+              allowFullScreen 
+            /> 
+          ) : ( 
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#7A7A7A] text-sm"> 
+              <p>Video is unavailable.</p> 
+            </div> 
+          )} 
         </div> 
       </div> 
     </div> 
@@ -188,6 +243,14 @@ function ImageModal({ image, format, onClose }) {
         }`} 
         onClick={(e) => e.stopPropagation()} 
       > 
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close modal"
+          className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/70 border border-white/20 flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 transition-colors cursor-pointer"
+        >
+          <X size={16} />
+        </button>
         {!loaded && ( 
           <div className="absolute inset-0 skeleton-shimmer" /> 
         )} 
@@ -218,9 +281,21 @@ export default function MediaItems({ movieData, seriesData }) {
     ); 
 
   const videos = useMemo(() => { 
-    const rawVideos = (mediaItem?.videos?.results || []).filter( 
-      (video) => video.site === "YouTube" 
-    ); 
+    const videoList = Array.isArray(mediaItem?.videos)
+      ? mediaItem.videos
+      : Array.isArray(mediaItem?.videos?.results)
+      ? mediaItem.videos.results
+      : Array.isArray(mediaItem?.videoList)
+      ? mediaItem.videoList
+      : [];
+
+    const rawVideos = videoList.filter((video) => {
+      if (!video) return false;
+      const site = (video.site || "").toLowerCase();
+      const isYouTube = !video.site || site === "youtube";
+      const hasKey = Boolean(getVideoKey(video));
+      return isYouTube && hasKey;
+    });
 
     return [...rawVideos] 
       .sort((a, b) => { 
@@ -237,7 +312,7 @@ export default function MediaItems({ movieData, seriesData }) {
         return getPriority(a) - getPriority(b); 
       }) 
       .slice(0, 120); 
-  }, [mediaItem?.videos?.results]); 
+  }, [mediaItem?.videos, mediaItem?.videoList]); 
 
   const backdrops = useMemo(() => { 
     return (mediaItem?.images?.backdrops || []).slice(0, 120); 
@@ -391,36 +466,44 @@ export default function MediaItems({ movieData, seriesData }) {
 
           {videos.length > 0 ? ( 
             <ScrollRow label="Videos"> 
-              {videos.map((video) => ( 
-                <button 
-                  key={video.id} 
-                  type="button" 
-                  onClick={() => setActiveVideo(video)} 
-                  className="group w-[240px] shrink-0 sm:w-[300px] lg:w-[340px] text-left cursor-pointer" 
-                > 
-                  <div className="relative aspect-video overflow-hidden rounded-[12px] border border-[#1C1C1C] group-hover:border-[#61F1AC]/50 bg-[#0B0B0B] transition-colors"> 
-                    <img 
-                      src={`https://img.youtube.com/vi/${video.key}/hqdefault.jpg`} 
-                      alt={video.name} 
-                      loading="lazy" 
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" 
-                    /> 
+              {videos.map((video, idx) => {
+                const key = getVideoKey(video);
+                return (
+                  <button 
+                    key={video.id || key || idx} 
+                    type="button" 
+                    onClick={() => setActiveVideo(video)} 
+                    className="group w-[240px] shrink-0 sm:w-[300px] lg:w-[340px] text-left cursor-pointer" 
+                  > 
+                    <div className="relative aspect-video overflow-hidden rounded-[12px] border border-[#1C1C1C] group-hover:border-[#61F1AC]/50 bg-[#0B0B0B] transition-colors"> 
+                      <img 
+                        src={`https://img.youtube.com/vi/${key}/hqdefault.jpg`} 
+                        alt={video.name || "Video thumbnail"} 
+                        loading="lazy" 
+                        onError={(e) => {
+                          if (e.target && !e.target.src.includes("mqdefault.jpg")) {
+                            e.target.src = `https://img.youtube.com/vi/${key}/mqdefault.jpg`;
+                          }
+                        }}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75" 
+                      /> 
 
-                    <div className="absolute inset-0 flex items-center justify-center"> 
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/80 border border-white/15 group-hover:border-[#61F1AC] text-white transition group-hover:scale-110"> 
-                        <Play size={19} fill="white" /> 
-                      </span> 
+                      <div className="absolute inset-0 flex items-center justify-center"> 
+                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/80 border border-white/15 group-hover:border-[#61F1AC] text-white transition group-hover:scale-110"> 
+                          <Play size={19} fill="white" /> 
+                        </span> 
+                      </div> 
                     </div> 
-                  </div> 
 
-                  <p className="mt-2 line-clamp-1 text-sm font-medium text-[#F5F5F5] group-hover:text-[#61F1AC] transition-colors"> 
-                    {video.name} 
-                  </p> 
-                  <p className="mt-1 text-xs text-[#7A7A7A]"> 
-                    {video.type || "Video"} 
-                  </p> 
-                </button> 
-              ))} 
+                    <p className="mt-2 line-clamp-1 text-sm font-medium text-[#F5F5F5] group-hover:text-[#61F1AC] transition-colors"> 
+                      {video.name || "Video"} 
+                    </p> 
+                    <p className="mt-1 text-xs text-[#7A7A7A]"> 
+                      {video.type || "Video"} 
+                    </p> 
+                  </button> 
+                );
+              })} 
             </ScrollRow> 
           ) : ( 
             <EmptyState label="Videos" /> 
@@ -486,7 +569,7 @@ export default function MediaItems({ movieData, seriesData }) {
 
       {activeVideo && ( 
         <VideoModal 
-          videoKey={activeVideo.key} 
+          videoKey={getVideoKey(activeVideo)} 
           videoName={activeVideo.name} 
           onClose={() => setActiveVideo(null)} 
         /> 

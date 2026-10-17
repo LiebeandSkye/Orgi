@@ -2,13 +2,13 @@ import axios from "axios";
 
 export const normalizeApiUrl = (url) => {
     if (!url) {
-        return import.meta.env.DEV ? "/api" : "http://localhost:3000/api";
+        return import.meta.env?.DEV ? "/api" : "http://localhost:3000/api";
     }
     const trimmed = url.trim().replace(/\/+$/, "");
     return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
 };
 
-export const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_URL);
+export const API_BASE_URL = normalizeApiUrl(import.meta.env?.VITE_API_URL);
 
 export async function safeFetchJson(url, options = {}) {
     const res = await fetch(url, options);
