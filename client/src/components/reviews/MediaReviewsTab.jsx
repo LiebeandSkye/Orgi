@@ -906,7 +906,7 @@ export function MediaReviewsTab({
                     <span>
                       {expandedReplies[rev.id]
                         ? "Hide replies"
-                        : `View ${rev.repliesCount} ${rev.repliesCount === 1 ? "reply" : "replies"} ⌄`}
+                        : `View ${rev.repliesCount} ${rev.repliesCount === 1 ? "reply" : "replies"}`}
                     </span>
                   </button>
                 )}

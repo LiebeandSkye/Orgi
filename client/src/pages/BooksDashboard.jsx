@@ -22,12 +22,12 @@ import {
 } from "../services/mediaApi";
 
 const CATEGORY_TABS = [
-  { key: "all", label: "All Literature", count: null, sectionId: null, catalogUrl: null },
-  { key: "manhwa", label: "Manhwa", count: "1.4k", sectionId: "section-manhwa", catalogUrl: "/books/manhwa" },
-  { key: "manga", label: "Manga", count: "2.8k", sectionId: "section-manga", catalogUrl: "/books/manga" },
-  { key: "novels", label: "Books & Novels", count: "4.1k", sectionId: "section-novels", catalogUrl: "/books/novels" },
-  { key: "manhua", label: "Manhua", count: "3.2k", sectionId: "section-manhua", catalogUrl: "/books/manhua" },
-  { key: "favorites", label: "Fan Favorites", count: "Top", sectionId: "section-favorites", catalogUrl: null },
+  { key: "all", label: "All Literature", count: null, sectionId: null },
+  { key: "manhwa", label: "Manhwa", count: "1.4k", sectionId: "section-manhwa" },
+  { key: "manga", label: "Manga", count: "2.8k", sectionId: "section-manga" },
+  { key: "novels", label: "Books & Novels", count: "4.1k", sectionId: "section-novels" },
+  { key: "manhua", label: "Manhua", count: "3.2k", sectionId: "section-manhua" },
+  { key: "favorites", label: "Fan Favorites", count: "Top", sectionId: "section-favorites" },
 ];
 
 const SUB_FILTER_CHIPS = {
@@ -65,39 +65,39 @@ const SUB_FILTER_CHIPS = {
   ],
 };
 
-const HUB_SHELF_CONFIG = {
-  manga: [
-    { key: "trending", title: "TRENDING THIS WEEK — MANGA", showTopScore: true, catalogUrl: "/books/manga" },
-    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true, catalogUrl: "/books/manga" },
-    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true, catalogUrl: "/books/manga" },
-    { key: "darkFantasy", title: "DARK FANTASY & PSYCHOLOGICAL", showTopScore: true, catalogUrl: "/books/manga" },
-    { key: "action", title: "SHONEN ACTION & HIGH-OCTANE BATTLES", showTopScore: true, catalogUrl: "/books/manga" },
-    { key: "psychological", title: "MIND GAMES & SUSPENSE THRILLERS", showTopScore: true, catalogUrl: "/books/manga" },
-  ],
-  manhwa: [
-    { key: "trending", title: "TRENDING THIS WEEK — MANHWA", showTopScore: true, catalogUrl: "/books/manhwa" },
-    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true, catalogUrl: "/books/manhwa" },
-    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true, catalogUrl: "/books/manhwa" },
-    { key: "darkFantasy", title: "DUNGEONS, TOWERS & DARK FANTASY", showTopScore: true, catalogUrl: "/books/manhwa" },
-    { key: "action", title: "HIGH-OCTANE ACTION & SYSTEM HITS", showTopScore: true, catalogUrl: "/books/manhwa" },
-    { key: "psychological", title: "MURIM & MARTIAL ARTS DYNASTIES", showTopScore: true, catalogUrl: "/books/manhwa" },
-  ],
-  manhua: [
-    { key: "trending", title: "TRENDING THIS WEEK — MANHUA", showTopScore: true, catalogUrl: "/books/manhua" },
-    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true, catalogUrl: "/books/manhua" },
-    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true, catalogUrl: "/books/manhua" },
-    { key: "darkFantasy", title: "IMMORTAL REALMS & DARK FANTASY", showTopScore: true, catalogUrl: "/books/manhua" },
-    { key: "action", title: "ACTION & SUPERNATURAL AWAKENING", showTopScore: true, catalogUrl: "/books/manhua" },
-    { key: "psychological", title: "CULTIVATION, XIANXIA & MARTIAL ARTS", showTopScore: true, catalogUrl: "/books/manhua" },
-  ],
-  novels: [
-    { key: "trending", title: "TRENDING THIS MONTH — NOVELS & BOOKS", showTopScore: true, catalogUrl: "/books/novels" },
-    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true, catalogUrl: "/books/novels" },
-    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true, catalogUrl: "/books/novels" },
-    { key: "darkFantasy", title: "EPIC FANTASY & WORLDBUILDING", showTopScore: true, catalogUrl: "/books/novels" },
-    { key: "action", title: "MIND-BENDING SCI-FI & CYBERPUNK", showTopScore: true, catalogUrl: "/books/novels" },
-    { key: "psychological", title: "PSYCHOLOGICAL THRILLERS & MYSTERY", showTopScore: true, catalogUrl: "/books/novels" },
-  ],
+const HUB_SHELF_CONFIG = { 
+  manga: [ 
+    { key: "trending", title: "TRENDING THIS WEEK — MANGA", showTopScore: true }, 
+    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true }, 
+    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true }, 
+    { key: "darkFantasy", title: "DARK FANTASY & PSYCHOLOGICAL", showTopScore: true }, 
+    { key: "action", title: "SHONEN ACTION & HIGH-OCTANE BATTLES", showTopScore: true }, 
+    { key: "psychological", title: "MIND GAMES & SUSPENSE THRILLERS", showTopScore: true }, 
+  ], 
+  manhwa: [ 
+    { key: "trending", title: "TRENDING THIS WEEK — MANHWA", showTopScore: true }, 
+    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true }, 
+    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true }, 
+    { key: "darkFantasy", title: "DUNGEONS, TOWERS & DARK FANTASY", showTopScore: true }, 
+    { key: "action", title: "HIGH-OCTANE ACTION & SYSTEM HITS", showTopScore: true }, 
+    { key: "psychological", title: "MURIM & MARTIAL ARTS DYNASTIES", showTopScore: true }, 
+  ], 
+  manhua: [ 
+    { key: "trending", title: "TRENDING THIS WEEK — MANHUA", showTopScore: true }, 
+    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true }, 
+    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true }, 
+    { key: "darkFantasy", title: "IMMORTAL REALMS & DARK FANTASY", showTopScore: true }, 
+    { key: "action", title: "ACTION & SUPERNATURAL AWAKENING", showTopScore: true }, 
+    { key: "psychological", title: "CULTIVATION, XIANXIA & MARTIAL ARTS", showTopScore: true }, 
+  ], 
+  novels: [ 
+    { key: "trending", title: "TRENDING THIS MONTH — NOVELS & BOOKS", showTopScore: true }, 
+    { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true }, 
+    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true }, 
+    { key: "darkFantasy", title: "EPIC FANTASY & WORLDBUILDING", showTopScore: true }, 
+    { key: "action", title: "MIND-BENDING SCI-FI & CYBERPUNK", showTopScore: true }, 
+    { key: "psychological", title: "PSYCHOLOGICAL THRILLERS & MYSTERY", showTopScore: true }, 
+  ], 
 };
 
 const SECTION_OPTIONS = [
@@ -108,7 +108,7 @@ const SECTION_OPTIONS = [
   { label: "Fan Favorites", id: "section-favorites" },
 ];
 
-function ShelfGrid({ title, items, isLoading, sectionId, catalogUrl, showRank = false }) {
+function ShelfGrid({ title, items, isLoading, sectionId, onExplore, showRank = false }) {
   if (isLoading) {
     return (
       <div id={sectionId} className="space-y-4 pt-4 scroll-mt-20">
@@ -131,14 +131,15 @@ function ShelfGrid({ title, items, isLoading, sectionId, catalogUrl, showRank = 
             {items.length} titles
           </span>
         </h3>
-        {catalogUrl && (
-          <Link
-            to={catalogUrl}
+        {onExplore && (
+          <button
+            type="button"
+            onClick={onExplore}
             className="text-xs text-[#7A7A7A] hover:text-[#61F1AC] transition-colors flex items-center gap-1 group font-medium cursor-pointer"
           >
             <span>Explore catalog</span>
             <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+          </button>
         )}
       </div>
 
@@ -704,14 +705,13 @@ export function BooksDashboard() {
                         />
                       </div>
                     ) : (
-                      <ShelfGrid
-                        key={shelf.key}
-                        sectionId={`hub-${activeTab}-${shelf.key}`}
-                        title={shelf.title}
-                        items={shelfItems}
-                        isLoading={shelfLoading}
-                        showRank={Boolean(shelf.showRank)}
-                        catalogUrl={shelf.catalogUrl}
+                      <ShelfGrid 
+                        key={shelf.key} 
+                        sectionId={`hub-${activeTab}-${shelf.key}`} 
+                        title={shelf.title} 
+                        items={shelfItems} 
+                        isLoading={shelfLoading} 
+                        showRank={Boolean(shelf.showRank)} 
                       />
                     );
                   })}
@@ -736,7 +736,10 @@ export function BooksDashboard() {
                       title="Trending this week — Manhwa"
                       items={feeds.trendingManhwa}
                       isLoading={isLoadingFeeds}
-                      catalogUrl="/books/manhwa"
+                      onExplore={() => {
+                        setActiveTab("manhwa");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
                     />
                   )
                 )}
@@ -758,7 +761,10 @@ export function BooksDashboard() {
                       title="Trending this week — Manga"
                       items={feeds.trendingManga}
                       isLoading={isLoadingFeeds}
-                      catalogUrl="/books/manga"
+                      onExplore={() => {
+                        setActiveTab("manga");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
                     />
                   )
                 )}
@@ -780,7 +786,10 @@ export function BooksDashboard() {
                       title="Trending this month — Novels & Books"
                       items={feeds.trendingBooks}
                       isLoading={isLoadingFeeds}
-                      catalogUrl="/books/novels"
+                      onExplore={() => {
+                        setActiveTab("novels");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
                     />
                   )
                 )}
@@ -802,7 +811,10 @@ export function BooksDashboard() {
                       title="Trending this month — Manhua"
                       items={feeds.trendingManhua}
                       isLoading={isLoadingFeeds}
-                      catalogUrl="/books/manhua"
+                      onExplore={() => {
+                        setActiveTab("manhua");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
                     />
                   )
                 )}

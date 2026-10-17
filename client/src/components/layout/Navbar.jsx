@@ -1,16 +1,9 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react"; 
 import { Link, useLocation } from "react-router-dom"; 
-import { ChevronDown, BookOpen, Layers, Smartphone, Bookmark, User, LayoutDashboard, Settings, LogOut, LogIn, Trash2, AlertTriangle } from "lucide-react"; 
+import { Bookmark, User, LayoutDashboard, Settings, LogOut, LogIn, Trash2, AlertTriangle } from "lucide-react"; 
 import { useAuth } from "../../context/AuthContext"; 
 import { authApi } from "../../feature/auth/services/authApi"; 
 import { NavbarSearch } from "./NavbarSearch"; 
-
-const BOOK_ITEMS = [ 
-    { to: "/books/novels", label: "Books / Novels", icon: BookOpen, match: ["/books/novels"] }, 
-    { to: "/books/manga", label: "Manga", icon: Layers, match: ["/books/manga"] }, 
-    { to: "/books/manhwa", label: "Manhwa", icon: Smartphone, match: ["/books/manhwa", "/books"] }, 
-    { to: "/books/manhua", label: "Manhua", icon: Bookmark, match: ["/books/manhua"] }, 
-];
 
 const PROFILE_ITEMS = [ 
     { to: "/profile", label: "Profile", icon: User }, 
@@ -19,14 +12,11 @@ const PROFILE_ITEMS = [
     { to: "/setting", label: "Setting", icon: Settings }, 
 ]; 
 
-
 const DEFAULT_AVATAR = "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
 
-export function Navbar({ forceBooksOpen = false }) { 
+export function Navbar() { 
     const location = useLocation(); 
     const { user, userProfile, logout } = useAuth(); 
-    const [dropdownOpen, setDropdownOpen] = useState(false); 
-    const dropdownRef = useRef(null); 
     const [profileOpen, setProfileOpen] = useState(false); 
     const profileDropdownRef = useRef(null); 
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false); 
@@ -55,9 +45,6 @@ export function Navbar({ forceBooksOpen = false }) {
   const indicatorRef = useRef(null); 
   const prevRect = useRef(null); 
 
-  const isDropdownVisible = forceBooksOpen || dropdownOpen; 
-
-  // Determine active tab based on path 
   const isMovies = 
     location.pathname === "/" || 
     location.pathname === "/movies" || 
@@ -67,23 +54,12 @@ export function Navbar({ forceBooksOpen = false }) {
   const isFeed = location.pathname.startsWith("/feed") || location.pathname.startsWith("/reviews");
   const active = isFeed ? "feed" : isBooks ? "books" : isMovies ? "movies" : null; 
 
-  // Close dropdown on route change 
   useEffect(() => { 
-    if (!forceBooksOpen) setDropdownOpen(false); 
     setProfileOpen(false); 
-  }, [location.pathname, forceBooksOpen]); 
+  }, [location.pathname]); 
 
-  // Close dropdown on click outside / Escape if not forced 
   useEffect(() => { 
     function handleClickOutside(event) { 
-      if ( 
-        !forceBooksOpen && 
-        dropdownRef.current && 
-        !dropdownRef.current.contains(event.target) 
-      ) { 
-        setDropdownOpen(false); 
-      } 
-
       if ( 
         profileDropdownRef.current && 
         !profileDropdownRef.current.contains(event.target) 
@@ -92,7 +68,6 @@ export function Navbar({ forceBooksOpen = false }) {
       }
     }
     function handleKey(event) { 
-      if (event.key === "Escape" && !forceBooksOpen) setDropdownOpen(false); 
       if (event.key === "Escape") setProfileOpen(false); 
     }
     document.addEventListener("mousedown", handleClickOutside); 
@@ -101,8 +76,7 @@ export function Navbar({ forceBooksOpen = false }) {
       document.removeEventListener("mousedown", handleClickOutside); 
       document.removeEventListener("keydown", handleKey); 
     }; 
-
-  }, [forceBooksOpen]); 
+  }, []); 
 
   // Measure the label of a tab relative to the nav
   const measure = useCallback((key) => {
@@ -184,16 +158,16 @@ export function Navbar({ forceBooksOpen = false }) {
     return () => window.removeEventListener("resize", onResize);
   }, [active, measure]);
 
-  const tabClass = (isActive) =>
-    `relative flex items-center h-full text-sm font-medium transition-colors select-none ${
-      isActive ? "text-[#F5F5F5]" : "text-[#7A7A7A] hover:text-[#F5F5F5]"
-    }`;
-
+  const tabClass = (isActive) => 
+    `relative flex items-center h-full text-xs sm:text-sm font-medium transition-colors select-none ${ 
+      isActive ? "text-[#F5F5F5]" : "text-[#7A7A7A] hover:text-[#F5F5F5]" 
+    }`; 
+ 
   return ( 
     <> 
-    <header className="sticky top-0 z-40 h-16 w-full bg-[#000000]/90 backdrop-blur-md border-b border-[#1C1C1C]">
-      <div className="max-w-[1440px] h-full mx-auto px-6 lg:px-[120px] flex items-center justify-between"> 
-        <div className="flex items-center gap-8 lg:gap-10 h-full"> 
+    <header className="sticky top-0 z-40 h-16 w-full bg-[#000000]/90 backdrop-blur-md border-b border-[#1C1C1C]"> 
+      <div className="max-w-[1440px] h-full mx-auto px-4 sm:px-6 lg:px-[120px] flex items-center justify-between"> 
+        <div className="flex items-center gap-3.5 sm:gap-8 lg:gap-10 h-full"> 
           <Link 
             to="/" 
             className="flex items-center text-xl font-semibold tracking-tighter text-[#F5F5F5] hover:opacity-90 transition-opacity select-none" 
@@ -202,58 +176,14 @@ export function Navbar({ forceBooksOpen = false }) {
             <span className="text-[#61F1AC]">.</span> 
           </Link> 
           
-          <nav ref={navRef} className="relative flex items-center gap-6 sm:gap-8 h-16"> 
+          <nav ref={navRef} className="relative flex items-center gap-3.5 sm:gap-8 h-16"> 
             <Link to="/" className={tabClass(isMovies)}> 
-              <span ref={(el) => (labelRefs.current.movies = el)}>Movies &amp; Series</span> 
+              <span ref={(el) => (labelRefs.current.movies = el)}>Movies</span> 
             </Link> 
             
-            <div className="relative h-full flex items-center" ref={dropdownRef}> 
-              <button 
-                type="button" 
-                aria-haspopup="menu" 
-                aria-expanded={isDropdownVisible} 
-                onClick={() => setDropdownOpen((prev) => !prev)} 
-                className={`${tabClass(isBooks)} gap-1.5 cursor-pointer`} 
-              > 
-                <span ref={(el) => (labelRefs.current.books = el)}>Books</span> 
-                <ChevronDown 
-                  size={13} 
-                  className={`transition-transform duration-200 ${ 
-                    isDropdownVisible ? "rotate-180 text-[#61F1AC]" : "text-[#7A7A7A]" 
-                  }`} 
-                /> 
-              </button> 
-              
-              {isDropdownVisible && ( 
-                <div 
-                  role="menu" 
-                  className="absolute top-[calc(100%-4px)] left-1/2 -translate-x-1/2 w-52 bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-100" 
-                > 
-                  {BOOK_ITEMS.map(({ to, label, icon: Icon, match }) => { 
-                    const isActiveItem = match.includes(location.pathname); 
-                    return ( 
-                      <Link 
-                        key={to} 
-                        to={to} 
-                        role="menuitem" 
-                        onClick={() => !forceBooksOpen && setDropdownOpen(false)} 
-                        className={`flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg transition-colors ${ 
-                          isActiveItem 
-                            ? "text-[#61F1AC] bg-[#141414] font-medium" 
-                            : "text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414]" 
-                        }`} 
-                      > 
-                        <Icon size={15} strokeWidth={1.75} className="shrink-0 text-[#F5F5F5]" /> 
-                        <span className="flex-1">{label}</span> 
-                        {isActiveItem && ( 
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" /> 
-                        )} 
-                      </Link> 
-                    ) 
-                  })} 
-                </div> 
-              )} 
-            </div> 
+            <Link to="/books" className={tabClass(isBooks)}> 
+              <span ref={(el) => (labelRefs.current.books = el)}>Books</span> 
+            </Link> 
             
             <Link to="/feed" className={tabClass(isFeed)}> 
               <span ref={(el) => (labelRefs.current.feed = el)}>Feed</span> 
@@ -268,7 +198,7 @@ export function Navbar({ forceBooksOpen = false }) {
           </nav> 
         </div> 
         
-        <div className="relative flex items-center gap-2.5 sm:gap-3"> 
+        <div className="relative flex items-center gap-2 sm:gap-3"> 
           <NavbarSearch /> 
           <div className="relative flex items-center" ref={profileDropdownRef}> 
             <button 
