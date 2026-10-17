@@ -461,59 +461,99 @@ export function MovieDetailsPage({
               blendedScore={blendedScore} 
               totalVotesLabel={totalVotesLabel} 
               communityScore={communityScore !== null ? communityScore : movieData.communityRating} 
-              communityVotesLabel={communityVotesCount > 0 ? `${communityVotesCount} Orgi votes` : movieData.communityVotes} 
             /> 
- 
-            <div className="flex items-center gap-3.5 mb-8"> 
-              <Button 
-                variant="primary" 
-                size="md" 
-                disabled={isLoadingTrailer} 
-                className="px-5 py-2.5 rounded-[10px]" 
-                onClick={handlePlayTrailer} 
-              > 
-                <Play size={15} className="fill-black text-black" /> 
-                <span>{isLoadingTrailer ? "Loading..." : "Trailer"}</span> 
-              </Button> 
 
-              <Button 
-                variant="outline" 
-                size="md" 
-                className="px-5 py-2.5 rounded-[10px] transition-all cursor-pointer hover:border-[#61F1AC]/50 hover:text-white" 
-                onClick={() => { 
-                  handleTabChange("Reviews"); 
-                }} 
-              > 
-                <Star size={15} className="text-[#61F1AC]" /> 
-                <span>Rate</span> 
-              </Button> 
+            {category ? ( 
+              <div className="flex items-center gap-3.5 mb-8"> 
+                <Button 
+                  variant="primary" 
+                  size="md" 
+                  className="px-5 py-2.5 rounded-[10px]" 
+                  onClick={() => { 
+                    handleTabChange("Reviews"); 
+                  }} 
+                > 
+                  <Star size={15} className="fill-black text-black" /> 
+                  <span>Rate this</span> 
+                </Button> 
 
-              <button 
-                type="button" 
-                aria-label={inCollection ? "Remove from collection" : "Add to collection"} 
-                disabled={collectionLoading} 
-                onClick={handleToggleCollection} 
-                className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${ 
-                  inCollection 
-                    ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" 
-                    : "border-[#1C1C1C] text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414]" 
-                }`} 
-              > 
-                <Bookmark size={15} className={inCollection ? "fill-[#61F1AC]" : ""} /> 
-              </button> 
+                <Button 
+                  variant={inCollection ? "mintGhost" : "outline"} 
+                  size="md" 
+                  disabled={collectionLoading} 
+                  className={`px-5 py-2.5 rounded-[10px] transition-all cursor-pointer ${ 
+                    inCollection ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" : "" 
+                  }`} 
+                  onClick={handleToggleCollection} 
+                > 
+                  {inCollection ? <Check size={15} /> : <Plus size={15} />} 
+                  <span>{inCollection ? "In collection" : "Add to collection"}</span> 
+                </Button> 
 
-              <button 
-                type="button" 
-                aria-label="Share" 
-                onClick={() => { 
-                  navigator.clipboard?.writeText(window.location.href); 
-                  showToast({ message: "Link copied to clipboard." });  
-                }} 
-                className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer" 
-              > 
-                <Share2 size={15} /> 
-              </button> 
-            </div> 
+                <button 
+                  type="button" 
+                  aria-label="Share" 
+                  onClick={() => { 
+                    navigator.clipboard?.writeText(window.location.href); 
+                    showToast({ message: "Link copied to clipboard." }); 
+                  }} 
+                  className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer" 
+                > 
+                  <Share2 size={15} /> 
+                </button> 
+              </div> 
+            ) : ( 
+              <div className="flex items-center gap-3.5 mb-8"> 
+                <Button 
+                  variant="primary" 
+                  size="md" 
+                  disabled={isLoadingTrailer} 
+                  className="px-5 py-2.5 rounded-[10px]" 
+                  onClick={handlePlayTrailer} 
+                > 
+                  <Play size={15} className="fill-black text-black" /> 
+                  <span>{isLoadingTrailer ? "Loading..." : "Trailer"}</span> 
+                </Button> 
+
+                <Button 
+                  variant="outline" 
+                  size="md" 
+                  className="px-5 py-2.5 rounded-[10px] transition-all cursor-pointer hover:border-[#61F1AC]/50 hover:text-white" 
+                  onClick={() => { 
+                    handleTabChange("Reviews"); 
+                  }} 
+                > 
+                  <Star size={15} className="text-[#61F1AC]" /> 
+                  <span>Rate</span> 
+                </Button> 
+
+                <button 
+                  type="button" 
+                  aria-label={inCollection ? "Remove from collection" : "Add to collection"} 
+                  disabled={collectionLoading} 
+                  onClick={handleToggleCollection} 
+                  className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${ 
+                    inCollection 
+                      ? "border-[#61F1AC]/50 text-[#61F1AC] bg-[#61F1AC]/10" 
+                      : "border-[#1C1C1C] text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414]" 
+                  }`} 
+                > 
+                  <Bookmark size={15} className={inCollection ? "fill-[#61F1AC]" : ""} /> 
+                </button> 
+
+                <button 
+                  type="button" 
+                  aria-label="Share" 
+                  onClick={() => { 
+                    navigator.clipboard?.writeText(window.location.href); 
+                    showToast({ message: "Link copied to clipboard." });  
+                  }} 
+                  className="w-10 h-10 rounded-full border border-[#1C1C1C] flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 hover:bg-[#141414] transition-colors cursor-pointer" 
+                > 
+                  <Share2 size={15} /> 
+                </button> 
+              </div> 
+            )} 
             
             {/* 3-line synopsis in #B5B5B5 at 16px with mint "Read more" link */}
             
@@ -741,12 +781,14 @@ export function MovieDetailsPage({
         )} 
       </main> 
  
-      <Trailer 
-        open={showTrailerModal} 
-        videoKey={activeTrailerKey || findTrailerKey(mediaData?.videos) || findTrailerKey(movieData?.videos)} 
-        videoName={`${movieData?.title || "Movie"} Trailer`} 
-        onClose={() => setShowTrailerModal(false)} 
-      /> 
+      {!category && ( 
+        <Trailer 
+          open={showTrailerModal} 
+          videoKey={activeTrailerKey || findTrailerKey(mediaData?.videos) || findTrailerKey(movieData?.videos)} 
+          videoName={`${movieData?.title || "Movie"} Trailer`} 
+          onClose={() => setShowTrailerModal(false)} 
+        /> 
+      )} 
     </div> 
   ); 
 } 
