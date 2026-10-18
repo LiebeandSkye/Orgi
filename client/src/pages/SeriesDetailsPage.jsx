@@ -21,12 +21,13 @@ import MediaItems from "../components/ui/MediaItems";
 import Trailer from "../components/ui/Trailer"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import EpisodesSection from "../components/ui/EpisodesSection"; 
+import OverviewTab from "../components/ui/OverviewTab";
 import { useToast } from "../context/ToastContext"; 
-import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection"; 
+import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection";
 
 
 export function SeriesDetailsPage({
-  initialTab = "Episodes",
+  initialTab = "Overview",
   initialCropHero = false,
 }) {
   const location = useLocation();
@@ -479,7 +480,7 @@ export function SeriesDetailsPage({
       >
         <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
           <div className="flex items-center gap-8 h-12">
-            {["Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
+            {["Overview", "Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
@@ -505,6 +506,20 @@ export function SeriesDetailsPage({
       
       {/* TAB CONTENT */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
+        {activeTab === "Overview" && (
+          <OverviewTab
+            id={id}
+            mediaType="SERIES"
+            seriesData={seriesData}
+            communityData={communityData}
+            onCommunityDataChange={setCommunityData}
+            onOpenReviews={() => handleTabChange("Reviews")}
+          />
+        )}
+
+        {/* ======================================================== */}
+        {/* 1. EPISODES TAB CONTENT WITH EPISODE RATING              */}
+        {/* ======================================================== */}
         {activeTab === "Episodes" && ( 
           <EpisodesSection 
             seriesId={id} 

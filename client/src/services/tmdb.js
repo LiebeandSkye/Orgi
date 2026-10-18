@@ -6,7 +6,7 @@ import { API_BASE_URL as ROOT_API_BASE_URL } from "./api";
 const API_BASE_URL = `${ROOT_API_BASE_URL}/tmdb`;
 const TMDB_DIRECT_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
-const DIRECT_API_KEY = import.meta.env.VITE_TMDB_API_KEY || "e2a7d3e1dd95c5e71b164f3334a3628d"; 
+const DIRECT_API_KEY = (import.meta.env.VITE_TMDB_API_KEY || "e2a7d3e1dd95c5e71b164f3334a3628d").toLowerCase().trim();
 
 /**
  * Build a full TMDB image URL
@@ -225,7 +225,10 @@ export async function getMovieDetails(movieId = 157336) {
   const data = await fetchFromApi(
     `/movie/${resolvedId}`,
     `/movie/${resolvedId}`,
-    { append_to_response: "credits,reviews,release_dates,similar,images,videos" }
+    { 
+      append_to_response: "credits,reviews,release_dates,similar,images,videos",
+      include_video_language: "en,null"
+    }
   );
 
   const director =
@@ -347,7 +350,10 @@ export async function getSeriesDetails(seriesId) {
   const data = await fetchFromApi(
     `/tv/${resolvedId}`,
     `/tv/${resolvedId}`,
-    { append_to_response: "credits,reviews,season/1,images,videos" }
+    { 
+      append_to_response: "credits,reviews,season/1,images,videos",
+      include_video_language: "en,null"
+    }
   );
 
   const episodes = (data["season/1"]?.episodes || []).slice(0, 15).map((ep, idx) => ({
@@ -376,7 +382,16 @@ export async function getSeriesDetails(seriesId) {
     genres: data.genres?.map((g) => g.name).slice(0, 3).join(", ") || "Drama",
     seasonsCount: `${data.number_of_seasons || 1} ${data.number_of_seasons === 1 ? "season" : "seasons"}`,
     episodesCount: `${data.number_of_episodes || episodes.length} episodes`,
-    seasons: (data.seasons || []).filter((s) => s.season_number > 0).map((s) => `Season ${s.season_number}`),
+    seasons: (data.seasons || [])
+      .filter((season) => season.season_number > 0)
+      .map((season) => ({
+        id: season.id,
+        season_number: season.season_number,
+        name: season.name,
+        episode_count: season.episode_count,
+        air_date: season.air_date,
+        poster_path: season.poster_path,
+      })),
     tmdbRating: data.vote_average ? data.vote_average.toFixed(1) : "—",
     tmdbVotes: data.vote_count
       ? data.vote_count >= 1000
@@ -540,15 +555,26 @@ export async function getMovieMedia(movieId) {
     const data = await fetchFromApi( 
       `/movie/${resolvedId}`, 
       `/movie/${resolvedId}`, 
-      { append_to_response: "images,videos" } 
+      { 
+        append_to_response: "images,videos",
+        include_video_language: "en,null"
+      } 
     ); 
+    const rawVideos = data?.videos?.results || [];
     return { 
       images: { 
         backdrops: data?.images?.backdrops || [], 
         posters: data?.images?.posters || [], 
       }, 
       videos: { 
-        results: data?.videos?.results || [], 
+        results: rawVideos.map((v) => ({
+          id: v.id,
+          key: v.key,
+          name: v.name,
+          site: v.site,
+          type: v.type,
+          official: v.official,
+        })), 
       }, 
     }; 
   } catch (err) { 
@@ -609,5 +635,76 @@ export function findTrailerKey(videos) {
     ytVideos[0]; 
 
   return trailer?.key || null; 
+}
+
+export async function getSeriesMedia(seriesId) {
+  if (!seriesId) return { images: { backdrops: [], posters: [] }, videos: { results: [] } };
+  try {
+    const data = await fetchFromApi(
+      `/tv/${seriesId}`,
+      `/tv/${seriesId}`,
+      { 
+        append_to_response: "images,videos",
+        include_video_language: "en,null"
+      }
+    );
+    const rawVideos = data?.videos?.results || [];
+    return {
+      images: {
+        backdrops: data?.images?.backdrops || [],
+        posters: data?.images?.posters || [],
+      },
+      videos: {
+        results: rawVideos.map((v) => ({
+          id: v.id,
+          key: v.key,
+          name: v.name,
+          site: v.site,
+          type: v.type,
+          official: v.official,
+        })),
+      },
+    };
+  } catch (err) {
+    return {
+      images: { backdrops: [], posters: [] },
+      videos: { results: [] },
+    };
+  }
+} 
+
+export async function getEpisodeDetails(seriesId, seasonNumber = 1, episodeNumber = 1) { 
+  if (!seriesId) { 
+    throw new Error("Series ID is missing."); 
+  } 
+
+  const data = await fetchFromApi( 
+    `/tv/${seriesId}/season/${seasonNumber}/episode/${episodeNumber}`, 
+    `/tv/${seriesId}/season/${seasonNumber}/episode/${episodeNumber}`, 
+    { language: "en-US" } 
+  ); 
+
+  return { 
+    id: data.id, 
+    seriesId: String(seriesId), 
+    seasonNumber: Number(seasonNumber), 
+    episodeNumber: Number(data.episode_number || episodeNumber), 
+    number: String(data.episode_number || episodeNumber).padStart(2, "0"), 
+    name: data.name || `Episode ${episodeNumber}`, 
+    title: data.name || `Episode ${episodeNumber}`, 
+    overview: data.overview || "No description available for this episode.", 
+    description: data.overview || "No description available for this episode.", 
+    airDate: data.air_date || "", 
+    air_date: data.air_date || "", 
+    runtime: typeof data.runtime === "number" ? data.runtime : parseInt(data.runtime, 10) || null, 
+    stillPath: data.still_path || null, 
+    still_path: data.still_path || null, 
+    thumbnail: data.still_path ? getTmdbImageUrl(data.still_path, "w780") : "", 
+    score: data.vote_average ? data.vote_average.toFixed(1) : "—", 
+    voteAverage: data.vote_average ?? 0, 
+    vote_average: data.vote_average ?? 0, 
+    voteCount: data.vote_count ?? 0, 
+    vote_count: data.vote_count ?? 0, 
+  }; 
 } 
 

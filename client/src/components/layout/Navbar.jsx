@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react"; 
 import { Link, useLocation } from "react-router-dom"; 
-import { ChevronDown, BookOpen, Layers, Smartphone, Bookmark, User, LayoutDashboard, Settings, LogOut, LogIn, Trash2, AlertTriangle } from "lucide-react"; 
+import { ChevronDown, BookOpen, Layers, Smartphone, Bookmark, User, LayoutDashboard, Settings, LogOut, LogIn, Trash2, AlertTriangle, Menu, X, Film, Rss } from "lucide-react"; 
 import { useAuth } from "../../context/AuthContext"; 
 import { authApi } from "../../feature/auth/services/authApi"; 
 import { NavbarSearch } from "./NavbarSearch"; 
@@ -32,6 +32,10 @@ export function Navbar({ forceBooksOpen = false }) {
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false); 
     const [isDeleting, setIsDeleting] = useState(false); 
     const [deleteError, setDeleteError] = useState(null); 
+
+    // Mobile-only drawer state
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [mobileBooksOpen, setMobileBooksOpen] = useState(false);
     
     const handleDeleteAccount = async () => { 
         setIsDeleting(true); 
@@ -71,6 +75,7 @@ export function Navbar({ forceBooksOpen = false }) {
   useEffect(() => { 
     if (!forceBooksOpen) setDropdownOpen(false); 
     setProfileOpen(false); 
+    setMobileMenuOpen(false);
   }, [location.pathname, forceBooksOpen]); 
 
   // Close dropdown on click outside / Escape if not forced 
@@ -93,7 +98,10 @@ export function Navbar({ forceBooksOpen = false }) {
     }
     function handleKey(event) { 
       if (event.key === "Escape" && !forceBooksOpen) setDropdownOpen(false); 
-      if (event.key === "Escape") setProfileOpen(false); 
+      if (event.key === "Escape") {
+        setProfileOpen(false); 
+        setMobileMenuOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside); 
     document.addEventListener("keydown", handleKey); 
@@ -103,6 +111,16 @@ export function Navbar({ forceBooksOpen = false }) {
     }; 
 
   }, [forceBooksOpen]); 
+
+  // Lock page scroll while the mobile drawer is open
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileMenuOpen]);
 
   // Measure the label of a tab relative to the nav
   const measure = useCallback((key) => {
@@ -189,11 +207,29 @@ export function Navbar({ forceBooksOpen = false }) {
       isActive ? "text-[#F5F5F5]" : "text-[#7A7A7A] hover:text-[#F5F5F5]"
     }`;
 
+  const drawerLinkClass = (isActive) =>
+    `flex items-center gap-3 h-11 px-3 text-sm rounded-lg transition-colors ${
+      isActive
+        ? "text-[#61F1AC] bg-[#141414] font-medium"
+        : "text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414]"
+    }`;
+
   return ( 
     <> 
-    <header className="sticky top-0 z-40 h-16 w-full bg-[#000000]/90 backdrop-blur-md border-b border-[#1C1C1C]">
-      <div className="max-w-[1440px] h-full mx-auto px-6 lg:px-[120px] flex items-center justify-between"> 
-        <div className="flex items-center gap-8 lg:gap-10 h-full"> 
+    <header className="sticky top-0 z-40 h-14 md:h-16 w-full bg-[#000000]/90 backdrop-blur-md border-b border-[#1C1C1C]">
+      <div className="max-w-[1440px] h-full mx-auto px-3 md:px-6 lg:px-[120px] flex items-center justify-between"> 
+        <div className="flex items-center gap-1 md:gap-8 lg:gap-10 h-full"> 
+          {/* Mobile only: hamburger */}
+          <button
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden w-10 h-10 -ml-1 flex items-center justify-center rounded-full text-[#F5F5F5] hover:bg-[#141414] active:bg-[#1C1C1C] transition-colors cursor-pointer"
+          >
+            <Menu size={22} strokeWidth={2} />
+          </button>
+
           <Link 
             to="/" 
             className="flex items-center text-xl font-semibold tracking-tighter text-[#F5F5F5] hover:opacity-90 transition-opacity select-none" 
@@ -202,7 +238,8 @@ export function Navbar({ forceBooksOpen = false }) {
             <span className="text-[#61F1AC]">.</span> 
           </Link> 
           
-          <nav ref={navRef} className="relative flex items-center gap-6 sm:gap-8 h-16"> 
+          {/* Desktop / tablet nav (hidden on mobile) */}
+          <nav ref={navRef} className="relative hidden md:flex items-center gap-6 sm:gap-8 h-16"> 
             <Link to="/" className={tabClass(isMovies)}> 
               <span ref={(el) => (labelRefs.current.movies = el)}>Movies &amp; Series</span> 
             </Link> 
@@ -268,9 +305,21 @@ export function Navbar({ forceBooksOpen = false }) {
           </nav> 
         </div> 
         
-        <div className="relative flex items-center gap-2.5 sm:gap-3"> 
+        <div className="relative flex items-center gap-1.5 md:gap-3"> 
           <NavbarSearch /> 
-          <div className="relative flex items-center" ref={profileDropdownRef}> 
+
+          {/* Mobile only: Sign in pill when logged out */}
+          {!user && (
+            <Link
+              to="/login"
+              className="md:hidden h-8 px-4 flex items-center text-[13px] font-bold text-black bg-[#61F1AC] hover:bg-[#7af5ba] active:scale-95 rounded-full transition select-none"
+            >
+              Sign in
+            </Link>
+          )}
+
+          {/* Avatar: always on desktop, only when logged in on mobile */}
+          <div className={`relative items-center ${user ? "flex" : "hidden md:flex"}`} ref={profileDropdownRef}> 
             <button 
                 type="button" 
                 onClick={() => setProfileOpen((prev) => !prev)} 
@@ -361,6 +410,104 @@ export function Navbar({ forceBooksOpen = false }) {
         </div> 
       </div> 
     </header> 
+
+    {/* Mobile only: slide-in drawer */}
+    <div
+      className={`md:hidden fixed inset-0 z-50 transition-opacity duration-200 ${
+        mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      }`}
+      aria-hidden={!mobileMenuOpen}
+    >
+      <div className="absolute inset-0 bg-black/70" onClick={() => setMobileMenuOpen(false)} />
+      <aside
+        className={`absolute top-0 left-0 h-full w-72 max-w-[85%] bg-[#0B0B0B] border-r border-[#1C1C1C] flex flex-col transition-transform duration-200 ease-out ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="h-14 px-4 flex items-center justify-between border-b border-[#1C1C1C] shrink-0">
+          <Link
+            to="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center text-xl font-semibold tracking-tighter text-[#F5F5F5] select-none"
+          >
+            <span>orgi</span>
+            <span className="text-[#61F1AC]">.</span>
+          </Link>
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-9 h-9 -mr-1 flex items-center justify-center rounded-full text-[#B5B5B5] hover:text-[#F5F5F5] hover:bg-[#141414] cursor-pointer"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+          <Link to="/" onClick={() => setMobileMenuOpen(false)} className={drawerLinkClass(isMovies)}>
+            <Film size={17} strokeWidth={1.75} className="shrink-0 text-[#F5F5F5]" />
+            <span className="flex-1">Movies &amp; Series</span>
+            {isMovies && <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" />}
+          </Link>
+
+          <button
+            type="button"
+            aria-expanded={mobileBooksOpen || isBooks}
+            onClick={() => setMobileBooksOpen((prev) => !prev)}
+            className={`${drawerLinkClass(isBooks)} w-full cursor-pointer`}
+          >
+            <BookOpen size={17} strokeWidth={1.75} className="shrink-0 text-[#F5F5F5]" />
+            <span className="flex-1 text-left">Books</span>
+            <ChevronDown
+              size={15}
+              className={`transition-transform duration-200 ${
+                mobileBooksOpen || isBooks ? "rotate-180 text-[#61F1AC]" : "text-[#7A7A7A]"
+              }`}
+            />
+          </button>
+
+          {(mobileBooksOpen || isBooks) && (
+            <div className="ml-5 pl-3 border-l border-[#1C1C1C] space-y-1">
+              {BOOK_ITEMS.map(({ to, label, icon: Icon, match }) => {
+                const isActiveItem = match.includes(location.pathname);
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${drawerLinkClass(isActiveItem)} h-10 text-[13px]`}
+                  >
+                    <Icon size={15} strokeWidth={1.75} className="shrink-0 text-[#F5F5F5]" />
+                    <span className="flex-1">{label}</span>
+                    {isActiveItem && <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" />}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          <Link to="/feed" onClick={() => setMobileMenuOpen(false)} className={drawerLinkClass(isFeed)}>
+            <Rss size={17} strokeWidth={1.75} className="shrink-0 text-[#F5F5F5]" />
+            <span className="flex-1">Feed</span>
+            {isFeed && <span className="w-1.5 h-1.5 rounded-full bg-[#61F1AC] shrink-0" />}
+          </Link>
+        </nav>
+
+        {!user && (
+          <div className="p-3 border-t border-[#1C1C1C] shrink-0">
+            <Link
+              to="/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full h-10 flex items-center justify-center gap-2 text-sm font-bold text-black bg-[#61F1AC] rounded-full"
+            >
+              <LogIn size={16} strokeWidth={2} />
+              Sign in
+            </Link>
+          </div>
+        )}
+      </aside>
+    </div>
+
     {confirmDeleteOpen && ( 
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"> 
             <div className="w-full max-w-sm bg-[#0B0B0B] border border-[#1C1C1C] rounded-xl p-6 text-[#F5F5F5]"> 
