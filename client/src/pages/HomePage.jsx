@@ -13,11 +13,53 @@ import { BorderBeam } from "../components/ui/border-beam";
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 import { MediaCarousel } from "../components/ui/MediaCarousel";
 import { Banner } from "../components/ui/Banner";
+import { OrgiPicksButton } from "../feature/recommendation/components/OrgiPicksButton";
 
-export function HomePage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
-  const [trendingItems, setTrendingItems] = useState([]);
+const HERO_HEADLINES = [
+  {
+    tag: "DISCOVER & ESCAPE",
+    title: "What are you in the mood to watch?",
+    placeholder: "Search a movie, series, or comfort favorite...",
+  },
+  {
+    tag: "YOUR NEXT OBSESSION",
+    title: "Ready to dive into something great?",
+    placeholder: "Search anything to lose yourself in...",
+  },
+  {
+    tag: "PRESS PLAY",
+    title: "What sounds good right now?",
+    placeholder: "Search a title, genre, or mood...",
+  },
+  {
+    tag: "CURATED STORIES",
+    title: "Let's find your next favorite watch.",
+    placeholder: "Search movies, shows, or hidden gems...",
+  },
+  {
+    tag: "TIME TO STREAM",
+    title: "Looking for something worth watching?",
+    placeholder: "Search your next binge or quick watch...",
+  },
+  {
+    tag: "ESCAPE THE ORDINARY",
+    title: "Where should we escape to today?",
+    placeholder: "Search any world, movie, or series...",
+  },
+  {
+    tag: "JUST FOR YOU",
+    title: "Find whatever you feel like watching.",
+    placeholder: "Search by title, director, or vibe...",
+  },
+];
+
+export function HomePage() { 
+  const [heroPrompt] = useState(() => 
+    HERO_HEADLINES[Math.floor(Math.random() * HERO_HEADLINES.length)] 
+  ); 
+  const [searchQuery, setSearchQuery] = useState(""); 
+  const [activeFilter, setActiveFilter] = useState("All"); 
+  const [trendingItems, setTrendingItems] = useState([]); 
   const [isLoadingTrending, setIsLoadingTrending] = useState(true);
 
   const [top10Items, setTop10Items] = useState([]);
@@ -174,58 +216,60 @@ export function HomePage() {
       <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-[120px]">
         {/* CENTER HERO SECTION (Permanent search bar that NEVER disappears) */}
         <section className="flex flex-col items-center justify-center pt-8 pb-12 text-center">
-          {/* Small tracked uppercase label "MOVIES" */}
-          <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#7A7A7A] mb-3">
-            MOVIES &amp; SERIES
-          </span>
+          <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#61F1AC] mb-3"> 
+            {heroPrompt.tag} 
+          </span> 
 
-          {/* Large light-weight white headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-light tracking-tight text-[#F5F5F5] mb-9">
-            What did you watch?
-          </h1>
+          <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-light tracking-tight text-[#F5F5F5] mb-9"> 
+            {heroPrompt.title} 
+          </h1> 
 
-          {/* Centered pill search bar with animated BorderBeam */}
-          <div className="relative w-full max-w-[620px] group">
-            <BorderBeam
-              size="md"
-              colorVariant="mint"
-              borderRadius={27}
-              className="w-full rounded-full"
-            >
-              <div className="relative w-full h-[54px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all">
-                <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                  <Search size={18} className="text-[#61F1AC] shrink-0" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    placeholder="Search any movie or series to rate..."
-                    className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]"
-                  />
-                </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-[800px]"> 
+            <div className="relative w-full max-w-[620px] group"> 
+              <BorderBeam 
+                size="md" 
+                colorVariant="mint" 
+                borderRadius={27} 
+                className="w-full rounded-full" 
+              > 
+                <div className="relative w-full h-[54px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all"> 
+                  <div className="flex items-center gap-3.5 flex-1 min-w-0"> 
+                    <Search size={18} className="text-[#61F1AC] shrink-0" /> 
+                    <input 
+                      ref={searchInputRef} 
+                      type="text" 
+                      value={searchQuery} 
+                      onChange={(e) => handleSearchChange(e.target.value)} 
+                      placeholder={heroPrompt.placeholder} 
+                      className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]" 
+                    /> 
+                  </div> 
 
-                {/* Clear button or shortcut chip */}
-                {isSearchActive ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleSearchChange("");
-                      searchInputRef.current?.focus();
-                    }}
-                    className="inline-flex items-center gap-1 text-xs text-[#7A7A7A] hover:text-[#F5F5F5] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] cursor-pointer transition-colors"
-                  >
-                    <X size={14} />
-                    <span>Clear</span>
-                  </button>
-                ) : (
-                  <kbd className="inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors">
-                    /
-                  </kbd>
-                )}
-              </div>
-            </BorderBeam>
-          </div>
+                  {isSearchActive ? ( 
+                    <button 
+                      type="button" 
+                      onClick={() => { 
+                        handleSearchChange(""); 
+                        searchInputRef.current?.focus(); 
+                      }} 
+                      className="inline-flex items-center gap-1 text-xs text-[#7A7A7A] hover:text-[#F5F5F5] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] cursor-pointer transition-colors" 
+                    > 
+                      <X size={14} /> 
+                      <span>Clear</span> 
+                    </button> 
+                  ) : ( 
+                    <kbd className="inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors"> 
+                      / 
+                    </kbd> 
+                  )} 
+                </div> 
+              </BorderBeam> 
+            </div> 
+
+            <OrgiPicksButton className="hidden sm:inline-flex" /> 
+          </div> 
+
+          <OrgiPicksButton className="sm:hidden mt-3 w-full max-w-[620px]" /> 
         </section>
 
         {/* ======================================================== */}

@@ -1,7 +1,8 @@
-import React from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import React from "react"; 
+import { Outlet } from "react-router-dom"; 
 import { Navbar } from "./Navbar"; 
 import { Footer } from "./Footer"; 
+import { OrgiPicksFAB } from "../../feature/recommendation/components/OrgiPicksFAB"; 
 
 export function Layout() { 
   return ( 
@@ -11,6 +12,7 @@ export function Layout() {
         <Outlet /> 
       </main> 
       <Footer /> 
+      <OrgiPicksFAB /> 
     </div> 
   ); 
 } 

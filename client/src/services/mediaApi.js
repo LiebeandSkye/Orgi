@@ -1209,14 +1209,36 @@ export async function fetchMediaDetails(category, id) {
             })),
         },
         reviews: mangaReviews,
-        details: {
-            director: authorName,
-            writers: authorName,
-            music: artistName,
-            cinematography: (attrs.status || "Ongoing").toUpperCase(),
-            boxOffice: volumeCount ? `${volumeCount} Volumes` : "Serialized",
-            aspectRatio: chapterCount ? `${chapterCount} Chapters` : (category || "manhwa").toUpperCase(),
-            studio: "MangaDex",
-        },
-    });
-}
+        details: { 
+            director: authorName, 
+            writers: authorName, 
+            music: artistName, 
+            cinematography: (attrs.status || "Ongoing").toUpperCase(), 
+            boxOffice: volumeCount ? `${volumeCount} Volumes` : "Serialized", 
+            aspectRatio: chapterCount ? `${chapterCount} Chapters` : (category || "manhwa").toUpperCase(), 
+            studio: "MangaDex", 
+        }, 
+    }); 
+} 
+ 
+export async function fetchMediaVerdict(payload) { 
+    try { 
+        const res = await fetch(`${API_BASE_URL}/verdict`, { 
+            method: "POST", 
+            headers: { 
+                "Content-Type": "application/json", 
+            }, 
+            body: JSON.stringify(payload), 
+        }); 
+        if (!res.ok) { 
+            return { fallback: true }; 
+        } 
+        const json = await res.json(); 
+        if (json.success && json.data) { 
+            return { success: true, data: json.data }; 
+        } 
+        return { fallback: true }; 
+    } catch { 
+        return { fallback: true }; 
+    } 
+} 

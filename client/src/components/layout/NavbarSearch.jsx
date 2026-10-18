@@ -35,7 +35,7 @@ export function NavbarSearch() {
 
   useEffect(() => { 
     const clean = query.trim(); 
-    if (!clean) { 
+    if (!clean || clean.length < 2) { 
       setResults([]); 
       setSearchedQuery(""); 
       setOpen(false); 
@@ -54,7 +54,7 @@ export function NavbarSearch() {
       } finally { 
         setLoading(false); 
       } 
-    }, 280); 
+    }, 500); 
 
     return () => clearTimeout(timer); 
   }, [query]); 

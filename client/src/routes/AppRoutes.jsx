@@ -15,6 +15,7 @@ import { DashboardPage } from "../pages/DashboardPage";
 import { SettingPage } from "../pages/SettingPage"; 
 import { LoginPage } from "../pages/LoginPage"; 
 import { AuthCallbackPage } from "../pages/AuthCallbackPage"; 
+import { RecommendationPage } from "../pages/RecommendationPage"; 
 
 export function AppRoutes() { 
     return ( 
@@ -66,6 +67,8 @@ export function AppRoutes() {
                 <Route path="/reviews/:source/:titleId/:reviewId" element={<ReviewsPage />} /> 
 
                 <Route path="/search" element={<SearchPage />} /> 
+                <Route path="/picks" element={<RecommendationPage />} /> 
+                <Route path="/recommend" element={<Navigate to="/picks" replace />} /> 
 
                 {/* Books: Main Dashboard + Subcategories + Details */} 
                 <Route path="/books" element={<BooksDashboard />} /> 

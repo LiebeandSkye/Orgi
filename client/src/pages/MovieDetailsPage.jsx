@@ -19,7 +19,9 @@ import { Button } from "../components/ui/Button";
 import { MediaReviewsTab } from "../components/reviews/MediaReviewsTab";
 import MediaItems from "../components/ui/MediaItems";
 import Trailer from "../components/ui/Trailer";
-import { fetchMediaDetails } from "../services/mediaApi"; 
+import { fetchMediaDetails, fetchMediaVerdict } from "../services/mediaApi"; 
+import { AiVerdictHero } from "../components/ui/AiVerdictHero"; 
+import { AiVerdictSkeleton } from "../components/ui/AiVerdictSkeleton"; 
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import { useAuth } from "../context/AuthContext"; 
 import { useToast } from "../context/ToastContext"; 
@@ -110,10 +112,67 @@ export function MovieDetailsPage({
     }
     loadTmdbMovie();
     
-    return () => {
-      mounted = false;
-    };
-  }, [category, id]);
+    return () => { 
+      mounted = false; 
+    }; 
+  }, [category, id]); 
+
+  const [verdictData, setVerdictData] = useState(null); 
+  const [verdictStatus, setVerdictStatus] = useState("loading"); 
+
+  useEffect(() => { 
+    if (!movieData) return; 
+
+    let mounted = true; 
+    setVerdictStatus("loading"); 
+
+    async function loadVerdict() { 
+      const startTime = Date.now(); 
+      try { 
+        const provider = category 
+          ? (category === "manga" || category === "manhwa" || category === "manhua" ? "mangadex" : "openlibrary") 
+          : "tmdb"; 
+        const targetExternalId = String(category ? id : (id || 157336)); 
+        const res = await fetchMediaVerdict({ 
+          provider, 
+          id: targetExternalId, 
+          title: movieData.title, 
+          type: movieData.type || category || "movie", 
+          genres: movieData.genres, 
+          year: movieData.year, 
+          synopsis: movieData.synopsis, 
+        }); 
+
+        const elapsed = Date.now() - startTime; 
+        if (elapsed < 2500) { 
+          await new Promise((resolve) => setTimeout(resolve, 2500 - elapsed)); 
+        } 
+
+        if (mounted) { 
+          if (res?.success && res.data) { 
+            setVerdictData(res.data); 
+            setVerdictStatus("success"); 
+          } else { 
+            setVerdictStatus("fallback"); 
+          } 
+        } 
+      } catch { 
+        const elapsed = Date.now() - startTime; 
+        if (elapsed < 2500) { 
+          await new Promise((resolve) => setTimeout(resolve, 2500 - elapsed)); 
+        } 
+        if (mounted) { 
+          setVerdictStatus("fallback"); 
+        } 
+      } 
+    } 
+
+    loadVerdict(); 
+
+    return () => { 
+      mounted = false; 
+    }; 
+  }, [movieData, category, id]); 
   
   const [mediaData, setMediaData] = useState({ 
     images: { 
@@ -359,7 +418,7 @@ export function MovieDetailsPage({
   }; 
  
   
-  if (isLoading || !movieData) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#000000] text-[#F5F5F5] select-none pt-12 pb-24">
         <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex flex-col md:flex-row gap-12">
@@ -378,15 +437,27 @@ export function MovieDetailsPage({
       </div>
     );
   }
+
+  if (!movieData) {
+    return (
+      <div className="min-h-[70vh] bg-[#000000] text-[#F5F5F5] flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-xl font-bold mb-2">Title Not Found</div>
+        <p className="text-sm text-[#7A7A7A] mb-6 max-w-md">We could not load details for this title. It might have been moved or is unavailable in our database.</p>
+        <Link to="/" className="px-5 py-2.5 rounded-full bg-[#61F1AC] text-black font-semibold text-xs">
+          Return Home
+        </Link>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24">
       {/* HERO SECTION */}
-      <section
-        className={`relative w-full overflow-hidden transition-all duration-500 ${
-          cropHero ? "h-[220px] md:h-[280px]" : "min-h-[580px] lg:min-h-[640px]"
-        }`}
-      >
+      <section 
+        className={`relative w-full overflow-hidden transition-all duration-500 ${ 
+          cropHero ? "h-[220px] md:h-[280px]" : "min-h-[580px] lg:min-h-[660px] pb-6" 
+        }`} 
+      > 
         {/* Full-width dark cinematic backdrop image heavily darkened with black gradient overlay fading to pure #000 at bottom */}
         <div className="absolute inset-0 z-0">
           <img
@@ -402,15 +473,48 @@ export function MovieDetailsPage({
           <div className="absolute inset-0 bg-gradient-to-r from-[#000000]/80 via-transparent to-[#000000]/80" />
         </div>
         
-        {/* Hero Content: Two-column layout with 120px side margins */}
-        <div
-          className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-10 pb-8 flex items-start gap-12 transition-transform duration-500 ${
-            cropHero
-              ? "-translate-y-48 opacity-100 pointer-events-none"
-              : "translate-y-0 opacity-100"
-          }`}
-        >
-          {/* LEFT: 2:3 portrait poster, 320px wide, 12px rounded corners, 1px border */}
+        {verdictStatus === "success" && verdictData ? ( 
+          <div 
+            className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-10 pb-8 transition-transform duration-500 ${ 
+              cropHero 
+                ? "-translate-y-48 opacity-100 pointer-events-none" 
+                : "translate-y-0 opacity-100" 
+            }`} 
+          > 
+            <AiVerdictHero 
+              movieData={movieData} 
+              verdictData={verdictData} 
+              blendedScore={blendedScore} 
+              totalVotesLabel={totalVotesLabel} 
+              inCollection={inCollection} 
+              collectionLoading={collectionLoading} 
+              onToggleCollection={handleToggleCollection} 
+              onPlayTrailer={handlePlayTrailer} 
+              isLoadingTrailer={isLoadingTrailer} 
+              onOpenReviews={() => handleTabChange("Reviews")} 
+              onShare={() => { 
+                navigator.clipboard?.writeText(window.location.href); 
+                showToast({ message: "Link copied to clipboard." }); 
+              }} 
+              category={category} 
+            /> 
+          </div> 
+        ) : verdictStatus === "loading" ? ( 
+          <AiVerdictSkeleton 
+            movieData={movieData} 
+            cropHero={cropHero} 
+            category={category} 
+          /> 
+        ) : ( 
+          <div 
+            className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-10 pb-8 flex items-start gap-12 transition-transform duration-500 ${ 
+              cropHero 
+                ? "-translate-y-48 opacity-100 pointer-events-none" 
+                : "translate-y-0 opacity-100" 
+            }`} 
+          > 
+            {/* LEFT: 2:3 portrait poster, 320px wide, 12px rounded corners, 1px border */}
+
           <div className="shrink-0 hidden md:block w-[320px]">
             <div className="relative aspect-[2/3] w-full rounded-[12px] border border-[#1C1C1C] overflow-hidden bg-[#0B0B0B] shadow-2xl group">
               <img
@@ -600,10 +704,12 @@ export function MovieDetailsPage({
                   />
                 </button>
               )}
-            </div>
-          </div>
-        </div>
-      </section>
+            </div> 
+          </div> 
+        </div> 
+      )} 
+      </section> 
+
       
       {/* BELOW THE HERO: Minimal horizontal tab switcher */}
       <div

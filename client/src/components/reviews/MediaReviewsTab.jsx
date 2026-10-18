@@ -161,6 +161,7 @@ export function MediaReviewsTab({
   const [replyAnon, setReplyAnon] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState({});
+  const [loadingReplies, setLoadingReplies] = useState({});
   
   const [likedReviews, setLikedReviews] = useState({});
   const [expandedReviews, setExpandedReviews] = useState({});
@@ -425,10 +426,21 @@ export function MediaReviewsTab({
     } 
   }; 
   
-  const toggleReplies = (reviewId) => { 
+  const toggleReplies = async (reviewId) => { 
+    if (loadingReplies[reviewId]) return; 
+    if (expandedReplies[reviewId]) { 
+      setExpandedReplies((prev) => ({ 
+        ...prev, 
+        [reviewId]: false, 
+      })); 
+      return; 
+    } 
+    setLoadingReplies((prev) => ({ ...prev, [reviewId]: true })); 
+    await new Promise((resolve) => setTimeout(resolve, 1000)); 
+    setLoadingReplies((prev) => ({ ...prev, [reviewId]: false })); 
     setExpandedReplies((prev) => ({ 
       ...prev, 
-      [reviewId]: !prev[reviewId], 
+      [reviewId]: true, 
     })); 
   }; 
   
@@ -897,20 +909,28 @@ export function MediaReviewsTab({
                   </div>
                 </div>
                 
-                {rev.repliesCount > 0 && rev.source === "community" && (
-                  <button
-                    type="button"
-                    onClick={() => toggleReplies(rev.id)}
-                    className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <span>
-                      {expandedReplies[rev.id]
-                        ? "Hide replies"
-                        : `View ${rev.repliesCount} ${rev.repliesCount === 1 ? "reply" : "replies"}`}
-                    </span>
-                  </button>
-                )}
-              </div>
+                {rev.repliesCount > 0 && rev.source === "community" && ( 
+                  <button 
+                    type="button" 
+                    disabled={Boolean(loadingReplies[rev.id])} 
+                    onClick={() => toggleReplies(rev.id)} 
+                    className="text-xs font-medium text-[#61F1AC] hover:underline cursor-pointer flex items-center gap-1.5 disabled:opacity-60" 
+                  > 
+                    {loadingReplies[rev.id] ? ( 
+                      <> 
+                        <Loader2 size={13} className="animate-spin text-[#61F1AC]" /> 
+                        <span>Loading replies...</span> 
+                      </> 
+                    ) : ( 
+                      <span> 
+                        {expandedReplies[rev.id] 
+                          ? "Hide replies" 
+                          : `View ${rev.repliesCount} ${rev.repliesCount === 1 ? "reply" : "replies"}`} 
+                      </span> 
+                    )} 
+                  </button> 
+                )} 
+              </div> 
               
               {replyingToReviewId === rev.id && rev.source === "community" && ( 
                 <div className="mt-3.5 pl-4 sm:pl-8"> 

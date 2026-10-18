@@ -109,3 +109,52 @@
   animation: backdropFade 0.2s ease-out forwards;
 }
 
+@keyframes shimmer-text { 
+  0% { 
+    background-position: 200% 0; 
+  }
+  100% { 
+    background-position: -200% 0; 
+  }
+}
+
+@keyframes pixel-on { 
+  0%, 100% { 
+    opacity: 0.15; 
+  }
+  50% { 
+    opacity: 1; 
+  }
+}
+
+@keyframes slide-in-right { 
+  0% { 
+    opacity: 0; 
+    transform: translateX(40px); 
+  } 
+  100% { 
+    opacity: 1; 
+    transform: translateX(0); 
+  } 
+} 
+
+@keyframes slide-in-left { 
+  0% { 
+    opacity: 0; 
+    transform: translateX(-40px); 
+  } 
+  100% { 
+    opacity: 1; 
+    transform: translateX(0); 
+  } 
+} 
+
+.animate-slide-in-right { 
+  animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+} 
+
+.animate-slide-in-left { 
+  animation: slide-in-left 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+} 
+
+

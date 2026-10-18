@@ -1,4 +1,5 @@
-import { getOrSetCache } from "../services/cacheService.js";
+import { getOrSetCache } from "../services/cacheService.js"; 
+import { generateMediaVerdict } from "../services/geminiService.js"; 
 
 const MANGADEX_BASE = "https://api.mangadex.org";
 const MANGADEX_COVERS = "https://uploads.mangadex.org/covers";
@@ -1092,9 +1093,53 @@ export const mediaController = {
         };
       });
 
-      res.json({ success: true, data });
-    } catch (err) {
-      next(err);
-    }
-  },
-};
+      res.json({ success: true, data }); 
+    } catch (err) { 
+      next(err); 
+    } 
+  }, 
+
+  async getVerdict(req, res) { 
+    try { 
+      const { 
+        provider = "tmdb", 
+        id = "", 
+        title = "", 
+        type = "movie", 
+        genres = "", 
+        year = "", 
+        synopsis = "", 
+      } = req.method === "POST" ? req.body : req.query; 
+
+      if (!title) { 
+        return res.json({ 
+          success: false, 
+          fallback: true, 
+          message: "Title is required", 
+        }); 
+      } 
+
+      const safeId = String(id || title).trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-"); 
+      const cacheKey = `ai:verdict:${provider.toLowerCase()}:${safeId}`; 
+
+      const data = await getOrSetCache(cacheKey, 30 * 24 * 3600, async () => { 
+        return await generateMediaVerdict({ 
+          title, 
+          type, 
+          genres, 
+          year, 
+          synopsis, 
+        }); 
+      }); 
+
+      res.json({ success: true, data }); 
+    } catch (err) { 
+      console.warn("[Gemini AI Error]", err.message, err.details || ""); 
+      res.json({ 
+        success: false, 
+        fallback: true, 
+        message: err.message || "Failed to generate verdict", 
+      }); 
+    } 
+  }, 
+}; 

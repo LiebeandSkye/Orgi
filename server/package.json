@@ -5,9 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "test": "node --test \"test/**/*.test.js\""
+    "start": "node index.js", 
+    "dev": "nodemon --watch .env --watch src --watch index.js index.js", 
+    "test": "node --test \"test/**/*.test.js\"" 
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

@@ -254,17 +254,22 @@ export function CommentThread({
             setExpanded((p) => ({ ...p, [id]: false })); 
             return; 
         } 
-        if (onLoadReplies) { 
-            setLoading((p) => ({ ...p, [id]: true })); 
-            try { 
+        setLoading((p) => ({ ...p, [id]: true })); 
+        try { 
+            const startTime = Date.now(); 
+            if (onLoadReplies) { 
                 await onLoadReplies(id); 
-            } catch { 
             } 
-            if (!mounted.current) return; 
-            setLoading((p) => ({ ...p, [id]: false })); 
+            const elapsed = Date.now() - startTime; 
+            if (elapsed < 1000) { 
+                await new Promise((resolve) => setTimeout(resolve, 1000 - elapsed)); 
+            } 
+        } catch { 
         } 
+        if (!mounted.current) return; 
+        setLoading((p) => ({ ...p, [id]: false })); 
         setExpanded((p) => ({ ...p, [id]: true })); 
-    };
+    }; 
 
     const openReply = (comment, rootId) => {
         const token = localStorage.getItem("orgi_session");
@@ -344,8 +349,8 @@ export function CommentThread({
                                     <span className="h-px w-6 bg-white/15" />
                                     {isLoading ? (
                                         <span className="inline-flex items-center gap-2">
-                                            <Loader2 size={13} className="animate-spin" />
-                                            Loading replies
+                                            <Loader2 size={13} className="animate-spin text-[#61F1AC]" />
+                                            <span>Loading replies</span>
                                         </span>
                                     ) : isOpen ? (
                                         "Hide replies"

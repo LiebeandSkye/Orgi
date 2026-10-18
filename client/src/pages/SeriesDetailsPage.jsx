@@ -24,6 +24,9 @@ import EpisodesSection from "../components/ui/EpisodesSection";
 import OverviewTab from "../components/ui/OverviewTab"; 
 import { useToast } from "../context/ToastContext"; 
 import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection"; 
+import { fetchMediaVerdict } from "../services/mediaApi"; 
+import { AiVerdictHero } from "../components/ui/AiVerdictHero"; 
+import { AiVerdictSkeleton } from "../components/ui/AiVerdictSkeleton"; 
 
 
 
@@ -59,6 +62,58 @@ export function SeriesDetailsPage({
   const [showTrailerModal, setShowTrailerModal] = useState(false); 
   const [activeTrailerKey, setActiveTrailerKey] = useState(null); 
   const [isLoadingTrailer, setIsLoadingTrailer] = useState(false); 
+  const [verdictData, setVerdictData] = useState(null); 
+  const [verdictStatus, setVerdictStatus] = useState("loading"); 
+
+  useEffect(() => { 
+    if (!seriesData || !id) return; 
+
+    let mounted = true; 
+    setVerdictStatus("loading"); 
+
+    async function loadVerdict() { 
+      const startTime = Date.now(); 
+      try { 
+        const res = await fetchMediaVerdict({ 
+          provider: "tmdb", 
+          id: String(id), 
+          title: seriesData.title, 
+          type: "tv", 
+          genres: seriesData.genres, 
+          year: seriesData.year, 
+          synopsis: seriesData.synopsis, 
+        }); 
+
+        const elapsed = Date.now() - startTime; 
+        if (elapsed < 2500) { 
+          await new Promise((resolve) => setTimeout(resolve, 2500 - elapsed)); 
+        } 
+
+        if (mounted) { 
+          if (res?.success && res.data) { 
+            setVerdictData(res.data); 
+            setVerdictStatus("success"); 
+          } else { 
+            setVerdictStatus("fallback"); 
+          } 
+        } 
+      } catch { 
+        const elapsed = Date.now() - startTime; 
+        if (elapsed < 2500) { 
+          await new Promise((resolve) => setTimeout(resolve, 2500 - elapsed)); 
+        } 
+        if (mounted) { 
+          setVerdictStatus("fallback"); 
+        } 
+      } 
+    } 
+
+    loadVerdict(); 
+
+    return () => { 
+      mounted = false; 
+    }; 
+  }, [seriesData, id]); 
  
   useEffect(() => { 
     if (!seriesData || !id) return; 
@@ -287,6 +342,31 @@ export function SeriesDetailsPage({
     );
   }
   
+  const providerScore = parseFloat(seriesData?.tmdbRating) || 0; 
+  const providerVotesCount = 
+    typeof seriesData?.tmdbVotes === "string" && (seriesData.tmdbVotes.includes("K") || seriesData.tmdbVotes.includes("k")) 
+      ? parseFloat(seriesData.tmdbVotes) * 1000 
+      : parseInt(seriesData?.tmdbVotes, 10) || 100; 
+
+  const communityScore = communityData?.communityAverage ?? null; 
+  const communityVotesCount = communityData?.communityVotes || 0; 
+
+  let blendedScore = providerScore; 
+  let totalVotesLabel = seriesData?.tmdbVotes; 
+
+  if (communityScore !== null && communityVotesCount > 0) { 
+    blendedScore = Number( 
+      ( 
+        (providerScore * providerVotesCount + communityScore * communityVotesCount) / 
+        (providerVotesCount + communityVotesCount) 
+      ).toFixed(1) 
+    ); 
+    const totalCount = providerVotesCount + communityVotesCount; 
+    totalVotesLabel = totalCount >= 1000 
+      ? `${(totalCount / 1000).toFixed(1)}k ratings` 
+      : `${totalCount} ratings`; 
+  } 
+
   return (
     <div className="min-h-screen bg-[#000000] text-[#F5F5F5] pb-24">
       {/* HERO SECTION */}
@@ -310,12 +390,44 @@ export function SeriesDetailsPage({
           <div className="absolute inset-0 bg-gradient-to-r from-[#000000]/80 via-transparent to-[#000000]/80" />
         </div>
         
-        {/* Hero Content: Two-column layout with 120px side margins */}
-        <div
-          className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12 pb-16 flex flex-col md:flex-row gap-12 lg:gap-16 items-start transition-opacity duration-300 ${
-            cropHero ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
-        >
+        {verdictStatus === "success" && verdictData ? ( 
+          <div 
+            className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-10 pb-8 transition-transform duration-500 ${ 
+              cropHero 
+                ? "-translate-y-48 opacity-100 pointer-events-none" 
+                : "translate-y-0 opacity-100" 
+            }`} 
+          > 
+            <AiVerdictHero 
+              movieData={seriesData} 
+              verdictData={verdictData} 
+              blendedScore={blendedScore} 
+              totalVotesLabel={totalVotesLabel} 
+              inCollection={inCollection} 
+              collectionLoading={collectionLoading} 
+              onToggleCollection={handleToggleCollection} 
+              onPlayTrailer={handlePlayTrailer} 
+              isLoadingTrailer={isLoadingTrailer} 
+              onOpenReviews={() => handleTabChange("Reviews")} 
+              onShare={() => { 
+                navigator.clipboard?.writeText(window.location.href); 
+                showToast({ message: "Link copied to clipboard." }); 
+              }} 
+              category="series" 
+            /> 
+          </div> 
+        ) : verdictStatus === "loading" ? ( 
+          <AiVerdictSkeleton 
+            movieData={seriesData} 
+            cropHero={cropHero} 
+            category="series" 
+          /> 
+        ) : ( 
+          <div 
+            className={`relative z-10 max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12 pb-16 flex flex-col md:flex-row gap-12 lg:gap-16 items-start transition-opacity duration-300 ${ 
+              cropHero ? "opacity-0 pointer-events-none" : "opacity-100" 
+            }`} 
+          >
           {/* LEFT: Poster column */}
           <div className="shrink-0 w-[240px] md:w-[280px] lg:w-[320px] hidden md:block">
             <div className="aspect-[2/3] w-full rounded-[16px] overflow-hidden border border-[#1C1C1C] shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative group bg-[#0A0A0A]">
@@ -472,6 +584,7 @@ export function SeriesDetailsPage({
             </div>
           </div>
         </div>
+        )}
       </section>
       
       {/* BELOW THE HERO: Minimal horizontal tab switcher */}

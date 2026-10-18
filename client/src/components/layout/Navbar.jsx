@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react"; 
 import { Link, useLocation } from "react-router-dom"; 
-import { Bookmark, User, LayoutDashboard, Settings, LogOut, LogIn, Trash2, AlertTriangle } from "lucide-react"; 
+import { Bookmark, User, LayoutDashboard, LogOut, LogIn, Trash2, AlertTriangle } from "lucide-react"; 
 import { useAuth } from "../../context/AuthContext"; 
 import { authApi } from "../../feature/auth/services/authApi"; 
 import { NavbarSearch } from "./NavbarSearch"; 
@@ -9,7 +9,6 @@ const PROFILE_ITEMS = [
     { to: "/profile", label: "Profile", icon: User }, 
     { to: "/collection", label: "Collection", icon: Bookmark }, 
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, 
-    { to: "/setting", label: "Setting", icon: Settings }, 
 ]; 
 
 const DEFAULT_AVATAR = "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
@@ -20,8 +19,13 @@ export function Navbar() {
     const [profileOpen, setProfileOpen] = useState(false); 
     const profileDropdownRef = useRef(null); 
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false); 
+    const [deleteConfirmationInput, setDeleteConfirmationInput] = useState(""); 
     const [isDeleting, setIsDeleting] = useState(false); 
     const [deleteError, setDeleteError] = useState(null); 
+    
+    const currentUsername = userProfile?.user_name || user?.user_metadata?.user_name || user?.user_name || user?.email?.split("@")[0] || "account"; 
+    const targetDeletePhrase = `delete my ${currentUsername} data`; 
+    const isDeleteConfirmed = deleteConfirmationInput.trim().toLowerCase() === targetDeletePhrase.toLowerCase(); 
     
     const handleDeleteAccount = async () => { 
         setIsDeleting(true); 
@@ -266,6 +270,7 @@ export function Navbar() {
                                 onClick={() => { 
                                     setProfileOpen(false); 
                                     setDeleteError(null); 
+                                    setDeleteConfirmationInput(""); 
                                     setConfirmDeleteOpen(true); 
                                 }} 
                                 className="w-full flex items-center gap-3 h-9 px-3 text-[13px] leading-none rounded-lg text-rose-400 hover:bg-[#141414] cursor-pointer" 
@@ -298,28 +303,48 @@ export function Navbar() {
                     <AlertTriangle size={20} /> 
                     <h2 className="text-base font-bold text-[#F5F5F5]">Delete Account</h2> 
                 </div> 
-                <p className="text-xs text-[#B5B5B5] leading-relaxed mb-4"> 
+                <p className="text-xs text-[#B5B5B5] leading-relaxed mb-3"> 
                     Warning: This action is permanent and cannot be undone. All your saved profile information, collections, and account data will be permanently removed. 
                 </p> 
+                <div className="mb-4"> 
+                    <label className="block text-[11px] text-[#7A7A7A] mb-1.5"> 
+                        To confirm, please type{" "} 
+                        <span className="font-mono text-rose-400 select-all font-semibold"> 
+                            {targetDeletePhrase} 
+                        </span> 
+                    </label> 
+                    <input 
+                        type="text" 
+                        value={deleteConfirmationInput} 
+                        onChange={(e) => setDeleteConfirmationInput(e.target.value)} 
+                        placeholder={targetDeletePhrase} 
+                        className="w-full px-3 py-2 text-xs bg-[#141414] border border-[#1C1C1C] focus:border-rose-500 rounded-lg outline-none text-[#F5F5F5] placeholder-[#4A4A4A] font-mono transition-colors" 
+                        autoFocus 
+                    /> 
+                </div> 
                 {deleteError && ( 
                     <div className="p-2 mb-4 text-xs text-rose-400 bg-rose-950/40 border border-rose-900 rounded"> 
                         {deleteError} 
                     </div> 
-                )}
+                )} 
                 <div className="flex justify-end gap-2"> 
                     <button 
                         type="button" 
                         disabled={isDeleting} 
-                        onClick={() => setConfirmDeleteOpen(false)} 
+                        onClick={() => { 
+                            setConfirmDeleteOpen(false); 
+                            setDeleteConfirmationInput(""); 
+                            setDeleteError(null); 
+                        }} 
                         className="px-3 py-1.5 text-xs border border-[#1C1C1C] rounded text-[#B5B5B5] bg-[#141414] hover:bg-[#1C1C1C] cursor-pointer" 
                     > 
                         Cancel 
                     </button> 
                     <button 
                         type="button" 
-                        disabled={isDeleting} 
+                        disabled={isDeleting || !isDeleteConfirmed} 
                         onClick={handleDeleteAccount} 
-                        className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded cursor-pointer disabled:opacity-50" 
+                        className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity" 
                     > 
                         {isDeleting ? "Deleting..." : "Delete Account"} 
                     </button> 
