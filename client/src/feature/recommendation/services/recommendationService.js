@@ -21,6 +21,21 @@ const VIBE_GENRE_MAP = {
   Cozy: ["35", "10751", "16"], 
 }; 
 
+const VIBE_TV_GENRE_MAP = { 
+  Relaxed: ["16", "35", "10762"], 
+  Exciting: ["10759", "10765"], 
+  "Thought-provoking": ["9648", "10765", "18"], 
+  Emotional: ["18", "10766"], 
+  Funny: ["35"], 
+  "Dark & Intense": ["80", "18", "9648"], 
+  "Feel-good": ["35", "16", "10762"], 
+  Suspenseful: ["9648", "80"], 
+  Whimsical: ["10765", "16", "10762"], 
+  "Mind-bending": ["10765", "9648"], 
+  Romantic: ["18", "10766"], 
+  Cozy: ["35", "10762", "16"], 
+}; 
+
 const VIBE_MANGADEX_MAP = { 
   Relaxed: ["Slice of Life", "Comedy"], 
   Exciting: ["Action", "Adventure"], 
@@ -35,6 +50,21 @@ const VIBE_MANGADEX_MAP = {
   Romantic: ["Romance"], 
   Cozy: ["Slice of Life"], 
 }; 
+
+const VIBE_OPENLIBRARY_SUBJECT_MAP = {
+  Relaxed: ["fiction", "humorous_stories", "cozy"],
+  Exciting: ["adventure", "action", "fantasy"],
+  "Thought-provoking": ["psychological_fiction", "philosophy", "mystery"],
+  Emotional: ["romance", "drama"],
+  Funny: ["humor", "comedy"],
+  "Dark & Intense": ["thriller", "horror", "crime"],
+  "Feel-good": ["friendship", "humor", "fantasy"],
+  Suspenseful: ["suspense", "thriller", "mystery"],
+  Whimsical: ["fairy_tales", "fantasy"],
+  "Mind-bending": ["science_fiction", "time_travel"],
+  Romantic: ["romance"],
+  Cozy: ["fiction", "domestic_fiction"],
+};
 
 const GENRE_NAME_MAP = { 
   "28": "Action", 
@@ -58,12 +88,19 @@ const GENRE_NAME_MAP = {
   "37": "Western", 
   "10759": "Action & Adventure", 
   "10765": "Sci-Fi & Fantasy", 
+  "10762": "Kids",
+  "10763": "News",
+  "10764": "Reality",
+  "10766": "Soap",
+  "10767": "Talk",
+  "10768": "War & Politics",
 }; 
 
-export function mapVibeToGenres(vibes = []) { 
+export function mapVibeToGenres(vibes = [], isTv = false) { 
   const set = new Set(); 
+  const map = isTv ? VIBE_TV_GENRE_MAP : VIBE_GENRE_MAP;
   vibes.forEach((v) => { 
-    const ids = VIBE_GENRE_MAP[v] || []; 
+    const ids = map[v] || []; 
     ids.forEach((id) => set.add(id)); 
   }); 
   return Array.from(set); 
@@ -82,15 +119,16 @@ export function buildTmdbDiscoverParams({
     api_key: DIRECT_API_KEY, 
     sort_by: "vote_count.desc", 
     "vote_average.gte": "7.0", 
-    "vote_count.gte": isTv ? "80" : "200", 
+    "vote_count.gte": isTv ? "40" : "150", 
     include_adult: "false", 
   }); 
 
-  const genreIds = new Set(mapVibeToGenres(vibes)); 
+  const genreIds = new Set(mapVibeToGenres(vibes, isTv)); 
   includeGenres.forEach((g) => { 
     if (g === "Animation" || g === "16") genreIds.add("16"); 
     if (g === "Romance" || g === "10749") { 
-      if (!isTv) genreIds.add("10749"); 
+      if (isTv) genreIds.add("18"); 
+      else genreIds.add("10749"); 
     } 
     if (g === "Sci-Fi" || g === "878") genreIds.add(isTv ? "10765" : "878"); 
     if (g === "Action" || g === "28") genreIds.add(isTv ? "10759" : "28"); 
@@ -100,24 +138,8 @@ export function buildTmdbDiscoverParams({
     if (g === "Fantasy" || g === "14") genreIds.add(isTv ? "10765" : "14"); 
   }); 
 
-  const hasAnimation = includeGenres.includes("Animation") || includeGenres.includes("16"); 
-  const hasRomance = includeGenres.includes("Romance") || includeGenres.includes("10749") || vibes.includes("Romantic"); 
-
-  if (isTv) { 
-    if (hasAnimation) { 
-      params.set("with_genres", "16"); 
-      if (hasRomance) { 
-        params.set("with_keywords", "9840"); 
-      } 
-    } else if (genreIds.size > 0) { 
-      params.set("with_genres", Array.from(genreIds).slice(0, 3).join("|")); 
-    } 
-  } else { 
-    if (hasAnimation && hasRomance) { 
-      params.set("with_genres", "16,10749"); 
-    } else if (genreIds.size > 0) { 
-      params.set("with_genres", Array.from(genreIds).slice(0, 4).join("|")); 
-    } 
+  if (genreIds.size > 0) { 
+    params.set("with_genres", Array.from(genreIds).slice(0, 4).join("|")); 
   } 
 
   if (excludedGenres.length > 0) { 
@@ -128,8 +150,12 @@ export function buildTmdbDiscoverParams({
   } 
 
   if (socialContext === "family") { 
-    params.set("certification_country", "US"); 
-    params.set("certification.lte", "PG-13"); 
+    if (isTv) {
+      params.set("with_genres", "10762|10751|16");
+    } else {
+      params.set("certification_country", "US"); 
+      params.set("certification.lte", "PG-13"); 
+    }
   } 
 
   if (!isTv) { 
@@ -166,11 +192,13 @@ export async function fetchOrgiPicks({
   excludedGenres = [], 
 }) { 
   if (medium === "book") { 
-    const rawPicks = await fetchMangaPicks({ subMedium, vibes, includeGenres, excludedGenres }); 
+    const rawPicks = subMedium === "novels"
+      ? await fetchOpenLibraryPicks({ vibes, includeGenres })
+      : await fetchMangaPicks({ subMedium, vibes, includeGenres, excludedGenres }); 
     return enrichPicksWithAi(rawPicks, "book"); 
   } 
 
-  const isTvEndpoint = subMedium === "series" || timeBudget === "episodes"; 
+  const isTvEndpoint = subMedium === "series" || timeBudget === "episodes" || medium === "series"; 
   const endpoint = isTvEndpoint ? "/discover/tv" : "/discover/movie"; 
   const params = buildTmdbDiscoverParams({ 
     medium: isTvEndpoint ? "series" : "movie", 
@@ -181,26 +209,30 @@ export async function fetchOrgiPicks({
     excludedGenres, 
   }); 
 
-  const res = await fetch(`${TMDB_DIRECT_URL}${endpoint}?${params.toString()}`); 
-  if (!res.ok) { 
-    throw new Error(`Failed to fetch recommendations: ${res.status}`); 
-  } 
-
-  const json = await res.json(); 
-  let results = json.results || []; 
+  let results = [];
+  try {
+    const res = await fetch(`${TMDB_DIRECT_URL}${endpoint}?${params.toString()}`); 
+    if (res.ok) { 
+      const json = await res.json(); 
+      results = json.results || []; 
+    }
+  } catch {}
 
   if (results.length === 0) { 
     const fallbackParams = new URLSearchParams({ 
       api_key: DIRECT_API_KEY, 
       sort_by: "vote_count.desc", 
       "vote_average.gte": "7.0", 
+      "vote_count.gte": isTvEndpoint ? "30" : "100",
       include_adult: "false", 
     }); 
-    const fallbackRes = await fetch(`${TMDB_DIRECT_URL}${endpoint}?${fallbackParams.toString()}`); 
-    if (fallbackRes.ok) { 
-      const fallbackJson = await fallbackRes.json(); 
-      results = fallbackJson.results || []; 
-    } 
+    try {
+      const fallbackRes = await fetch(`${TMDB_DIRECT_URL}${endpoint}?${fallbackParams.toString()}`); 
+      if (fallbackRes.ok) { 
+        const fallbackJson = await fallbackRes.json(); 
+        results = fallbackJson.results || []; 
+      } 
+    } catch {}
   } 
 
   const shuffled = shuffleArray(results); 
@@ -234,7 +266,7 @@ export async function fetchOrgiPicks({
     }; 
   }); 
 
-  return enrichPicksWithAi(basePicks, "movie"); 
+  return enrichPicksWithAi(basePicks, isTvEndpoint ? "series" : "movie"); 
 } 
 
 async function enrichPicksWithAi(picks, mediaCategory) { 
@@ -276,7 +308,76 @@ async function enrichPicksWithAi(picks, mediaCategory) {
   }); 
 } 
 
-async function fetchMangaPicks({ subMedium = "manga", vibes = ["Relaxed"], includeGenres = [], excludedGenres = [] }) { 
+async function fetchOpenLibraryPicks({ vibes = ["Relaxed"], includeGenres = [] }) {
+  let subject = "fiction";
+  for (const v of vibes) {
+    const list = VIBE_OPENLIBRARY_SUBJECT_MAP[v];
+    if (list && list.length > 0) {
+      subject = list[0];
+      break;
+    }
+  }
+  if (includeGenres.includes("Romance")) subject = "romance";
+  if (includeGenres.includes("Fantasy")) subject = "fantasy";
+  if (includeGenres.includes("Action")) subject = "adventure";
+  if (includeGenres.includes("Mystery")) subject = "mystery";
+
+  let works = [];
+  try {
+    const res = await fetch(`https://openlibrary.org/subjects/${subject}.json?limit=30`);
+    if (res.ok) {
+      const json = await res.json();
+      works = json.works || [];
+    }
+  } catch {}
+
+  if (works.length === 0) {
+    try {
+      const fbRes = await fetch("https://openlibrary.org/subjects/fiction.json?limit=30");
+      if (fbRes.ok) {
+        const fbJson = await fbRes.json();
+        works = fbJson.works || [];
+      }
+    } catch {}
+  }
+
+  const shuffled = shuffleArray(works);
+  const selected = shuffled.slice(0, 3);
+
+  return selected.map((item, idx) => {
+    const coverId = item.cover_id;
+    const authorName = item.authors?.[0]?.name || "Unknown Author";
+    const id = (item.key || "").replace("/works/", "") || `ol-${idx}`;
+    const cover = coverId
+      ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
+      : "";
+
+    return {
+      id,
+      rank: idx + 1,
+      title: item.title || "Untitled",
+      poster: cover,
+      backdrop: cover,
+      year: item.first_publish_year ? String(item.first_publish_year) : "Classic",
+      genreTags: "COMPLETED · NOVELS",
+      rating: "8.8",
+      votesCount: item.edition_count ? `${item.edition_count * 20}` : "850",
+      synopsis: item.subject ? `A celebrated work exploring ${item.subject.slice(0, 3).join(", ")}.` : "A critically acclaimed literary work.",
+      provider: "openlibrary",
+      type: "BOOK",
+      subMedium: "novels",
+      route: `/books/novels/${id}`,
+      vibes: vibes.slice(0, 2),
+      pitch: `A standout novel fitting your ${vibes.join(" & ").toLowerCase()} mood.`,
+    };
+  });
+}
+
+async function fetchMangaPicks({ subMedium = "all", vibes = ["Relaxed"], includeGenres = [], excludedGenres = [] }) { 
+  if (subMedium === "novels") {
+    return fetchOpenLibraryPicks({ vibes, includeGenres });
+  }
+
   const params = new URLSearchParams({ 
     limit: "30", 
     "order[followedCount]": "desc", 
@@ -285,6 +386,17 @@ async function fetchMangaPicks({ subMedium = "manga", vibes = ["Relaxed"], inclu
 
   params.append("includes[]", "cover_art"); 
   params.append("includes[]", "author"); 
+  params.append("contentRating[]", "safe");
+  params.append("contentRating[]", "suggestive");
+
+  if (subMedium === "manga") {
+    params.append("originalLanguage[]", "ja");
+  } else if (subMedium === "manhwa") {
+    params.append("originalLanguage[]", "ko");
+  } else if (subMedium === "manhua") {
+    params.append("originalLanguage[]", "zh");
+    params.append("originalLanguage[]", "zh-hk");
+  }
 
   const targetTags = new Set(); 
   vibes.forEach((v) => { 
@@ -298,7 +410,10 @@ async function fetchMangaPicks({ subMedium = "manga", vibes = ["Relaxed"], inclu
     if (MANGADEX_GENRE_TAGS[g]) targetTags.add(MANGADEX_GENRE_TAGS[g]); 
   }); 
 
-  targetTags.forEach((tagId) => params.append("includedTags[]", tagId)); 
+  if (targetTags.size > 0) {
+    targetTags.forEach((tagId) => params.append("includedTags[]", tagId)); 
+    params.set("includedTagsMode", "OR");
+  }
 
   excludedGenres.forEach((eg) => { 
     if (MANGADEX_GENRE_TAGS[eg] && !targetTags.has(MANGADEX_GENRE_TAGS[eg])) { 
@@ -306,13 +421,41 @@ async function fetchMangaPicks({ subMedium = "manga", vibes = ["Relaxed"], inclu
     } 
   }); 
 
-  const res = await fetch(`${MANGADEX_BASE}/manga?${params.toString()}`); 
-  if (!res.ok) { 
-    throw new Error(`Failed to fetch manga picks: ${res.status}`); 
-  } 
+  let items = [];
+  try {
+    const res = await fetch(`${MANGADEX_BASE}/manga?${params.toString()}`); 
+    if (res.ok) {
+      const json = await res.json(); 
+      items = json.data || []; 
+    }
+  } catch {}
 
-  const json = await res.json(); 
-  const items = json.data || []; 
+  // Fallback to top-followed items for this subMedium if tag combinations returned 0
+  if (items.length === 0) {
+    try {
+      const fbParams = new URLSearchParams({
+        limit: "30",
+        "order[followedCount]": "desc",
+      });
+      fbParams.append("includes[]", "cover_art");
+      fbParams.append("contentRating[]", "safe");
+      fbParams.append("contentRating[]", "suggestive");
+      if (subMedium === "manga") {
+        fbParams.append("originalLanguage[]", "ja");
+      } else if (subMedium === "manhwa") {
+        fbParams.append("originalLanguage[]", "ko");
+      } else if (subMedium === "manhua") {
+        fbParams.append("originalLanguage[]", "zh");
+        fbParams.append("originalLanguage[]", "zh-hk");
+      }
+      const fbRes = await fetch(`${MANGADEX_BASE}/manga?${fbParams.toString()}`);
+      if (fbRes.ok) {
+        const fbJson = await fbRes.json();
+        items = fbJson.data || [];
+      }
+    } catch {}
+  }
+
   const shuffled = shuffleArray(items); 
   const selected = shuffled.slice(0, 3); 
 
@@ -322,7 +465,7 @@ async function fetchMangaPicks({ subMedium = "manga", vibes = ["Relaxed"], inclu
     const coverRel = (item.relationships || []).find((r) => r.type === "cover_art"); 
     const fileName = coverRel?.attributes?.fileName; 
     const coverUrl = fileName ? `${MANGADEX_COVERS}/${item.id}/${fileName}.512.jpg` : ""; 
-    const bookCategory = subMedium || "manga"; 
+    const bookCategory = subMedium === "all" ? "manga" : subMedium; 
 
     return { 
       id: String(item.id), 
