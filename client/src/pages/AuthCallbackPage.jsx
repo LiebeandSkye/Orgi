@@ -11,6 +11,7 @@ export function AuthCallbackPage() {
  
     useEffect(() => { 
         if (processedRef.current) return; 
+        processedRef.current = true; 
  
         const handleCallback = async () => { 
             try { 
@@ -27,16 +28,10 @@ export function AuthCallbackPage() {
  
                 if (!accessToken && !code) throw new Error("No authorization tokens received"); 
  
-                processedRef.current = true; 
- 
-                const codeVerifier = sessionStorage.getItem("orgi_oauth_verifier"); 
-                sessionStorage.removeItem("orgi_oauth_verifier"); 
- 
                 const res = await authApi.verifyOAuthSession({ 
                     access_token: accessToken, 
                     refresh_token: refreshToken, 
                     code, 
-                    code_verifier: codeVerifier || undefined, 
                 }); 
  
                 saveSession(res.data?.session || res.data); 

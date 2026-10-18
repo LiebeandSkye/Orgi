@@ -1,5 +1,4 @@
 import express from "express"; 
-import crypto from "crypto"; 
 import { supabaseAdmin, createAuthClient } from "../services/supabase.js"; 
 import { helperGenerateRandomId } from "../services/functionHelper.js"; 
 import { requireAuth } from "../middlewares/authMiddleware.js"; 
@@ -97,9 +96,6 @@ router.get('/oauth/:provider', async(req, res, next) => {
         const allowedProviders = ['google', 'discord', 'github']; 
         if (!allowedProviders.includes(provider)) throw new Error('Unsupported provider'); 
         
-        const codeVerifier = crypto.randomBytes(32).toString('base64url'); 
-        const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url'); 
-        
         const providerScopes = { 
             google: 'openid email profile', 
             discord: 'identify email', 
@@ -119,70 +115,36 @@ router.get('/oauth/:provider', async(req, res, next) => {
             options: { 
                 redirectTo: `${clientUrl}/auth/callback`, 
                 scopes: providerScopes[provider], 
-                queryParams: { 
-                    ...(providerQueryParams[provider] || {}), 
-                    code_challenge: codeChallenge, 
-                    code_challenge_method: 'S256', 
-                }, 
+                queryParams: providerQueryParams[provider], 
             } 
         }); 
         if (error) throw error; 
         
-        res.json({ 
-            success: true, 
-            url: data?.url, 
-            code_verifier: codeVerifier, 
-        }); 
+        res.json({ success: true, url: data?.url }); 
     } 
     catch (err) { next(err) } 
 }); 
  
 router.post('/oauth-session', async(req, res, next) => { 
     try { 
-        const { access_token, refresh_token, code, code_verifier } = req.body; 
+        const { access_token, refresh_token, code } = req.body; 
         let activeToken = access_token; 
         let activeRefreshToken = refresh_token; 
         let authUser = null; 
         
-        if (code) { 
-            const supabaseUrl = process.env.SUPABASE_URL; 
-            const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
-            let exchangeData = null; 
-            
-            if (code_verifier) { 
-                const tokenRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=pkce`, { 
-                    method: 'POST', 
-                    headers: { 
-                        'apikey': supabaseKey, 
-                        'Authorization': `Bearer ${supabaseKey}`, 
-                        'Content-Type': 'application/json', 
-                    }, 
-                    body: JSON.stringify({ 
-                        auth_code: code, 
-                        code_verifier, 
-                    }), 
-                }); 
-                const tokenJson = await tokenRes.json(); 
-                if (!tokenRes.ok || tokenJson.error || tokenJson.error_description || tokenJson.msg) { 
-                    throw new Error(tokenJson.error_description || tokenJson.msg || tokenJson.error || 'Failed to exchange authorization code'); 
-                } 
-                exchangeData = tokenJson; 
-            } else { 
-                const authClient = createAuthClient(); 
-                const { data, error } = await authClient.auth.exchangeCodeForSession(code); 
-                if (error) throw error; 
-                exchangeData = data; 
-            } 
-            
-            authUser = exchangeData.user; 
-            activeToken = exchangeData.access_token || exchangeData.session?.access_token; 
-            activeRefreshToken = exchangeData.refresh_token || exchangeData.session?.refresh_token; 
-        } else if (access_token) { 
+        if (access_token) { 
             const { data: { user }, error } = await supabaseAdmin.auth.getUser(access_token); 
             if (error) throw error; 
             authUser = user; 
             activeToken = access_token; 
             activeRefreshToken = refresh_token; 
+        } else if (code) { 
+            const authClient = createAuthClient(); 
+            const { data, error } = await authClient.auth.exchangeCodeForSession(code); 
+            if (error) throw error; 
+            authUser = data.user; 
+            activeToken = data.session?.access_token; 
+            activeRefreshToken = data.session?.refresh_token; 
         } else { 
             throw new Error('Authentication token or code required'); 
         } 

@@ -47,7 +47,7 @@ test("authRoutes refresh endpoint rejects invalid refresh_token", async () => {
   } 
 }); 
  
-test("authRoutes oauth endpoint returns authorization url with code_verifier for google, discord, github", async () => { 
+test("authRoutes oauth endpoint returns authorization url for google, discord, github", async () => { 
   const app = express(); 
   app.use(express.json()); 
   app.use("/api/auth", authRoutes); 
@@ -62,7 +62,6 @@ test("authRoutes oauth endpoint returns authorization url with code_verifier for
       const json = await res.json(); 
       assert.equal(json.success, true); 
       assert.ok(typeof json.url === "string" && json.url.includes("provider=" + provider)); 
-      assert.ok(typeof json.code_verifier === "string" && json.code_verifier.length >= 43); 
     } 
   } finally { 
     server.close(); 
