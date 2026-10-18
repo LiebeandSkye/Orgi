@@ -112,8 +112,20 @@ router.get('/oauth/:provider', async(req, res, next) => {
         const codeVerifier = crypto.randomBytes(32).toString('base64url'); 
         const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url'); 
         
+        const allowedOrigins = [ 
+            'http://localhost:5173', 
+            'http://localhost:3000', 
+            'https://orgi-one.vercel.app', 
+        ]; 
+        const rawOrigin = req.query.origin || 
+            req.headers.origin || 
+            (req.headers.referer ? new URL(req.headers.referer).origin : null); 
+        const isAllowed = rawOrigin && ( 
+            allowedOrigins.includes(rawOrigin) || 
+            rawOrigin.endsWith('.vercel.app') 
+        ); 
+        const clientUrl = isAllowed ? rawOrigin : (process.env.CLIENT_URL || 'http://localhost:5173'); 
         const authClient = createAuthClient(); 
-        const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'; 
         const { data, error } = await authClient.auth.signInWithOAuth({ 
             provider, 
             options: { 
