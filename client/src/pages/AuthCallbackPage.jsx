@@ -25,6 +25,7 @@ export function AuthCallbackPage() {
                 const accessToken = hashParams.get("access_token"); 
                 const refreshToken = hashParams.get("refresh_token"); 
                 const code = queryParams.get("code"); 
+                const codeVerifier = sessionStorage.getItem("orgi_oauth_verifier"); 
  
                 if (!accessToken && !code) throw new Error("No authorization tokens received"); 
  
@@ -32,8 +33,10 @@ export function AuthCallbackPage() {
                     access_token: accessToken, 
                     refresh_token: refreshToken, 
                     code, 
+                    code_verifier: codeVerifier, 
                 }); 
  
+                sessionStorage.removeItem("orgi_oauth_verifier"); 
                 saveSession(res.data?.session || res.data); 
                 navigate("/", { replace: true }); 
             } 

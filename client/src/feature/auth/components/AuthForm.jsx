@@ -162,13 +162,16 @@ export function AuthForm({ onSuccess }) {
         setMessage(null); 
         try { 
             const res = await authApi.getOAuthUrl(provider); 
+            if (res?.code_verifier) { 
+                sessionStorage.setItem("orgi_oauth_verifier", res.code_verifier); 
+            } 
             if (res?.url) { 
                 window.location.href = res.url; 
             } 
         } catch (err) { 
             showError(err.message); 
         } 
-    };
+    }; 
 
     const toggleMode = () => {
         setIsSignUp((v) => !v);
