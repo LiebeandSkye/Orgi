@@ -13,7 +13,7 @@ import {
   Share2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { getSeriesDetails, getSeasonEpisodes, getEpisodeDetails } from "../services/tmdb";
+import { getSeriesDetails, getSeasonEpisodes, getEpisodeDetails, getTmdbImageUrl } from "../services/tmdb";
 import {
   getSeasonDiscussionCounts,
   getEpisodeDiscussion,
@@ -399,6 +399,12 @@ export function EpisodeDiscussionPage() {
     setSubmitError(null);
 
     try {
+      const episodeCover =
+        currentEpisode?.thumbnail ||
+        (currentEpisode?.still_path ? getTmdbImageUrl(currentEpisode.still_path, "w780") : "") ||
+        seriesData?.poster ||
+        "";
+
       const res = await postEpisodeComment({
         seriesId,
         seasonNumber: selectedSeason,
@@ -408,7 +414,7 @@ export function EpisodeDiscussionPage() {
         isAnonymous,
         seriesTitle: seriesData?.title || "",
         episodeTitle: currentEpisode?.name || currentEpisode?.title || "",
-        coverUrl: currentEpisode?.still_path || currentEpisode?.thumbnail || seriesData?.poster || "",
+        coverUrl: episodeCover,
       });
 
       if (res?.success && res.data) {
@@ -438,6 +444,12 @@ export function EpisodeDiscussionPage() {
     }
 
     try {
+      const replyCover =
+        currentEpisode?.thumbnail ||
+        (currentEpisode?.still_path ? getTmdbImageUrl(currentEpisode.still_path, "w780") : "") ||
+        seriesData?.poster ||
+        "";
+
       const res = await postEpisodeComment({
         seriesId,
         seasonNumber: selectedSeason,
@@ -447,7 +459,7 @@ export function EpisodeDiscussionPage() {
         isAnonymous: anon,
         seriesTitle: seriesData?.title || "",
         episodeTitle: currentEpisode?.name || currentEpisode?.title || "",
-        coverUrl: currentEpisode?.still_path || currentEpisode?.thumbnail || "",
+        coverUrl: replyCover,
       });
 
       if (res?.success && res.data) {

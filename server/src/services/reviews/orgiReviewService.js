@@ -39,6 +39,7 @@ export async function getOrgiReviewCards({ category = "all", limit = 20, userId 
     const reviewIds = rawReviews.map((r) => r.id); 
     const likesMap = {}; 
     const repliesMap = {}; 
+    const latestReplyMap = {}; 
     const myLikedSet = new Set(); 
     
     if (reviewIds.length > 0) { 
@@ -49,9 +50,10 @@ export async function getOrgiReviewCards({ category = "all", limit = 20, userId 
           .in("review_id", reviewIds), 
         supabase 
           .from("reviews") 
-          .select("parent_id") 
+          .select("parent_id, content, created_at, users ( user_name, profile_url )") 
           .in("parent_id", reviewIds) 
-          .eq("is_deleted", false), 
+          .eq("is_deleted", false) 
+          .order("created_at", { ascending: false }), 
         userId 
           ? supabase 
               .from("review_likes") 
@@ -67,6 +69,9 @@ export async function getOrgiReviewCards({ category = "all", limit = 20, userId 
       
       (repliesData || []).forEach((r) => { 
         repliesMap[r.parent_id] = (repliesMap[r.parent_id] || 0) + 1; 
+        if (!latestReplyMap[r.parent_id]) { 
+          latestReplyMap[r.parent_id] = r; 
+        } 
       }); 
 
       (myLikes || []).forEach((l) => { 
@@ -84,6 +89,15 @@ export async function getOrgiReviewCards({ category = "all", limit = 20, userId 
       let contentText = rev.content || ""; 
       let authorName = rev.users?.user_name || "Community Member"; 
       let avatarUrl = rev.users?.profile_url || undefined; 
+
+      const isDiscussionRoot = rev.content === "<!--discussion_root-->";
+      if (isDiscussionRoot && latestReplyMap[rev.id]) {
+        const latestReply = latestReplyMap[rev.id];
+        contentText = latestReply.content || "";
+        authorName = latestReply.users?.user_name || authorName;
+        avatarUrl = latestReply.users?.profile_url || undefined;
+      }
+
       const anonMatch = contentText.match(/^<!--anon:([^>]+)-->/); 
       if (anonMatch) { 
         authorName = anonMatch[1]; 
@@ -91,6 +105,9 @@ export async function getOrgiReviewCards({ category = "all", limit = 20, userId 
         contentText = contentText.replace(/^<!--anon:[^>]+-->\s*/, ""); 
       } 
       contentText = contentText.replace(/^<!--prov:[^>]+-->\s*/, ""); 
+      if (contentText === "<!--discussion_root-->") {
+        contentText = "";
+      }
       
       const itemType = (item.type || "MOVIE").toUpperCase(); 
       let mappedCategory = "movie"; 
@@ -101,6 +118,15 @@ export async function getOrgiReviewCards({ category = "all", limit = 20, userId 
         mappedCategory = "series"; 
         mediaLabel = "Series"; 
         mediaRoute = `/series/${item.external_id}`; 
+      } else if (itemType === "TV_EPISODE") {
+        mappedCategory = "series";
+        mediaLabel = "Episode";
+        const match = item.external_id?.match(/^tv_([^_]+)_s(\d+)_e(\d+)$/);
+        if (match) {
+          mediaRoute = `/series/${match[1]}/season/${match[2]}/episode/${match[3]}/discussion`;
+        } else {
+          mediaRoute = `/series/${item.external_id}`;
+        }
       } else if (itemType === "ANIME") { 
         mappedCategory = "anime"; 
         mediaLabel = "Anime"; 
@@ -123,6 +149,13 @@ export async function getOrgiReviewCards({ category = "all", limit = 20, userId 
       
       const isBookOrManga = ["manga", "manhwa", "manhua", "book", "novel"].includes(mappedCategory);
 
+      const rawCover = item.cover_url;
+      const normalizedPosterUrl = rawCover
+        ? rawCover.startsWith("http")
+          ? rawCover
+          : `https://image.tmdb.org/t/p/w780${rawCover.startsWith("/") ? "" : "/"}${rawCover}`
+        : null;
+
       cards.push({ 
         id: `orgi:${item.id}:${rev.id}`, 
         source: "orgi", 
@@ -130,8 +163,8 @@ export async function getOrgiReviewCards({ category = "all", limit = 20, userId 
         titleId: String(item.external_id), 
         title: item.title, 
         mediaLabel, 
-        posterUrl: item.cover_url, 
-        backdropUrl: isBookOrManga ? undefined : item.cover_url, 
+        posterUrl: normalizedPosterUrl, 
+        backdropUrl: isBookOrManga ? undefined : normalizedPosterUrl, 
         genres: [], 
         rating: typeof rev.score === "number" && rev.score > 0 ? rev.score : undefined, 
         excerpt: createExcerpt(contentText, 260), 
@@ -213,6 +246,15 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
       mappedCategory = "series"; 
       mediaLabel = "Series"; 
       mediaRoute = `/series/${item.external_id}`; 
+    } else if (itemType === "TV_EPISODE") {
+      mappedCategory = "series";
+      mediaLabel = "Episode";
+      const match = item.external_id?.match(/^tv_([^_]+)_s(\d+)_e(\d+)$/);
+      if (match) {
+        mediaRoute = `/series/${match[1]}/season/${match[2]}/episode/${match[3]}/discussion`;
+      } else {
+        mediaRoute = `/series/${item.external_id}`;
+      }
     } else if (itemType === "ANIME") { 
       mappedCategory = "anime"; 
       mediaLabel = "Anime"; 
@@ -341,8 +383,18 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
       detailContent = detailContent.replace(/^<!--anon:[^>]+-->\s*/, ""); 
     } 
     detailContent = detailContent.replace(/^<!--prov:[^>]+-->\s*/, ""); 
+    if (detailContent === "<!--discussion_root-->") {
+      detailContent = `Episode Discussion for ${item.title}`;
+    }
     
     const isBookOrManga = ["manga", "manhwa", "manhua", "book", "novel"].includes(mappedCategory);
+
+    const rawCover = item.cover_url;
+    const normalizedPosterUrl = rawCover
+      ? rawCover.startsWith("http")
+        ? rawCover
+        : `https://image.tmdb.org/t/p/w780${rawCover.startsWith("/") ? "" : "/"}${rawCover}`
+      : null;
 
     return { 
       id: `orgi:${item.id}:${rev.id}`, 
@@ -351,8 +403,8 @@ export async function getOrgiReviewDetail(titleId, reviewId) {
       titleId: String(item.external_id), 
       title: item.title, 
       mediaLabel, 
-      posterUrl: item.cover_url, 
-      backdropUrl: isBookOrManga ? undefined : item.cover_url, 
+      posterUrl: normalizedPosterUrl, 
+      backdropUrl: isBookOrManga ? undefined : normalizedPosterUrl, 
       genres: [], 
       rating: typeof rev.score === "number" && rev.score > 0 ? rev.score : undefined, 
       excerpt: createExcerpt(detailContent, 260), 

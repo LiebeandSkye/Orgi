@@ -252,9 +252,20 @@ export const discussionController = {
 
       const externalId = `tv_${seriesId}_s${seasonNumber}_e${episodeNumber}`;
 
+      let normalizedCoverUrl = cover_url || null;
+      if (normalizedCoverUrl && typeof normalizedCoverUrl === "string") {
+        normalizedCoverUrl = normalizedCoverUrl.trim();
+        if (normalizedCoverUrl && !normalizedCoverUrl.startsWith("http")) {
+          const cleanPath = normalizedCoverUrl.startsWith("/")
+            ? normalizedCoverUrl
+            : `/${normalizedCoverUrl}`;
+          normalizedCoverUrl = `https://image.tmdb.org/t/p/w780${cleanPath}`;
+        }
+      }
+
       let { data: item } = await supabaseAdmin
         .from("items")
-        .select("id")
+        .select("id, cover_url")
         .eq("provider", "tmdb")
         .eq("type", "tv_episode")
         .eq("external_id", externalId)
@@ -272,13 +283,19 @@ export const discussionController = {
             provider: "tmdb",
             type: "tv_episode",
             title,
-            cover_url: cover_url || null,
+            cover_url: normalizedCoverUrl,
           })
-          .select("id")
+          .select("id, cover_url")
           .single();
 
         if (itemError) throw itemError;
         item = newItem;
+      } else if (normalizedCoverUrl && (!item.cover_url || item.cover_url.startsWith("/"))) {
+        await supabaseAdmin
+          .from("items")
+          .update({ cover_url: normalizedCoverUrl })
+          .eq("id", item.id);
+        item.cover_url = normalizedCoverUrl;
       }
 
       let { data: threadRoot } = await supabaseAdmin

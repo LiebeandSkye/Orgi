@@ -6,11 +6,11 @@ import { FormattedText } from "../common/FormattedText";
 import { handleFormattingKeyDown } from "../common/CommentFormattingToolbar";
 import { Button } from "../ui/Button";
 import { getReviewAuthor } from "../../utils/reviewUtils";
-import { useAuth } from "../../context/AuthContext"; 
-import { useToast } from "../../context/ToastContext"; 
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
-const DEFAULT_AVATAR = 
-    "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg"; 
+const DEFAULT_AVATAR =
+    "https://i.pinimg.com/736x/2e/e4/25/2ee425db685b15db57175a0840e931b1.jpg";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -147,12 +147,12 @@ function InlineComposer({ avatar, replyingTo, submitting, onSubmit, onCancel, cu
 function CommentRow({ comment, replyTo, small = false, liked, onToggleLike, onReply, allowReply }) {
     const { name, avatar } = getAuthor(comment);
     const time = timeAgo(comment.createdAt || comment.created_at || comment.time);
-    const baseLikes = comment.likes ?? comment.likesCount ?? 0; 
-    const likes = Math.max(0, baseLikes + (liked && !comment.isLiked ? 1 : !liked && comment.isLiked ? -1 : 0)); 
-    const content = comment.content || comment.rawContent || comment.excerpt; 
+    const baseLikes = comment.likes ?? comment.likesCount ?? 0;
+    const likes = Math.max(0, baseLikes + (liked && !comment.isLiked ? 1 : !liked && comment.isLiked ? -1 : 0));
+    const content = comment.content || comment.rawContent || comment.excerpt;
 
-    return ( 
-        <div id={comment?.id ? `review-${comment.id}` : undefined} className="flex gap-3"> 
+    return (
+        <div id={comment?.id ? `review-${comment.id}` : undefined} className="flex gap-3">
             <Avatar src={avatar} name={name} size={small ? "w-7 h-7" : "w-9 h-9"} />
 
             <div className="min-w-0 flex-1">
@@ -216,24 +216,24 @@ export function CommentThread({
     onLoadReplies,
     allowReply = true,
 }) {
-    const { user, userProfile } = useAuth(); 
-    const { showToast, openAuthModal } = useToast(); 
-    const effectiveAvatar = 
-        currentUserAvatar || 
-        userProfile?.profile_url || 
-        user?.profile_url || 
-        user?.user_metadata?.avatar_url || 
-        user?.user_metadata?.picture || 
-        DEFAULT_AVATAR; 
-    const effectiveName = 
-        currentUserName && currentUserName !== "You" 
-            ? currentUserName 
-            : (userProfile?.user_name || 
-               user?.user_name || 
-               user?.user_metadata?.user_name || 
-               user?.user_metadata?.full_name || 
-               user?.user_metadata?.name || 
-               "You"); 
+    const { user, userProfile } = useAuth();
+    const { showToast, openAuthModal } = useToast();
+    const effectiveAvatar =
+        currentUserAvatar ||
+        userProfile?.profile_url ||
+        user?.profile_url ||
+        user?.user_metadata?.avatar_url ||
+        user?.user_metadata?.picture ||
+        DEFAULT_AVATAR;
+    const effectiveName =
+        currentUserName && currentUserName !== "You"
+            ? currentUserName
+            : (userProfile?.user_name ||
+                user?.user_name ||
+                user?.user_metadata?.user_name ||
+                user?.user_metadata?.full_name ||
+                user?.user_metadata?.name ||
+                "You");
 
     const [expanded, setExpanded] = useState({});
     const [loading, setLoading] = useState({});
@@ -248,37 +248,37 @@ export function CommentThread({
         };
     }, []);
 
-    const toggleReplies = async (id) => { 
-        if (loading[id]) return; 
-        if (expanded[id]) { 
-            setExpanded((p) => ({ ...p, [id]: false })); 
-            return; 
-        } 
-        setLoading((p) => ({ ...p, [id]: true })); 
-        try { 
-            const startTime = Date.now(); 
-            if (onLoadReplies) { 
-                await onLoadReplies(id); 
-            } 
-            const elapsed = Date.now() - startTime; 
-            if (elapsed < 1000) { 
-                await new Promise((resolve) => setTimeout(resolve, 1000 - elapsed)); 
-            } 
-        } catch { 
-        } 
-        if (!mounted.current) return; 
-        setLoading((p) => ({ ...p, [id]: false })); 
-        setExpanded((p) => ({ ...p, [id]: true })); 
-    }; 
+    const toggleReplies = async (id) => {
+        if (loading[id]) return;
+        if (expanded[id]) {
+            setExpanded((p) => ({ ...p, [id]: false }));
+            return;
+        }
+        setLoading((p) => ({ ...p, [id]: true }));
+        try {
+            const startTime = Date.now();
+            if (onLoadReplies) {
+                await onLoadReplies(id);
+            }
+            const elapsed = Date.now() - startTime;
+            if (elapsed < 1000) {
+                await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+            }
+        } catch {
+        }
+        if (!mounted.current) return;
+        setLoading((p) => ({ ...p, [id]: false }));
+        setExpanded((p) => ({ ...p, [id]: true }));
+    };
 
     const openReply = (comment, rootId) => {
         const token = localStorage.getItem("orgi_session");
         if (!token) {
-            showToast({ 
-                message: "Please sign in to reply.", 
-                actionText: "Sign In", 
-                onAction: openAuthModal, 
-            }); 
+            showToast({
+                message: "Please sign in to reply.",
+                actionText: "Sign In",
+                onAction: openAuthModal,
+            });
             return;
         }
         setTarget((current) =>
@@ -349,7 +349,7 @@ export function CommentThread({
                                     <span className="h-px w-6 bg-white/15" />
                                     {isLoading ? (
                                         <span className="inline-flex items-center gap-2">
-                                            <Loader2 size={13} className="animate-spin text-[#61F1AC]" />
+                                            <Loader2 size={13} className="animate-spin text-[#7A7A7A]" />
                                             <span>Loading replies</span>
                                         </span>
                                     ) : isOpen ? (

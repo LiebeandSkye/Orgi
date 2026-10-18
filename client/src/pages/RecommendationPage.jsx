@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"; 
+import { useSearchParams } from "react-router-dom";
 import { StepMediumSelector } from "../feature/recommendation/components/StepMediumSelector"; 
 import { StepMoodQuestions } from "../feature/recommendation/components/StepMoodQuestions"; 
 import { StepPicksResults } from "../feature/recommendation/components/StepPicksResults"; 
@@ -15,14 +16,26 @@ const GENERATING_STEPS = [
 ]; 
 
 export function RecommendationPage() { 
-  const [step, setStep] = useState(1); 
+  const [searchParams] = useSearchParams(); 
+  const queryMedium = searchParams.get("medium"); 
+  const queryType = searchParams.get("type"); 
+
+  const initialMedium = queryMedium === "book" ? "book" : "movie"; 
+  const isSeries = queryMedium === "series" || queryType === "series"; 
+  const initialSubMedium = queryMedium === "book" 
+    ? (queryType || "manga") 
+    : isSeries 
+    ? "series" 
+    : "movie"; 
+
+  const [step, setStep] = useState(() => (queryMedium ? 2 : 1)); 
   const [slideDirection, setSlideDirection] = useState("right"); 
-  const [medium, setMedium] = useState("movie"); 
-  const [subMedium, setSubMedium] = useState("movie"); 
+  const [medium, setMedium] = useState(initialMedium); 
+  const [subMedium, setSubMedium] = useState(initialSubMedium); 
   const [answers, setAnswers] = useState({ 
     vibes: ["Relaxed"], 
     social: "justMe", 
-    time: "90-120", 
+    time: isSeries ? "episodes" : "90-120", 
     depth: "deep", 
     includeGenres: [], 
     excludedGenres: [], 
@@ -42,7 +55,13 @@ export function RecommendationPage() {
 
   const handleSelectMedium = (m) => { 
     setMedium(m); 
-    setSubMedium(m === "book" ? "manga" : "movie"); 
+    const nextSubMedium = m === "book" ? "manga" : m === "series" ? "series" : "movie";
+    setSubMedium(nextSubMedium); 
+    if (m === "series") {
+      setAnswers((prev) => ({ ...prev, time: "episodes" }));
+    } else if (m === "movie" && answers.time === "episodes") {
+      setAnswers((prev) => ({ ...prev, time: "90-120" }));
+    }
   }; 
 
   const handleToggleVibe = (vibe) => { 
@@ -69,9 +88,9 @@ export function RecommendationPage() {
     setLoadingStepIndex(0); 
     const startTime = Date.now(); 
     try { 
-      const effectiveSubMedium = answers.time === "episodes" && medium === "movie" ? "series" : subMedium; 
+      const effectiveSubMedium = (answers.time === "episodes" || medium === "series") ? "series" : subMedium; 
       const results = await fetchOrgiPicks({ 
-        medium, 
+        medium: medium === "book" ? "book" : (medium === "series" ? "series" : "movie"), 
         subMedium: effectiveSubMedium, 
         vibes: answers.vibes, 
         socialContext: answers.social, 

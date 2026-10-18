@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Search, Star, X } from "lucide-react";
+import { Search, Star, X, Sparkles } from "lucide-react";
 import {
   searchTmdb,
   getTrending,
@@ -13,7 +13,6 @@ import { BorderBeam } from "../components/ui/border-beam";
 import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
 import { MediaCarousel } from "../components/ui/MediaCarousel";
 import { Banner } from "../components/ui/Banner";
-import { OrgiPicksButton } from "../feature/recommendation/components/OrgiPicksButton";
 
 const HERO_HEADLINES = [
   {
@@ -216,57 +215,102 @@ export function HomePage() {
       <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-[120px]">
         {/* CENTER HERO SECTION (Permanent search bar that NEVER disappears) */}
         <section className="flex flex-col items-center justify-center pt-8 pb-12 text-center">
-          <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#61F1AC] mb-3"> 
-            {heroPrompt.tag} 
-          </span> 
+          {/* Tagline with fading & tapering horizontal accent lines */}
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3">
+            {/* Left tapering & fading line */}
+            <svg
+              className="w-12 sm:w-20 md:w-28 h-[4px] overflow-visible"
+              viewBox="0 0 100 4"
+              fill="none"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="tag-accent-left" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#61F1AC" stopOpacity="0" />
+                  <stop offset="60%" stopColor="#61F1AC" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#61F1AC" stopOpacity="1" />
+                </linearGradient>
+              </defs>
+              <polygon points="0,2 100,0.5 100,3.5" fill="url(#tag-accent-left)" />
+            </svg>
+
+            <span className="text-[11px] uppercase tracking-[0.25em] font-semibold text-[#61F1AC] shrink-0">
+              {heroPrompt.tag}
+            </span>
+
+            {/* Right tapering & fading line */}
+            <svg
+              className="w-12 sm:w-20 md:w-28 h-[4px] overflow-visible"
+              viewBox="0 0 100 4"
+              fill="none"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="tag-accent-right" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#61F1AC" stopOpacity="1" />
+                  <stop offset="40%" stopColor="#61F1AC" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#61F1AC" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <polygon points="0,0.5 100,2 0,3.5" fill="url(#tag-accent-right)" />
+            </svg>
+          </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-light tracking-tight text-[#F5F5F5] mb-9"> 
             {heroPrompt.title} 
           </h1> 
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-[800px]"> 
-            <div className="relative w-full max-w-[620px] group"> 
-              <BorderBeam 
-                size="md" 
-                colorVariant="mint" 
-                borderRadius={27} 
-                className="w-full rounded-full" 
-              > 
-                <div className="relative w-full h-[54px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all"> 
-                  <div className="flex items-center gap-3.5 flex-1 min-w-0"> 
-                    <Search size={18} className="text-[#61F1AC] shrink-0" /> 
-                    <input 
-                      ref={searchInputRef} 
-                      type="text" 
-                      value={searchQuery} 
-                      onChange={(e) => handleSearchChange(e.target.value)} 
-                      placeholder={heroPrompt.placeholder} 
-                      className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]" 
-                    /> 
-                  </div> 
+          {/* Centered Search Bar */}
+          <div className="w-full max-w-[620px]"> 
+            <BorderBeam 
+              size="md" 
+              colorVariant="mint" 
+              borderRadius={27} 
+              className="w-full rounded-full" 
+            > 
+              <div className="relative w-full h-[54px] rounded-full bg-[#0B0B0B] border border-[#1C1C1C] focus-within:border-[#61F1AC]/60 px-5 flex items-center justify-between shadow-2xl transition-all"> 
+                <div className="flex items-center gap-3.5 flex-1 min-w-0"> 
+                  <Search size={18} className="text-[#61F1AC] shrink-0" /> 
+                  <input 
+                    ref={searchInputRef} 
+                    type="text" 
+                    value={searchQuery} 
+                    onChange={(e) => handleSearchChange(e.target.value)} 
+                    placeholder={heroPrompt.placeholder} 
+                    className="w-full bg-transparent text-sm font-normal text-[#F5F5F5] placeholder-[#7A7A7A] focus:outline-none caret-[#61F1AC]" 
+                  /> 
+                </div> 
 
-                  {isSearchActive ? ( 
-                    <button 
-                      type="button" 
-                      onClick={() => { 
-                        handleSearchChange(""); 
-                        searchInputRef.current?.focus(); 
-                      }} 
-                      className="inline-flex items-center gap-1 text-xs text-[#7A7A7A] hover:text-[#F5F5F5] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] cursor-pointer transition-colors" 
-                    > 
-                      <X size={14} /> 
-                      <span>Clear</span> 
-                    </button> 
-                  ) : ( 
-                    <kbd className="inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors"> 
+                {isSearchActive ? ( 
+                  <button 
+                    type="button" 
+                    onClick={() => { 
+                      handleSearchChange(""); 
+                      searchInputRef.current?.focus(); 
+                    }} 
+                    className="inline-flex items-center gap-1 text-xs text-[#7A7A7A] hover:text-[#F5F5F5] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] cursor-pointer transition-colors" 
+                  > 
+                    <X size={14} /> 
+                    <span>Clear</span> 
+                  </button> 
+                ) : ( 
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      to="/picks"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-[#61F1AC]/10 text-xs font-medium text-[#C5C5C5] hover:text-[#61F1AC] border border-white/[0.06] hover:border-[#61F1AC]/40 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(97,241,172,0.15)] group/picks"
+                      title="AI Recommendation Wizard"
+                    >
+                      <Sparkles size={13} className="text-[#61F1AC] group-hover/picks:rotate-12 group-hover/picks:scale-110 transition-transform duration-300 shrink-0" />
+                      <span className="hidden sm:inline">Pick for me</span>
+                      <span className="sm:hidden">Pick</span>
+                    </Link>
+                    <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors"> 
                       / 
                     </kbd> 
-                  )} 
-                </div> 
-              </BorderBeam> 
-            </div> 
-
-            <OrgiPicksButton className="w-full max-w-[620px] sm:w-auto" /> 
+                  </div>
+                )} 
+              </div> 
+            </BorderBeam> 
           </div> 
         </section>
 

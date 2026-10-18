@@ -28,6 +28,7 @@ import { useToast } from "../context/ToastContext";
 import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection"; 
 import api from "../services/api"; 
 import OverviewTab from "../components/ui/OverviewTab";
+import { DetailTabs } from "../components/ui/DetailTabs";
 
 
 
@@ -711,37 +712,20 @@ export function MovieDetailsPage({
       </section> 
 
       
-      {/* BELOW THE HERO: Minimal horizontal tab switcher */}
-      <div
+      {/* BELOW THE HERO: Responsive tab switcher (underline on desktop, tactile pills on mobile) */}
+      <DetailTabs
         ref={contentRef}
-        className="sticky top-16 z-30 bg-[#000000]/95 backdrop-blur-md border-b border-[#1C1C1C]"
-      >
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
-          <div className="flex items-center gap-8 h-12">
-            {["Overview", "Cast", "Reviews", "Media", "Details"].map((tab) => {
-              const isActive = activeTab === tab;
-              const tabLabel = tab === "Cast" && category ? "Author" : tab;
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => handleTabChange(tab)}
-                  className={`relative h-full flex items-center text-sm font-medium transition-colors cursor-pointer ${
-                    isActive
-                      ? "text-[#F5F5F5]"
-                      : "text-[#7A7A7A] hover:text-[#F5F5F5]"
-                  }`}
-                >
-                  <span>{tabLabel}</span>
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#61F1AC]" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+        tabs={[
+          { id: "Overview", label: "Overview" },
+          { id: "Cast", label: category ? "Author" : "Cast" },
+          { id: "Reviews", label: "Reviews" },
+          { id: "Media", label: "Media" },
+          { id: "Details", label: "Details" },
+        ]}
+        activeTab={activeTab}
+        onChange={handleTabChange}
+      />
+
       
       {/* TAB CONTENT (Only the active tab's content is shown, never all at once) */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">

@@ -23,7 +23,7 @@ export function MobileCategoryChips({
   }, [currentCategory]);
 
   return (
-    <div className="sticky top-[var(--nav-h,64px)] z-30 w-full bg-[#000000]/90 backdrop-blur-md border-b border-[#1C1C1C] md:hidden">
+    <div className="sticky top-14 md:top-16 z-30 w-full bg-[#000000]/90 backdrop-blur-md border-b border-[#1C1C1C] md:hidden">
       <div className="flex items-center justify-between px-3 py-2 gap-2">
         {/* Horizontally scrollable chips */}
         <div

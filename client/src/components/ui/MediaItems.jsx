@@ -20,9 +20,8 @@ function ArrowButton({ direction, visible, onClick, label }) {
       onClick={onClick}
       aria-label={label}
       tabIndex={visible ? 0 : -1}
-      className={`group/btn absolute ${ 
-        isLeft ? "left-1 sm:left-2" : "right-1 sm:right-2" 
-      } top-[40%] -translate-y-1/2 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center cursor-pointer 
+      className={`group/btn absolute ${isLeft ? "left-1 sm:left-2" : "right-1 sm:right-2"
+        } top-[40%] -translate-y-1/2 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center cursor-pointer 
         bg-gradient-to-b from-[#1C1C1C]/90 to-[#0C0C0C]/90 backdrop-blur-xl 
         border border-white/10 text-[#9A9A9A] 
         shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_24px_rgba(0,0,0,0.6)] 
@@ -30,22 +29,19 @@ function ArrowButton({ direction, visible, onClick, label }) {
         hover:text-[#61F1AC] hover:border-[#61F1AC]/60 
         hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_0_0_4px_rgba(97,241,172,0.08),0_8px_28px_rgba(97,241,172,0.22)] 
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#61F1AC]/70 
-        ${ 
-          visible 
-            ? "opacity-100 pointer-events-auto translate-x-0 scale-100 hover:scale-110 active:scale-95" 
-            : `opacity-0 pointer-events-none scale-90 ${ 
-                isLeft ? "-translate-x-3" : "translate-x-3" 
-              }` 
-        }`} 
+        ${visible
+          ? "opacity-100 pointer-events-auto translate-x-0 scale-100 hover:scale-110 active:scale-95"
+          : `opacity-0 pointer-events-none scale-90 ${isLeft ? "-translate-x-3" : "translate-x-3"
+          }`
+        }`}
     >
       <Icon
         size={20}
         strokeWidth={2.25}
-        className={`transition-transform duration-300 ${ 
-          isLeft 
-            ? "group-hover/btn:-translate-x-0.5" 
-            : "group-hover/btn:translate-x-0.5" 
-        }`} 
+        className={`transition-transform duration-300 ${isLeft
+            ? "group-hover/btn:-translate-x-0.5"
+            : "group-hover/btn:translate-x-0.5"
+          }`}
       />
     </button>
   );
@@ -86,11 +82,11 @@ function ScrollRow({ children, label }) {
     setTimeout(checkScroll, 350);
   };
 
-  const fadeLeft = canScrollLeft 
-    ? "transparent 0, #000 48px" 
+  const fadeLeft = canScrollLeft
+    ? "transparent 0, #000 48px"
     : "#000 0, #000 0";
-  const fadeRight = canScrollRight 
-    ? "#000 calc(100% - 48px), transparent 100%" 
+  const fadeRight = canScrollRight
+    ? "#000 calc(100% - 48px), transparent 100%"
     : "#000 100%, #000 100%";
   const edgeMask = `linear-gradient(to right, ${fadeLeft}, ${fadeRight})`;
 
@@ -155,8 +151,8 @@ export function VideoModal({ videoKey, videoName, onClose }) {
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const cleanKey = typeof videoKey === "string" ? videoKey.trim() : "";
-  const embedUrl = cleanKey 
-    ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(cleanKey)}?autoplay=1&rel=0&enablejsapi=1${origin ? `&origin=${encodeURIComponent(origin)}` : ""}` 
+  const embedUrl = cleanKey
+    ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(cleanKey)}?autoplay=1&rel=0&enablejsapi=1${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`
     : null;
 
   return (
@@ -169,32 +165,7 @@ export function VideoModal({ videoKey, videoName, onClose }) {
         className="relative z-10 w-[92vw] max-w-[960px] rounded-2xl border-2 border-white/20 bg-black overflow-hidden shadow-2xl animate-modal-pop cursor-default flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-[#0B0B0B] border-b border-white/10">
-          <p className="text-sm font-medium text-[#F5F5F5] truncate pr-4">
-            {videoName || "Video Player"}
-          </p>
-          <div className="flex items-center gap-2">
-            {cleanKey && (
-              <a
-                href={`https://www.youtube.com/watch?v=${cleanKey}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-[#9A9A9A] hover:text-[#61F1AC] transition-colors px-2.5 py-1 rounded bg-[#141414] border border-white/10"
-              >
-                <span>YouTube</span>
-                <ExternalLink size={12} />
-              </a>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close modal"
-              className="w-8 h-8 rounded-full bg-[#141414] border border-white/10 flex items-center justify-center text-[#7A7A7A] hover:text-[#F5F5F5] hover:border-[#61F1AC]/50 transition-colors cursor-pointer"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
+
         <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
           {embedUrl ? (
             <iframe
@@ -247,11 +218,10 @@ function ImageModal({ image, format, onClose }) {
       <div className="absolute inset-0 bg-black/85 backdrop-blur-sm animate-backdrop-fade" />
 
       <div
-        className={`relative z-10 overflow-hidden rounded-2xl border border-white/20 bg-[#0B0B0B] shadow-2xl flex flex-col animate-modal-pop cursor-default max-h-[90vh] ${ 
-          isBackdrop 
-            ? "w-[94vw] max-w-[1100px]" 
-            : "w-[90vw] max-w-[480px]" 
-        }`} 
+        className={`relative z-10 overflow-hidden rounded-2xl border border-white/20 bg-[#0B0B0B] shadow-2xl flex flex-col animate-modal-pop cursor-default max-h-[90vh] ${isBackdrop
+            ? "w-[94vw] max-w-[1100px]"
+            : "w-[90vw] max-w-[480px]"
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         {(image?.title || image?.subtitle) && (
@@ -290,9 +260,8 @@ function ImageModal({ image, format, onClose }) {
 
 
         <div
-          className={`relative flex items-center justify-center overflow-hidden bg-black/60 ${ 
-            isBackdrop ? "aspect-video w-full" : "aspect-[2/3] w-full" 
-          }`} 
+          className={`relative flex items-center justify-center overflow-hidden bg-black/60 ${isBackdrop ? "aspect-video w-full" : "aspect-[2/3] w-full"
+            }`}
         >
           {!loaded && <div className="absolute inset-0 skeleton-shimmer" />}
 
@@ -301,11 +270,9 @@ function ImageModal({ image, format, onClose }) {
             alt={image?.title || (isBackdrop ? "Backdrop preview" : "Cover preview")}
             referrerPolicy="no-referrer"
             onLoad={() => setLoaded(true)}
-            className={`w-full h-full ${ 
-              isBackdrop ? "object-cover" : "object-contain" 
-            } select-none transition-opacity duration-300 ${ 
-              loaded ? "opacity-100" : "opacity-0" 
-            }`} 
+            className={`w-full h-full ${isBackdrop ? "object-cover" : "object-contain"
+              } select-none transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"
+              }`}
           />
         </div>
       </div>
@@ -319,10 +286,10 @@ export default function MediaItems({ movieData, seriesData }) {
   const [activeImage, setActiveImage] = useState(null);
 
   const volumes = mediaItem?.volumes || [];
-  const isBookOrManga = 
-    Array.isArray(mediaItem?.volumes) || 
-    ["MANGA", "MANHWA", "MANHUA", "BOOK / NOVEL", "NOVELS", "BOOKS", "LIGHT-NOVELS"].includes( 
-      (mediaItem?.type || "").toUpperCase() 
+  const isBookOrManga =
+    Array.isArray(mediaItem?.volumes) ||
+    ["MANGA", "MANHWA", "MANHUA", "BOOK / NOVEL", "NOVELS", "BOOKS", "LIGHT-NOVELS"].includes(
+      (mediaItem?.type || "").toUpperCase()
     );
 
   const officialArt = useMemo(() => {
@@ -351,37 +318,37 @@ export default function MediaItems({ movieData, seriesData }) {
   }, [mediaItem?.artworks, mediaItem?.images?.backdrops]);
 
   const videos = useMemo(() => {
-    const videoList = Array.isArray(mediaItem?.videos) 
-      ? mediaItem.videos 
-      : Array.isArray(mediaItem?.videos?.results) 
-      ? mediaItem.videos.results 
-      : Array.isArray(mediaItem?.videoList) 
-      ? mediaItem.videoList 
-      : []; 
+    const videoList = Array.isArray(mediaItem?.videos)
+      ? mediaItem.videos
+      : Array.isArray(mediaItem?.videos?.results)
+        ? mediaItem.videos.results
+        : Array.isArray(mediaItem?.videoList)
+          ? mediaItem.videoList
+          : [];
 
-    const rawVideos = videoList.filter((video) => { 
-      if (!video) return false; 
-      const site = (video.site || "").toLowerCase(); 
-      const isYouTube = !video.site || site === "youtube"; 
-      const hasKey = Boolean(getVideoKey(video)); 
-      return isYouTube && hasKey; 
-    }); 
+    const rawVideos = videoList.filter((video) => {
+      if (!video) return false;
+      const site = (video.site || "").toLowerCase();
+      const isYouTube = !video.site || site === "youtube";
+      const hasKey = Boolean(getVideoKey(video));
+      return isYouTube && hasKey;
+    });
 
-    return [...rawVideos] 
-      .sort((a, b) => { 
-        const getPriority = (v) => { 
-          const name = (v.name || "").toLowerCase(); 
-          const type = (v.type || "").toLowerCase(); 
+    return [...rawVideos]
+      .sort((a, b) => {
+        const getPriority = (v) => {
+          const name = (v.name || "").toLowerCase();
+          const type = (v.type || "").toLowerCase();
 
-          if (type === "trailer" && name.includes("official")) return 1; 
-          if (type === "trailer") return 2; 
-          if (type === "teaser") return 3; 
-          return 4; 
-        }; 
+          if (type === "trailer" && name.includes("official")) return 1;
+          if (type === "trailer") return 2;
+          if (type === "teaser") return 3;
+          return 4;
+        };
 
-        return getPriority(a) - getPriority(b); 
-      }) 
-      .slice(0, 120); 
+        return getPriority(a) - getPriority(b);
+      })
+      .slice(0, 120);
   }, [mediaItem?.videos, mediaItem?.videoList]);
 
   const backdrops = useMemo(() => {
@@ -434,11 +401,11 @@ export default function MediaItems({ movieData, seriesData }) {
 
               <ScrollRow label="Official Art">
                 {officialArt.map((art, index) => {
-                  const isBackdrop = 
-                    art.format === "backdrop" || 
-                    (art.type && art.type.toLowerCase().includes("banner")); 
-                  const artSrc = art.url || art.file_path || art.cover; 
-                  const badgeText = art.type || (isBackdrop ? "Official Banner" : "Official Art"); 
+                  const isBackdrop =
+                    art.format === "backdrop" ||
+                    (art.type && art.type.toLowerCase().includes("banner"));
+                  const artSrc = art.url || art.file_path || art.cover;
+                  const badgeText = art.type || (isBackdrop ? "Official Banner" : "Official Art");
 
                   return (
                     <button
@@ -453,16 +420,14 @@ export default function MediaItems({ movieData, seriesData }) {
                           file_path: artSrc,
                         })
                       }
-                      className={`group shrink-0 text-left cursor-pointer ${ 
-                        isBackdrop 
-                          ? "w-[280px] sm:w-[360px] lg:w-[420px]" 
-                          : "w-[150px] sm:w-[175px] lg:w-[195px]" 
-                      }`} 
+                      className={`group shrink-0 text-left cursor-pointer ${isBackdrop
+                          ? "w-[280px] sm:w-[360px] lg:w-[420px]"
+                          : "w-[150px] sm:w-[175px] lg:w-[195px]"
+                        }`}
                     >
                       <div
-                        className={`relative overflow-hidden rounded-xl border border-[#202020] bg-[#0B0B0B] transition-all duration-300 group-hover:border-[#61F1AC]/50 group-hover:scale-[1.02] group-hover:shadow-[0_0_20px_rgba(97,241,172,0.15)] ${ 
-                          isBackdrop ? "aspect-video" : "aspect-[2/3]" 
-                        }`} 
+                        className={`relative overflow-hidden rounded-xl border border-[#202020] bg-[#0B0B0B] transition-all duration-300 group-hover:border-[#61F1AC]/50 group-hover:scale-[1.02] group-hover:shadow-[0_0_20px_rgba(97,241,172,0.15)] ${isBackdrop ? "aspect-video" : "aspect-[2/3]"
+                          }`}
                       >
                         <img
                           src={artSrc}
@@ -514,10 +479,10 @@ export default function MediaItems({ movieData, seriesData }) {
             {hasVolumes ? (
               <ScrollRow label="Volume Covers">
                 {volumes.map((vol, index) => {
-                  const volBadge = 
-                    vol.volume === "none" || !vol.volume 
-                      ? "Full" 
-                      : `Vol. ${vol.volume}`; 
+                  const volBadge =
+                    vol.volume === "none" || !vol.volume
+                      ? "Full"
+                      : `Vol. ${vol.volume}`;
 
                   return (
                     <button

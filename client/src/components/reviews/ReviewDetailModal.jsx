@@ -10,7 +10,7 @@ import { CommentThread } from "./CommentThread";
 import { LikeButton } from "./LikeButton";
 import { FormattedText } from "../common/FormattedText";
 import { CommentFormattingToolbar, handleFormattingKeyDown } from "../common/CommentFormattingToolbar";
-import { getReviewAuthor } from "../../utils/reviewUtils";
+import { getReviewAuthor, getReviewPoster } from "../../utils/reviewUtils";
 import { useToast } from "../../context/ToastContext";
 
 // Insert a reply under `targetId` anywhere in the tree.
@@ -313,6 +313,13 @@ export function ReviewDetailModal({
     }
   }
 
+  const posterSrc = getReviewPoster(data);
+  const backdropSrc = data.backdropUrl?.startsWith("http")
+    ? data.backdropUrl
+    : data.backdropUrl?.startsWith("/")
+    ? `https://image.tmdb.org/t/p/w1280${data.backdropUrl}`
+    : data.backdropUrl;
+
   return (
     <div
       role="dialog"
@@ -396,18 +403,18 @@ export function ReviewDetailModal({
             onClick={onClose}
             className="mt-3 block rounded-2xl border border-[#1C1C1C] overflow-hidden hover:bg-white/[0.03] transition-colors"
           >
-            {data.backdropUrl && (
+            {backdropSrc && (
               <img
-                src={data.backdropUrl}
+                src={backdropSrc}
                 alt=""
                 referrerPolicy="no-referrer"
                 className="w-full h-36 sm:h-44 object-cover"
               />
             )}
             <div className="flex items-center gap-3 p-3">
-              {!data.backdropUrl && data.posterUrl && (
+              {!backdropSrc && posterSrc && (
                 <img
-                  src={data.posterUrl}
+                  src={posterSrc}
                   alt=""
                   referrerPolicy="no-referrer"
                   className="w-10 h-14 rounded object-cover shrink-0"

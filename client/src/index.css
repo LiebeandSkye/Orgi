@@ -13,7 +13,7 @@
     --accent-mint: #61F1AC;
 
     /* Community Reviews / Feed Design Tokens */
-    --nav-h: 64px;
+    --nav-h: 56px;
     --feed-bg: #000000;
     --feed-surface: #0B0B0B;
     --feed-surface-hover: #141414;
@@ -23,6 +23,12 @@
     --feed-faint: #7A7A7A;
     --feed-accent: #61F1AC;
     --feed-accent-soft: rgba(97, 241, 172, 0.12);
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --nav-h: 64px;
+    }
   }
 
   body {
@@ -50,7 +56,7 @@
   box-shadow: 0 0 30px -5px rgba(97, 241, 172, 0.12);
 }
 
-/* Hide scrollbar for cast carousel */
+/* Hide scrollbar for carousels and specific components */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -59,10 +65,44 @@
   scrollbar-width: none;
 }
 
-/* Custom sleek scrollbar */
+/* Global sleek dark scrollbars across all components and pages */
+html {
+  color-scheme: dark;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+  border: 2px solid #000000;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(97, 241, 172, 0.5);
+}
+
+::-webkit-scrollbar-corner {
+  background: #000000;
+}
+
+/* Custom sleek scrollbar utility class */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -72,12 +112,12 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 9999px;
   transition: background-color 0.2s ease;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(97, 241, 172, 0.45);
+  background: rgba(97, 241, 172, 0.5);
 }
 
 
