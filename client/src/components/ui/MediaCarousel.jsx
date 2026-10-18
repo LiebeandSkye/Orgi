@@ -1,6 +1,6 @@
-import React, { useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react"; 
+import { Link } from "react-router-dom"; 
+import { ChevronLeft, ChevronRight, Star, Play } from "lucide-react"; 
 import { CardSkeleton } from "./CardSkeleton";
 
 /* ------------------------------------------------------------------ */
@@ -74,13 +74,14 @@ function ArrowButton({ direction, visible, onClick, label }) {
   );
 }
 
-export function MediaCarousel({
-  title,
-  items = [],
-  isLoading = false,
-  showRank = false,
-  showTopScore = false,
-  subtitle = null,
+export function MediaCarousel({ 
+  title, 
+  items = [], 
+  isLoading = false, 
+  showRank = false, 
+  showTopScore = false, 
+  subtitle = null, 
+  cardVariant = "portrait", 
 }) {
   const rowRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -167,81 +168,126 @@ export function MediaCarousel({
         )}
 
         {/* Horizontal Carousel Row */}
-        {isLoading ? (
-          <div className="flex gap-4 overflow-hidden py-1">
-            {Array.from({ length: 6 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="w-[140px] sm:w-[160px] md:w-[180px] shrink-0"
-              >
-                <CardSkeleton />
-              </div>
-            ))}
-          </div>
-        ) : items && items.length > 0 ? (
-          <div
-            ref={rowRef}
-            onScroll={checkScroll}
-            style={{ WebkitMaskImage: edgeMask, maskImage: edgeMask }}
-            className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth py-1 -mx-1 px-1"
-          >
-            {items.map((item, idx) => (
-              <Link
-                key={`${item.type || "media"}-${item.id || idx}`}
-                to={item.route}
-                className="group flex flex-col w-[140px] sm:w-[160px] md:w-[180px] shrink-0 cursor-pointer transition-all"
-              >
-                {/* Poster Card */}
-                <div className="relative aspect-[2/3] w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] border border-[#1C1C1C] group-hover:border-[#61F1AC]/60 group-hover:shadow-[0_0_20px_rgba(97,241,172,0.12)] transition-all duration-300">
-                  {/* Rank number for Top 10 */}
-                  {showRank && <RankNumber rank={idx + 1} />}
-
-                  {/* Top-Right Status Badge (e.g. Completed) or Score Pill */}
-                  {item.statusBadge ? (
-                    <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 rounded-full bg-[#61F1AC] text-black text-[10px] font-bold tracking-tight shadow-md">
-                      {item.statusBadge}
-                    </div>
-                  ) : showTopScore ? (
-                    <div className="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-[#61F1AC] text-black text-[10px] font-bold font-tabular flex items-center gap-0.5 shadow-md">
-                      <Star size={9} className="fill-black text-black" />
-                      <span>{item.rating || item.score || "8.8"}</span>
-                    </div>
-                  ) : null}
-
-                  {item.poster || item.cover ? (
-                    <img
-                      src={item.poster || item.cover}
-                      alt={item.title}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-[#7A7A7A] p-3 text-center">
-                      {item.title}
-                    </div>
-                  )}
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-
-                {/* Title & Metadata */}
-                <div className="mt-3 flex flex-col">
-                  <span className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-[#61F1AC] transition-colors">
-                    {item.title}
-                  </span>
-                  <div className="flex items-center justify-between mt-1 text-xs">
-                    <span className="text-[#7A7A7A] font-tabular truncate max-w-[105px]">
-                      {item.year || item.chapters || item.author || "—"}
-                    </span>
-                    <div className="flex items-center gap-1 text-[#61F1AC] font-medium font-tabular">
-                      <Star size={11} className="fill-[#61F1AC]" />
-                      <span>{item.rating || item.score || "—"}</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+        {isLoading ? ( 
+          <div className="flex gap-4 overflow-hidden py-1"> 
+            {Array.from({ length: cardVariant === "landscape" ? 4 : 6 }).map((_, idx) => ( 
+              <div 
+                key={idx} 
+                className={ 
+                  cardVariant === "landscape" 
+                    ? "w-[280px] sm:w-[320px] md:w-[360px] shrink-0" 
+                    : "w-[140px] sm:w-[160px] md:w-[180px] shrink-0" 
+                } 
+              > 
+                {cardVariant === "landscape" ? ( 
+                  <> 
+                    <div className="relative aspect-[16/9] w-full rounded-[12px] overflow-hidden bg-[#0C0C0C] border border-[#1C1C1C] animate-pulse" /> 
+                    <div className="mt-3 space-y-1.5"> 
+                      <div className="h-4 bg-[#141414] rounded w-3/4 animate-pulse" /> 
+                      <div className="h-3 bg-[#141414] rounded w-1/3 animate-pulse" /> 
+                    </div> 
+                  </> 
+                ) : ( 
+                  <CardSkeleton /> 
+                )} 
+              </div> 
+            ))} 
+          </div> 
+        ) : items && items.length > 0 ? ( 
+          <div 
+            ref={rowRef} 
+            onScroll={checkScroll} 
+            style={{ WebkitMaskImage: edgeMask, maskImage: edgeMask }} 
+            className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth py-1 -mx-1 px-1" 
+          > 
+            {items.map((item, idx) => { 
+              const isLandscape = cardVariant === "landscape"; 
+              const cardImage = isLandscape 
+                ? (item.backdrop || item.poster || item.cover) 
+                : (item.poster || item.cover); 
+ 
+              return ( 
+                <Link 
+                  key={`${item.type || "media"}-${item.id || idx}`} 
+                  to={item.route} 
+                  className={`group flex flex-col ${ 
+                    isLandscape 
+                      ? "w-[280px] sm:w-[320px] md:w-[360px]" 
+                      : "w-[140px] sm:w-[160px] md:w-[180px]" 
+                  } shrink-0 cursor-pointer transition-all`} 
+                > 
+                  <div 
+                    className={`relative ${ 
+                      isLandscape ? "aspect-[16/9]" : "aspect-[2/3]" 
+                    } w-full rounded-[12px] overflow-hidden bg-[#0B0B0B] border border-[#1C1C1C] group-hover:border-[#61F1AC]/60 group-hover:shadow-[0_0_20px_rgba(97,241,172,0.12)] transition-all duration-300`} 
+                  > 
+                    {showRank && <RankNumber rank={idx + 1} />} 
+ 
+                    {item.statusBadge ? ( 
+                      <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 rounded-full bg-[#61F1AC] text-black text-[10px] font-bold tracking-tight shadow-md"> 
+                        {item.statusBadge} 
+                      </div> 
+                    ) : showTopScore || isLandscape ? ( 
+                      item.rating && item.rating !== "—" ? ( 
+                        <div className="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[#61F1AC] text-[10px] sm:text-[11px] font-bold font-tabular flex items-center gap-1 shadow-md"> 
+                          <Star size={10} className="fill-[#61F1AC] text-[#61F1AC]" /> 
+                          <span>{item.rating || item.score}</span> 
+                        </div> 
+                      ) : null 
+                    ) : null} 
+ 
+                    {isLandscape && item.type && !showRank && ( 
+                      <div className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-semibold tracking-wider text-white/80 uppercase"> 
+                        {item.type} 
+                      </div> 
+                    )} 
+ 
+                    {cardImage ? ( 
+                      <img 
+                        src={cardImage} 
+                        alt={item.title} 
+                        loading="lazy" 
+                        referrerPolicy="no-referrer" 
+                        className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500" 
+                      /> 
+                    ) : ( 
+                      <div className="w-full h-full flex items-center justify-center text-xs text-[#7A7A7A] p-3 text-center"> 
+                        {item.title} 
+                      </div> 
+                    )} 
+ 
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" /> 
+                  </div> 
+ 
+                  <div className="mt-2.5 flex flex-col"> 
+                    <div className="flex items-center justify-between gap-2"> 
+                      <span className="text-sm font-medium text-[#F5F5F5] truncate group-hover:text-[#61F1AC] transition-colors"> 
+                        {item.title} 
+                      </span> 
+                      {!isLandscape && ( 
+                        <div className="flex items-center gap-1 text-[#61F1AC] font-medium font-tabular text-xs shrink-0"> 
+                          <Star size={11} className="fill-[#61F1AC]" /> 
+                          <span>{item.rating || item.score || "—"}</span> 
+                        </div> 
+                      )} 
+                    </div> 
+                    <div className="flex items-center gap-2 mt-1 text-xs text-[#7A7A7A]"> 
+                      <span className="font-tabular truncate max-w-[105px]"> 
+                        {item.year || item.chapters || item.author || "—"} 
+                      </span> 
+                      {isLandscape && item.overview && ( 
+                        <> 
+                          <span className="text-white/20">•</span> 
+                          <span className="truncate max-w-[180px] sm:max-w-[220px] text-white/50"> 
+                            {item.overview} 
+                          </span> 
+                        </> 
+                      )} 
+                    </div> 
+                  </div> 
+                </Link> 
+              ); 
+            })} 
           </div>
         ) : (
           <div className="py-6 text-xs text-[#666666]">

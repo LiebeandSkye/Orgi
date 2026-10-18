@@ -128,7 +128,7 @@ export function RecommendationPage() {
               </span> 
             </h2> 
             <p className="text-xs text-[#7A7A7A] mb-8"> 
-              Matching against TMDB &amp; MangaDex with Gemini AI critique 
+              Matching against TMDB &amp; MangaDex with AI critique 
             </p> 
 
             <div className="p-4 rounded-2xl bg-[#0B0F13] border border-[#1E262F] shadow-2xl"> 

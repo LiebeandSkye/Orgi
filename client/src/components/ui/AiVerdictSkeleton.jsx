@@ -97,11 +97,6 @@ export function AiVerdictSkeleton({ movieData, cropHero, category }) {
             label={LOADING_STEPS[stepIndex]} 
             variant="Drive" 
           /> 
-          <div className="hidden sm:flex items-center gap-2 shrink-0"> 
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#61F1AC]/80"> 
-              Gemini AI 
-            </span> 
-          </div> 
         </div> 
 
         <div className="rounded-[14px] bg-[#0D1217]/50 border border-[#1E262F]/60 p-4 sm:p-5 flex flex-col gap-3.5 mb-5 max-w-2xl animate-pulse"> 

@@ -389,10 +389,11 @@ export function HomePage() {
               isLoading={isLoadingTrendingMonth}
             />
 
-            <MediaCarousel
-              title="Fan favorites"
-              items={fanFavoritesItems}
-              isLoading={isLoadingFanFavorites}
+            <MediaCarousel 
+              title="Fan favorites" 
+              items={fanFavoritesItems} 
+              isLoading={isLoadingFanFavorites} 
+              cardVariant="landscape" 
             />
 
             <MediaCarousel
