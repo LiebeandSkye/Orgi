@@ -3,7 +3,7 @@ import { Star, MoreHorizontal, MessageSquare, Copy, AlertCircle, Check } from "l
 import { Avatar } from "./Avatar";
 import { LikeButton } from "./LikeButton";
 import { FormattedText } from "../common/FormattedText";
-import { getReviewAuthor } from "../../utils/reviewUtils";
+import { getReviewAuthor, getReviewPoster } from "../../utils/reviewUtils";
 
 function formatRelativeTime(dateString) {
     if (!dateString) return "";
@@ -90,6 +90,7 @@ export function ReviewCard({
     const likesCount = Math.max(0, (item.likes ?? 0) + delta); 
     const hasRating = item.rating !== undefined && item.rating !== null;
     const reviewAuthor = getReviewAuthor(item, "Anonymous");
+    const posterUrl = getReviewPoster(item);
 
     const metaLine = [item.mediaLabel, ...(item.genres || []).slice(0, 3)]
         .filter(Boolean)
@@ -165,9 +166,9 @@ export function ReviewCard({
 
                     {/* Poster */}
                     <div className="shrink-0 w-[72px] h-[104px] sm:w-[84px] sm:h-[122px] rounded-lg overflow-hidden bg-[#141414]">
-                        {item.posterUrl && !posterError ? (
+                        {posterUrl && !posterError ? (
                             <img
-                                src={item.posterUrl}
+                                src={posterUrl}
                                 alt={item.title}
                                 loading="lazy"
                                 decoding="async"

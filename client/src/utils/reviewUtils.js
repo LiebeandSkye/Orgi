@@ -53,3 +53,30 @@ export function getReviewAuthor(item, fallbackName = "Anonymous") {
     avatar: avatar && typeof avatar === "string" && avatar.trim().length > 0 ? avatar.trim() : undefined,
   };
 }
+
+/**
+ * Normalizes poster or cover image URL from reviews/items:
+ * - Full URLs: "https://image.tmdb.org/t/p/w500/..." -> preserved
+ * - TMDB relative paths: "/abc.jpg" -> "https://image.tmdb.org/t/p/w500/abc.jpg"
+ * - Fallbacks: posterUrl, poster_url, cover_url, coverUrl, backdropUrl, backdrop_url
+ */
+export function getReviewPoster(item) {
+  if (!item) return "";
+  const raw =
+    item.posterUrl ||
+    item.poster_url ||
+    item.cover_url ||
+    item.coverUrl ||
+    item.backdropUrl ||
+    item.backdrop_url ||
+    "";
+  if (!raw || typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/")) {
+    return `https://image.tmdb.org/t/p/w500${trimmed}`;
+  }
+  return trimmed;
+}

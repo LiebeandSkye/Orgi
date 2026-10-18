@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { getReviewAuthor } from "./reviewUtils.js";
+import { getReviewAuthor, getReviewPoster } from "./reviewUtils.js";
 
 describe("getReviewAuthor", () => {
   it("extracts from flat string author and avatar", () => {
@@ -84,5 +84,42 @@ describe("getReviewAuthor", () => {
     const githubRes = getReviewAuthor(githubItem);
     assert.equal(githubRes.name, "octocat");
     assert.equal(githubRes.avatar, "https://example.com/octo.png");
+  });
+});
+
+describe("getReviewPoster", () => {
+  it("returns full HTTP/HTTPS poster URLs unchanged", () => {
+    const item = { posterUrl: "https://image.tmdb.org/t/p/w500/sample.jpg" };
+    assert.equal(getReviewPoster(item), "https://image.tmdb.org/t/p/w500/sample.jpg");
+  });
+
+  it("normalizes TMDB relative paths to full image URLs", () => {
+    const item = { posterUrl: "/icUfSdcAqVPZq2Tmh4kg5z6CXYt.jpg" };
+    assert.equal(
+      getReviewPoster(item),
+      "https://image.tmdb.org/t/p/w500/icUfSdcAqVPZq2Tmh4kg5z6CXYt.jpg"
+    );
+  });
+
+  it("checks fallback fields cover_url, coverUrl, backdropUrl", () => {
+    assert.equal(
+      getReviewPoster({ cover_url: "/cover.jpg" }),
+      "https://image.tmdb.org/t/p/w500/cover.jpg"
+    );
+    assert.equal(
+      getReviewPoster({ coverUrl: "https://example.com/cover.png" }),
+      "https://example.com/cover.png"
+    );
+    assert.equal(
+      getReviewPoster({ backdropUrl: "/backdrop.jpg" }),
+      "https://image.tmdb.org/t/p/w500/backdrop.jpg"
+    );
+  });
+
+  it("handles null, undefined, empty or invalid inputs", () => {
+    assert.equal(getReviewPoster(null), "");
+    assert.equal(getReviewPoster(undefined), "");
+    assert.equal(getReviewPoster({}), "");
+    assert.equal(getReviewPoster({ posterUrl: "   " }), "");
   });
 });
