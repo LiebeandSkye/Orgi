@@ -89,7 +89,8 @@ export default function EpisodesSection({
   const [internalColLoading, setInternalColLoading] = useState(false); 
 
   const effectiveInCollection = inCollection !== undefined ? inCollection : internalInCollection; 
-  const effectiveColLoading = collectionLoading !== undefined ? collectionLoading : internalColLoading;
+  const effectiveColLoading = collectionLoading !== undefined ? collectionLoading : internalColLoading; 
+
   const [series, setSeries] = useState(seriesData || null); 
   const [seasons, setSeasons] = useState(() => { 
     if (seriesData?.seasons && Array.isArray(seriesData.seasons)) { 
@@ -109,6 +110,9 @@ export default function EpisodesSection({
 
   const [savedEpisodes, setSavedEpisodes] = useState([]); 
   const [userRatings, setUserRatings] = useState({}); 
+  const [ratingEpisode, setRatingEpisode] = useState(null);
+  const [showRatingPicker, setShowRatingPicker] = useState(false);
+  const [discussionCounts, setDiscussionCounts] = useState({});
   const [showReviewComposer, setShowReviewComposer] = useState(false); 
   const [reviewContent, setReviewContent] = useState(""); 
   const [reviewScore, setReviewScore] = useState(8); 
@@ -116,7 +120,7 @@ export default function EpisodesSection({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false); 
   const ratingStripRef = useRef(null); 
 
-  const [discussionCounts, setDiscussionCounts] = useState({});
+
   useEffect(() => { 
     if (inCollection !== undefined || !seriesId) return; 
     let mounted = true; 
@@ -140,7 +144,6 @@ export default function EpisodesSection({
       mounted = false; 
     }; 
   }, [inCollection, seriesId]); 
-
 
   const handleCollectionClick = async () => { 
     if (onToggleCollection) { 

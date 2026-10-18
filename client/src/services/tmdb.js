@@ -590,6 +590,7 @@ export async function getMovieMedia(movieId) {
   } 
 } 
 
+
 export async function getSeriesMedia(seriesId) {
   if (!seriesId) return { images: { backdrops: [], posters: [] }, videos: { results: [] } };
   try {
@@ -659,7 +660,7 @@ export async function getEpisodeDetails(seriesId, seasonNumber = 1, episodeNumbe
     voteCount: data.vote_count ?? 0, 
     vote_count: data.vote_count ?? 0, 
   }; 
-}
+} 
 
 export async function getMediaVideos(id, type = "movie") { 
   if (!id) return []; 
@@ -706,5 +707,5 @@ export function findTrailerKey(videos) {
     ytVideos[0]; 
 
   return trailer?.key || null; 
-} 
+}
 

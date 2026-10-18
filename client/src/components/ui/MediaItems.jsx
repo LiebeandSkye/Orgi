@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Play, ChevronLeft, ChevronRight, BookOpen, X, ExternalLink } from "lucide-react";
 
+
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
 function getTMDBImage(path, size = "w500") {
@@ -134,6 +135,7 @@ function getVideoKey(video) {
   }
   return "";
 }
+
 
 export function VideoModal({ videoKey, videoName, onClose }) {
   useEffect(() => {
@@ -286,6 +288,7 @@ function ImageModal({ image, format, onClose }) {
           </button>
         )}
 
+
         <div
           className={`relative flex items-center justify-center overflow-hidden bg-black/60 ${ 
             isBackdrop ? "aspect-video w-full" : "aspect-[2/3] w-full" 
@@ -354,15 +357,15 @@ export default function MediaItems({ movieData, seriesData }) {
       ? mediaItem.videos.results 
       : Array.isArray(mediaItem?.videoList) 
       ? mediaItem.videoList 
-      : [];
+      : []; 
 
-    const rawVideos = videoList.filter((video) => {
-      if (!video) return false;
-      const site = (video.site || "").toLowerCase();
-      const isYouTube = !video.site || site === "youtube";
-      const hasKey = Boolean(getVideoKey(video));
-      return isYouTube && hasKey;
-    });
+    const rawVideos = videoList.filter((video) => { 
+      if (!video) return false; 
+      const site = (video.site || "").toLowerCase(); 
+      const isYouTube = !video.site || site === "youtube"; 
+      const hasKey = Boolean(getVideoKey(video)); 
+      return isYouTube && hasKey; 
+    }); 
 
     return [...rawVideos] 
       .sort((a, b) => { 
@@ -419,6 +422,7 @@ export default function MediaItems({ movieData, seriesData }) {
     return (
       <section className="w-full bg-black text-[#F5F5F5]">
         <div className="space-y-10 py-6 sm:py-8">
+
           {hasOfficialArt && (
             <section>
               <SectionTitle
@@ -669,6 +673,7 @@ export default function MediaItems({ movieData, seriesData }) {
                         }}
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:brightness-75"
                       />
+
 
                       <div className="absolute inset-0 flex items-center justify-center">
                         <span className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/80 bg-black/40 backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-black/60 group-hover:border-white">

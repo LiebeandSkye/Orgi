@@ -123,28 +123,27 @@ export function HeroCoverflow({ items = [], resetKey }) {
     };
 
     /* ---------- Loading skeleton ---------- */
-    if (!n) {
-        return (
-            <div className={`relative ${STAGE_HEIGHT} animate-pulse`} aria-hidden="true">
-                <div className="absolute inset-y-0 left-0 right-0 mx-auto w-[78%] sm:w-[60%] lg:w-[56%] rounded-[28px] bg-[#0C0C0C] border border-white/[0.05]" />
-                <div className="absolute inset-y-[14px] -left-[8%] w-[26%] rounded-[24px] bg-[#0A0A0A] border border-white/[0.04] hidden sm:block" />
-                <div className="absolute inset-y-[14px] -right-[8%] w-[26%] rounded-[24px] bg-[#0A0A0A] border border-white/[0.04] hidden sm:block" />
-            </div>
-        );
-    }
-
-    const dotCount = items.length;
-    const activeDot = index % dotCount;
-
-    return (
-        <div
-            className="relative"
-            onMouseEnter={() => (pausedRef.current = true)}
-            onMouseLeave={() => (pausedRef.current = false)}
-        >
-            {/* Stage */}
-            <div
-                className={`relative ${STAGE_HEIGHT} touch-pan-y select-none`}
+    if (!n) { 
+        return ( 
+            <div className={`relative w-full max-w-full overflow-hidden ${STAGE_HEIGHT} animate-pulse`} aria-hidden="true"> 
+                <div className="absolute inset-y-0 left-0 right-0 mx-auto w-[78%] sm:w-[60%] lg:w-[56%] rounded-[28px] bg-[#0C0C0C] border border-white/[0.05]" /> 
+                <div className="absolute inset-y-[14px] -left-[8%] w-[26%] rounded-[24px] bg-[#0A0A0A] border border-white/[0.04] hidden sm:block" /> 
+                <div className="absolute inset-y-[14px] -right-[8%] w-[26%] rounded-[24px] bg-[#0A0A0A] border border-white/[0.04] hidden sm:block" /> 
+            </div> 
+        ); 
+    } 
+ 
+    const dotCount = items.length; 
+    const activeDot = index % dotCount; 
+ 
+    return ( 
+        <div 
+            className="relative w-full max-w-full overflow-hidden" 
+            onMouseEnter={() => (pausedRef.current = true)} 
+            onMouseLeave={() => (pausedRef.current = false)} 
+        > 
+            <div 
+                className={`relative w-full max-w-full ${STAGE_HEIGHT} touch-pan-y select-none overflow-hidden`} 
                 style={{ maskImage: EDGE_MASK, WebkitMaskImage: EDGE_MASK }}
                 onPointerDown={(e) => {
                     startX.current = e.clientX;

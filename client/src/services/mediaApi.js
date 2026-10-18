@@ -336,36 +336,50 @@ export async function fetchBooksDashboardFeeds(onProgress) {
 
     // 3. Books track: Check local cache first so Open Library takes 0ms
     const booksPromise = (async () => {
-        try {
-            const raw = sessionStorage.getItem(POPULAR_BOOKS_CACHE_KEY);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Date.now() - parsed.timestamp < POPULAR_BOOKS_CACHE_TTL && Array.isArray(parsed.data)) {
-                    const booksUpdate = { trendingBooks: parsed.data.map((b) => formatRoute(b, "novels")) };
-                    aggregated = { ...aggregated, ...booksUpdate };
-                    if (typeof onProgress === "function") {
-                        onProgress(aggregated);
-                    }
-                    return booksUpdate;
-                }
-            }
-        } catch {}
-
-        const popularBooks = await fetchBooks(1, "").catch(() => []);
-        if (Array.isArray(popularBooks) && popularBooks.length > 0) {
-            try {
-                sessionStorage.setItem(
-                    POPULAR_BOOKS_CACHE_KEY,
-                    JSON.stringify({ data: popularBooks, timestamp: Date.now() })
-                );
-            } catch {}
-        }
-        const booksUpdate = { trendingBooks: (popularBooks || []).map((b) => formatRoute(b, "novels")) };
-        aggregated = { ...aggregated, ...booksUpdate };
-        if (typeof onProgress === "function") {
-            onProgress(aggregated);
-        }
-        return booksUpdate;
+        try { 
+            const raw = sessionStorage.getItem(POPULAR_BOOKS_CACHE_KEY); 
+            if (raw) { 
+                const parsed = JSON.parse(raw); 
+                if (Date.now() - parsed.timestamp < POPULAR_BOOKS_CACHE_TTL && Array.isArray(parsed.data)) { 
+                    const novelsFormatted = parsed.data.map((b) => formatRoute(b, "novels")); 
+                    const booksFormatted = novelsFormatted.map((b) => ({ ...b, route: `/books/books/${b.id}`, type: "BOOKS" })); 
+                    const booksUpdate = { 
+                        trendingNovels: novelsFormatted, 
+                        trendingBooks: booksFormatted, 
+                    }; 
+                    aggregated = { ...aggregated, ...booksUpdate }; 
+                    if (typeof onProgress === "function") { 
+                        onProgress(aggregated); 
+                    } 
+                    return booksUpdate; 
+                } 
+            } 
+        } catch {} 
+ 
+        const popularNovels = await fetchBooks(1, "").catch(() => []); 
+        if (Array.isArray(popularNovels) && popularNovels.length > 0) { 
+            try { 
+                sessionStorage.setItem( 
+                    POPULAR_BOOKS_CACHE_KEY, 
+                    JSON.stringify({ data: popularNovels, timestamp: Date.now() }) 
+                ); 
+            } catch {} 
+        } 
+        const novelsFormatted = (popularNovels || []).map((b) => formatRoute(b, "novels")); 
+        const popularBooks = await fetchBooksBySubject("nonfiction", 16).catch(() => []); 
+        const booksFormatted = (popularBooks && popularBooks.length > 0) 
+            ? popularBooks.map((b) => formatRoute(b, "books")) 
+            : novelsFormatted.map((b) => ({ ...b, route: `/books/books/${b.id}`, type: "BOOKS" })); 
+ 
+        const booksUpdate = { 
+            trendingNovels: novelsFormatted, 
+            trendingBooks: booksFormatted, 
+        }; 
+        aggregated = { ...aggregated, ...booksUpdate }; 
+        if (typeof onProgress === "function") { 
+            onProgress(aggregated); 
+        } 
+        return booksUpdate; 
     })();
 
     await Promise.allSettled([mangaDexPromise, booksPromise]);
@@ -670,18 +684,29 @@ export async function fetchCategoryHubFeeds(category, onProgress) {
         }
     };
 
-    if (category === "novels") {
-        const tasks = [
-            fetchBooksBySubject("fiction", 16).then((res) => emit({ trending: res })),
-            fetchBooksBySubject("classic_literature", 16).then((res) => emit({ masterpieces: res })),
-            fetchBooksBySubject("fantasy", 16).then((res) =>
-                emit({ completed: res.map((i) => ({ ...i, statusBadge: "Completed" })), darkFantasy: res })
-            ),
-            fetchBooksBySubject("science_fiction", 16).then((res) => emit({ action: res })),
-            fetchBooksBySubject("thriller", 16).then((res) => emit({ psychological: res })),
-        ];
-        await Promise.allSettled(tasks);
-    } else {
+    if (category === "novels") { 
+        const tasks = [ 
+            fetchBooksBySubject("fiction", 16).then((res) => emit({ trending: res })), 
+            fetchBooksBySubject("classic_literature", 16).then((res) => emit({ masterpieces: res })), 
+            fetchBooksBySubject("fantasy", 16).then((res) => 
+                emit({ completed: res.map((i) => ({ ...i, statusBadge: "Completed" })), darkFantasy: res }) 
+            ), 
+            fetchBooksBySubject("science_fiction", 16).then((res) => emit({ action: res })), 
+            fetchBooksBySubject("thriller", 16).then((res) => emit({ psychological: res })), 
+        ]; 
+        await Promise.allSettled(tasks); 
+    } else if (category === "books") { 
+        const tasks = [ 
+            fetchBooksBySubject("nonfiction", 16).then((res) => emit({ trending: res })), 
+            fetchBooksBySubject("history", 16).then((res) => emit({ masterpieces: res })), 
+            fetchBooksBySubject("biography", 16).then((res) => 
+                emit({ completed: res.map((i) => ({ ...i, statusBadge: "Completed" })), darkFantasy: res }) 
+            ), 
+            fetchBooksBySubject("science", 16).then((res) => emit({ action: res })), 
+            fetchBooksBySubject("philosophy", 16).then((res) => emit({ psychological: res })), 
+        ]; 
+        await Promise.allSettled(tasks); 
+    } else { 
         const psychOrMartialGenre = category === "manga" ? "Psychological" : "Martial Arts";
         const tasks = [
             fetchMangaDexByCategory(category, 1, "", "All", "All", "Most popular")

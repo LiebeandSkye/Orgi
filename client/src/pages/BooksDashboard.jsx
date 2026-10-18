@@ -1,70 +1,79 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Link } from "react-router-dom";
-import {
-  Search,
-  Star,
-  X,
-  ChevronDown,
-  LayoutGrid,
-  Columns3,
-  ArrowRight,
-} from "lucide-react";
-import { MediaCarousel } from "../components/ui/MediaCarousel";
-import { CardSkeletonGrid } from "../components/ui/CardSkeleton";
-import { HeroCoverflow, CategoryTabs } from "../components/ui/HeroCoverFlow";
-import {
-  fetchBooksDashboardFeeds,
-  getCachedBooksDashboardFeeds,
-  fetchCategoryHubFeeds,
-  getCachedCategoryHubFeeds,
-  searchMangaDex,
-  searchBooks,
-} from "../services/mediaApi";
-
-const CATEGORY_TABS = [
-  { key: "all", label: "All Literature", count: null, sectionId: null },
-  { key: "manhwa", label: "Manhwa", count: "1.4k", sectionId: "section-manhwa" },
-  { key: "manga", label: "Manga", count: "2.8k", sectionId: "section-manga" },
-  { key: "novels", label: "Books & Novels", count: "4.1k", sectionId: "section-novels" },
-  { key: "manhua", label: "Manhua", count: "3.2k", sectionId: "section-manhua" },
-  { key: "favorites", label: "Fan Favorites", count: "Top", sectionId: "section-favorites" },
-];
-
-const SUB_FILTER_CHIPS = {
-  manga: [
-    { key: "all", label: "All Manga" },
-    { key: "completed", label: "Completed Series" },
-    { key: "action", label: "Shonen Action" },
-    { key: "darkFantasy", label: "Dark Fantasy" },
-    { key: "masterpieces", label: "Masterpieces" },
-    { key: "psychological", label: "Psychological" },
-  ],
-  manhwa: [
-    { key: "all", label: "All Manhwa" },
-    { key: "completed", label: "Completed Series" },
-    { key: "action", label: "Dungeon & Action" },
-    { key: "darkFantasy", label: "Dark Fantasy" },
-    { key: "masterpieces", label: "Masterpieces" },
-    { key: "psychological", label: "Murim & Martial Arts" },
-  ],
-  manhua: [
-    { key: "all", label: "All Manhua" },
-    { key: "completed", label: "Completed Series" },
-    { key: "action", label: "Action & Wuxia" },
-    { key: "darkFantasy", label: "Dark Fantasy" },
-    { key: "masterpieces", label: "Masterpieces" },
-    { key: "psychological", label: "Cultivation & Martial Arts" },
-  ],
-  novels: [
-    { key: "all", label: "All Books & Novels" },
-    { key: "completed", label: "Completed Classics" },
-    { key: "action", label: "Sci-Fi & Cyberpunk" },
-    { key: "darkFantasy", label: "Epic Fantasy" },
-    { key: "masterpieces", label: "Masterpieces" },
-    { key: "psychological", label: "Mystery & Psychological" },
-  ],
-};
-
+import React, { useState, useEffect, useRef, useMemo } from "react"; 
+import { Link, useSearchParams } from "react-router-dom"; 
+import { 
+  Search, 
+  Star, 
+  X, 
+  ChevronDown, 
+  LayoutGrid, 
+  Columns3, 
+  ArrowRight, 
+} from "lucide-react"; 
+import { MediaCarousel } from "../components/ui/MediaCarousel"; 
+import { CardSkeletonGrid } from "../components/ui/CardSkeleton"; 
+import { HeroCoverflow, CategoryTabs } from "../components/ui/HeroCoverFlow"; 
+import { 
+  fetchBooksDashboardFeeds, 
+  getCachedBooksDashboardFeeds, 
+  fetchCategoryHubFeeds, 
+  getCachedCategoryHubFeeds, 
+  searchMangaDex, 
+  searchBooks, 
+} from "../services/mediaApi"; 
+ 
+const CATEGORY_TABS = [ 
+  { key: "all", label: "All Literature", count: null, sectionId: null }, 
+  { key: "manga", label: "Manga", count: "2.8k", sectionId: "section-manga" }, 
+  { key: "manhwa", label: "Manhwa", count: "1.4k", sectionId: "section-manhwa" }, 
+  { key: "manhua", label: "Manhua", count: "3.2k", sectionId: "section-manhua" }, 
+  { key: "books", label: "Books", count: "3.5k", sectionId: "section-books" }, 
+  { key: "novels", label: "Novels", count: "4.1k", sectionId: "section-novels" }, 
+  { key: "favorites", label: "Fan Favorite", count: "Top", sectionId: "section-favorites" }, 
+]; 
+ 
+const SUB_FILTER_CHIPS = { 
+  manga: [ 
+    { key: "all", label: "All Manga" }, 
+    { key: "completed", label: "Completed Series" }, 
+    { key: "action", label: "Shonen Action" }, 
+    { key: "darkFantasy", label: "Dark Fantasy" }, 
+    { key: "masterpieces", label: "Masterpieces" }, 
+    { key: "psychological", label: "Psychological" }, 
+  ], 
+  manhwa: [ 
+    { key: "all", label: "All Manhwa" }, 
+    { key: "completed", label: "Completed Series" }, 
+    { key: "action", label: "Dungeon & Action" }, 
+    { key: "darkFantasy", label: "Dark Fantasy" }, 
+    { key: "masterpieces", label: "Masterpieces" }, 
+    { key: "psychological", label: "Murim & Martial Arts" }, 
+  ], 
+  manhua: [ 
+    { key: "all", label: "All Manhua" }, 
+    { key: "completed", label: "Completed Series" }, 
+    { key: "action", label: "Action & Wuxia" }, 
+    { key: "darkFantasy", label: "Dark Fantasy" }, 
+    { key: "masterpieces", label: "Masterpieces" }, 
+    { key: "psychological", label: "Cultivation & Martial Arts" }, 
+  ], 
+  books: [ 
+    { key: "all", label: "All Books" }, 
+    { key: "completed", label: "Biographies & Memoirs" }, 
+    { key: "action", label: "Science & Tech" }, 
+    { key: "darkFantasy", label: "History & Culture" }, 
+    { key: "masterpieces", label: "Masterpieces" }, 
+    { key: "psychological", label: "Philosophy & Mind" }, 
+  ], 
+  novels: [ 
+    { key: "all", label: "All Novels" }, 
+    { key: "completed", label: "Completed Classics" }, 
+    { key: "action", label: "Sci-Fi & Cyberpunk" }, 
+    { key: "darkFantasy", label: "Epic Fantasy" }, 
+    { key: "masterpieces", label: "Masterpieces" }, 
+    { key: "psychological", label: "Mystery & Psychological" }, 
+  ], 
+}; 
+ 
 const HUB_SHELF_CONFIG = { 
   manga: [ 
     { key: "trending", title: "TRENDING THIS WEEK — MANGA", showTopScore: true }, 
@@ -90,22 +99,31 @@ const HUB_SHELF_CONFIG = {
     { key: "action", title: "ACTION & SUPERNATURAL AWAKENING", showTopScore: true }, 
     { key: "psychological", title: "CULTIVATION, XIANXIA & MARTIAL ARTS", showTopScore: true }, 
   ], 
+  books: [ 
+    { key: "trending", title: "TRENDING THIS MONTH — NONFICTION & BOOKS", showTopScore: true }, 
+    { key: "masterpieces", title: "HISTORICAL & TIMELESS MASTERPIECES", showRank: true, showTopScore: true }, 
+    { key: "completed", title: "BIOGRAPHIES & MEMOIRS — ESSENTIAL READS", showTopScore: true }, 
+    { key: "darkFantasy", title: "CULTURE, SOCIETY & EXPLORATION", showTopScore: true }, 
+    { key: "action", title: "SCIENCE, DISCOVERY & TECHNOLOGY", showTopScore: true }, 
+    { key: "psychological", title: "PHILOSOPHY, PSYCHOLOGY & THOUGHT", showTopScore: true }, 
+  ], 
   novels: [ 
-    { key: "trending", title: "TRENDING THIS MONTH — NOVELS & BOOKS", showTopScore: true }, 
+    { key: "trending", title: "TRENDING THIS MONTH — NOVELS", showTopScore: true }, 
     { key: "masterpieces", title: "ALL-TIME MASTERPIECES (HALL OF FAME)", showRank: true, showTopScore: true }, 
-    { key: "completed", title: "COMPLETED SERIES — BINGE TONIGHT", showTopScore: true }, 
+    { key: "completed", title: "COMPLETED CLASSICS — BINGE TONIGHT", showTopScore: true }, 
     { key: "darkFantasy", title: "EPIC FANTASY & WORLDBUILDING", showTopScore: true }, 
     { key: "action", title: "MIND-BENDING SCI-FI & CYBERPUNK", showTopScore: true }, 
     { key: "psychological", title: "PSYCHOLOGICAL THRILLERS & MYSTERY", showTopScore: true }, 
   ], 
-};
-
-const SECTION_OPTIONS = [
-  { label: "Trending Manhwa", id: "section-manhwa" },
-  { label: "Trending Manga", id: "section-manga" },
-  { label: "Books & Novels", id: "section-novels" },
-  { label: "Trending Manhua", id: "section-manhua" },
-  { label: "Fan Favorites", id: "section-favorites" },
+}; 
+ 
+const SECTION_OPTIONS = [ 
+  { label: "Trending Manga", id: "section-manga" }, 
+  { label: "Trending Manhwa", id: "section-manhwa" }, 
+  { label: "Trending Manhua", id: "section-manhua" }, 
+  { label: "Trending Books", id: "section-books" }, 
+  { label: "Trending Novels", id: "section-novels" }, 
+  { label: "Fan Favorites", id: "section-favorites" }, 
 ];
 
 function ShelfGrid({ title, items, isLoading, sectionId, onExplore, showRank = false }) {
@@ -197,46 +215,63 @@ function ShelfGrid({ title, items, isLoading, sectionId, onExplore, showRank = f
   );
 }
 
-export function BooksDashboard() {
-  const [activeTab, setActiveTab] = useState("all");
-  const [activeSubFilter, setActiveSubFilter] = useState("all");
-  const [viewMode, setViewMode] = useState("carousel");
-  const [jumpMenuOpen, setJumpMenuOpen] = useState(false);
-  const jumpMenuRef = useRef(null);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const searchInputRef = useRef(null);
-
-  // Instant 0ms cache hydration for Overview feeds
-  const initialCached = useMemo(() => getCachedBooksDashboardFeeds(), []);
-  const [feeds, setFeeds] = useState(
-    initialCached || {
-      trendingManhwa: [],
-      trendingManga: [],
-      trendingManhua: [],
-      trendingBooks: [],
-      fanFavorites: [],
-    }
-  );
-  const [isLoadingFeeds, setIsLoadingFeeds] = useState(!initialCached);
-
-  // Dedicated Category Hub feeds state (keyed by category: manga, manhwa, manhua, novels)
-  const [hubFeedsByCat, setHubFeedsByCat] = useState(() => ({
-    manga: getCachedCategoryHubFeeds("manga"),
-    manhwa: getCachedCategoryHubFeeds("manhwa"),
-    manhua: getCachedCategoryHubFeeds("manhua"),
-    novels: getCachedCategoryHubFeeds("novels"),
-  }));
-  const [isLoadingHub, setIsLoadingHub] = useState(false);
-
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  const isCategoryHubActive = ["manga", "manhwa", "manhua", "novels"].includes(activeTab);
-
-  // Close jump menu on outside click
-  useEffect(() => {
+export function BooksDashboard() { 
+  const [searchParams, setSearchParams] = useSearchParams(); 
+  const tabParam = searchParams.get("tab"); 
+  const validTabs = ["all", "manga", "manhwa", "manhua", "books", "novels", "favorites"]; 
+ 
+  const [activeTab, setActiveTab] = useState(() => { 
+    return validTabs.includes(tabParam) ? tabParam : "all"; 
+  }); 
+  const [activeSubFilter, setActiveSubFilter] = useState("all"); 
+  const [viewMode, setViewMode] = useState("carousel"); 
+  const [jumpMenuOpen, setJumpMenuOpen] = useState(false); 
+  const jumpMenuRef = useRef(null); 
+ 
+  const [searchQuery, setSearchQuery] = useState(""); 
+  const [debouncedQuery, setDebouncedQuery] = useState(""); 
+  const searchInputRef = useRef(null); 
+ 
+  const initialCached = useMemo(() => getCachedBooksDashboardFeeds(), []); 
+  const [feeds, setFeeds] = useState( 
+    initialCached || { 
+      trendingManga: [], 
+      trendingManhwa: [], 
+      trendingManhua: [], 
+      trendingBooks: [], 
+      trendingNovels: [], 
+      fanFavorites: [], 
+    } 
+  ); 
+  const [isLoadingFeeds, setIsLoadingFeeds] = useState(!initialCached); 
+ 
+  const [hubFeedsByCat, setHubFeedsByCat] = useState(() => ({ 
+    manga: getCachedCategoryHubFeeds("manga"), 
+    manhwa: getCachedCategoryHubFeeds("manhwa"), 
+    manhua: getCachedCategoryHubFeeds("manhua"), 
+    books: getCachedCategoryHubFeeds("books"), 
+    novels: getCachedCategoryHubFeeds("novels"), 
+  })); 
+  const [isLoadingHub, setIsLoadingHub] = useState(false); 
+ 
+  const [searchResults, setSearchResults] = useState([]); 
+  const [isSearching, setIsSearching] = useState(false); 
+ 
+  const isCategoryHubActive = ["manga", "manhwa", "manhua", "books", "novels"].includes(activeTab); 
+ 
+  useEffect(() => { 
+    if (tabParam && validTabs.includes(tabParam)) { 
+      if (activeTab !== tabParam) { 
+        setActiveTab(tabParam); 
+        setActiveSubFilter("all"); 
+      } 
+    } else if (!tabParam && activeTab !== "all") { 
+      setActiveTab("all"); 
+      setActiveSubFilter("all"); 
+    } 
+  }, [tabParam]); 
+ 
+  useEffect(() => { 
     function handleClickOutside(e) {
       if (jumpMenuRef.current && !jumpMenuRef.current.contains(e.target)) {
         setJumpMenuOpen(false);
@@ -384,105 +419,121 @@ export function BooksDashboard() {
 
   const isSearchActive = searchQuery.trim().length > 0;
 
-  // Contextual Spotlight Pool (adapts dynamically to the active category tab)
-  const spotlightPool = useMemo(() => {
-    if (activeTab === "manga") {
-      const mangaList =
-        hubFeedsByCat.manga?.masterpieces?.length > 0
-          ? hubFeedsByCat.manga.masterpieces
-          : feeds.trendingManga;
-      if (mangaList && mangaList.length > 0) {
-        return mangaList.slice(0, 6).map((item) => ({ ...item, badge: "Top Rated Manga" }));
-      }
-    } else if (activeTab === "manhwa") {
-      const manhwaList =
-        hubFeedsByCat.manhwa?.masterpieces?.length > 0
-          ? hubFeedsByCat.manhwa.masterpieces
-          : feeds.trendingManhwa;
-      if (manhwaList && manhwaList.length > 0) {
-        return manhwaList.slice(0, 6).map((item) => ({ ...item, badge: "Top Rated Manhwa" }));
-      }
-    } else if (activeTab === "manhua") {
-      const manhuaList =
-        hubFeedsByCat.manhua?.masterpieces?.length > 0
-          ? hubFeedsByCat.manhua.masterpieces
-          : feeds.trendingManhua;
-      if (manhuaList && manhuaList.length > 0) {
-        return manhuaList.slice(0, 6).map((item) => ({ ...item, badge: "Top Rated Manhua" }));
-      }
-    } else if (activeTab === "novels") {
-      const booksList =
-        hubFeedsByCat.novels?.trending?.length > 0
-          ? hubFeedsByCat.novels.trending
-          : feeds.trendingBooks;
-      if (booksList && booksList.length > 0) {
-        return booksList.slice(0, 6).map((item) => ({ ...item, badge: "Featured Book / Novel" }));
-      }
-    } else if (activeTab === "favorites") {
-      if (feeds.fanFavorites && feeds.fanFavorites.length > 0) {
-        return feeds.fanFavorites.slice(0, 6).map((item) => ({ ...item, badge: "Hall of Fame Favorite" }));
-      }
-    }
-
-    const pool = [];
-    if (feeds.trendingManhwa[0]) pool.push({ ...feeds.trendingManhwa[0], badge: "Trending Manhwa" });
-    if (feeds.trendingManga[0]) pool.push({ ...feeds.trendingManga[0], badge: "Trending Manga" });
-    if (feeds.trendingBooks[0]) pool.push({ ...feeds.trendingBooks[0], badge: "Trending Book / Novel" });
-    if (feeds.trendingManhua[0]) pool.push({ ...feeds.trendingManhua[0], badge: "Trending Manhua" });
-    if (feeds.trendingManhwa[1]) pool.push({ ...feeds.trendingManhwa[1], badge: "Featured Webtoon" });
-    if (feeds.trendingManga[1]) pool.push({ ...feeds.trendingManga[1], badge: "Featured Manga" });
-
-    return pool;
-  }, [activeTab, feeds, hubFeedsByCat]);
-
-  const handleTabClick = (tab) => {
-    setActiveTab(tab.key);
-    setActiveSubFilter("all");
-  };
-
-  const scrollToSection = (id) => {
-    setActiveTab("all");
-    setActiveSubFilter("all");
-    setJumpMenuOpen(false);
-    setTimeout(() => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }, 50);
-  };
-
-  // Resolve current category hub shelves with instant fallback to overview feed for the first shelf
-  const activeHubData = useMemo(() => {
-    if (!isCategoryHubActive) return null;
-    const raw = hubFeedsByCat[activeTab] || {};
-    const overviewFallback =
-      activeTab === "manga"
-        ? feeds.trendingManga
-        : activeTab === "manhwa"
-        ? feeds.trendingManhwa
-        : activeTab === "manhua"
-        ? feeds.trendingManhua
-        : feeds.trendingBooks;
-
-    return {
-      trending: raw.trending?.length > 0 ? raw.trending : overviewFallback || [],
-      masterpieces: raw.masterpieces || [],
-      completed: raw.completed || [],
-      darkFantasy: raw.darkFantasy || [],
-      action: raw.action || [],
-      psychological: raw.psychological || [],
-    };
-  }, [activeTab, isCategoryHubActive, hubFeedsByCat, feeds]);
-
-  return (
-    <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col justify-between pt-3 sm:pt-4 pb-24 select-none">
-      <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-[120px]">
-        {/* ======================================================== */}
-        {/* 1. COVERFLOW HERO (3-up, side slides peek in and cut off) */}
-        {/* ======================================================== */}
-        <div className="mb-8">
-          <HeroCoverflow items={spotlightPool} resetKey={activeTab} />
+  const spotlightPool = useMemo(() => { 
+    if (activeTab === "manga") { 
+      const mangaList = 
+        hubFeedsByCat.manga?.masterpieces?.length > 0 
+          ? hubFeedsByCat.manga.masterpieces 
+          : feeds.trendingManga; 
+      if (mangaList && mangaList.length > 0) { 
+        return mangaList.slice(0, 6).map((item) => ({ ...item, badge: "Top Rated Manga" })); 
+      } 
+    } else if (activeTab === "manhwa") { 
+      const manhwaList = 
+        hubFeedsByCat.manhwa?.masterpieces?.length > 0 
+          ? hubFeedsByCat.manhwa.masterpieces 
+          : feeds.trendingManhwa; 
+      if (manhwaList && manhwaList.length > 0) { 
+        return manhwaList.slice(0, 6).map((item) => ({ ...item, badge: "Top Rated Manhwa" })); 
+      } 
+    } else if (activeTab === "manhua") { 
+      const manhuaList = 
+        hubFeedsByCat.manhua?.masterpieces?.length > 0 
+          ? hubFeedsByCat.manhua.masterpieces 
+          : feeds.trendingManhua; 
+      if (manhuaList && manhuaList.length > 0) { 
+        return manhuaList.slice(0, 6).map((item) => ({ ...item, badge: "Top Rated Manhua" })); 
+      } 
+    } else if (activeTab === "books") { 
+      const booksList = 
+        hubFeedsByCat.books?.trending?.length > 0 
+          ? hubFeedsByCat.books.trending 
+          : feeds.trendingBooks; 
+      if (booksList && booksList.length > 0) { 
+        return booksList.slice(0, 6).map((item) => ({ ...item, badge: "Featured Nonfiction & Books" })); 
+      } 
+    } else if (activeTab === "novels") { 
+      const novelsList = 
+        hubFeedsByCat.novels?.trending?.length > 0 
+          ? hubFeedsByCat.novels.trending 
+          : (feeds.trendingNovels?.length > 0 ? feeds.trendingNovels : feeds.trendingBooks); 
+      if (novelsList && novelsList.length > 0) { 
+        return novelsList.slice(0, 6).map((item) => ({ ...item, badge: "Featured Novel" })); 
+      } 
+    } else if (activeTab === "favorites") { 
+      if (feeds.fanFavorites && feeds.fanFavorites.length > 0) { 
+        return feeds.fanFavorites.slice(0, 6).map((item) => ({ ...item, badge: "Hall of Fame Favorite" })); 
+      } 
+    } 
+ 
+    const pool = []; 
+    if (feeds.trendingManga[0]) pool.push({ ...feeds.trendingManga[0], badge: "Trending Manga" }); 
+    if (feeds.trendingManhwa[0]) pool.push({ ...feeds.trendingManhwa[0], badge: "Trending Manhwa" }); 
+    if (feeds.trendingBooks[0]) pool.push({ ...feeds.trendingBooks[0], badge: "Trending Book" }); 
+    if (feeds.trendingNovels?.[0]) pool.push({ ...feeds.trendingNovels[0], badge: "Trending Novel" }); 
+    else if (feeds.trendingBooks[1]) pool.push({ ...feeds.trendingBooks[1], badge: "Featured Novel" }); 
+    if (feeds.trendingManhua[0]) pool.push({ ...feeds.trendingManhua[0], badge: "Trending Manhua" }); 
+    if (feeds.trendingManga[1]) pool.push({ ...feeds.trendingManga[1], badge: "Featured Manga" }); 
+ 
+    return pool; 
+  }, [activeTab, feeds, hubFeedsByCat]); 
+ 
+  const handleTabClick = (tab) => { 
+    setActiveTab(tab.key); 
+    setActiveSubFilter("all"); 
+    if (tab.key === "all") { 
+      const next = new URLSearchParams(searchParams); 
+      next.delete("tab"); 
+      setSearchParams(next, { replace: true }); 
+    } else { 
+      setSearchParams({ tab: tab.key }, { replace: true }); 
+    } 
+  }; 
+ 
+  const scrollToSection = (id) => { 
+    setActiveTab("all"); 
+    setActiveSubFilter("all"); 
+    const next = new URLSearchParams(searchParams); 
+    next.delete("tab"); 
+    setSearchParams(next, { replace: true }); 
+    setJumpMenuOpen(false); 
+    setTimeout(() => { 
+      const el = document.getElementById(id); 
+      if (el) { 
+        el.scrollIntoView({ behavior: "smooth", block: "start" }); 
+      } 
+    }, 50); 
+  }; 
+ 
+  const activeHubData = useMemo(() => { 
+    if (!isCategoryHubActive) return null; 
+    const raw = hubFeedsByCat[activeTab] || {}; 
+    const overviewFallback = 
+      activeTab === "manga" 
+        ? feeds.trendingManga 
+        : activeTab === "manhwa" 
+        ? feeds.trendingManhwa 
+        : activeTab === "manhua" 
+        ? feeds.trendingManhua 
+        : activeTab === "books" 
+        ? feeds.trendingBooks 
+        : (feeds.trendingNovels?.length > 0 ? feeds.trendingNovels : feeds.trendingBooks); 
+ 
+    return { 
+      trending: raw.trending?.length > 0 ? raw.trending : overviewFallback || [], 
+      masterpieces: raw.masterpieces || [], 
+      completed: raw.completed || [], 
+      darkFantasy: raw.darkFantasy || [], 
+      action: raw.action || [], 
+      psychological: raw.psychological || [], 
+    }; 
+  }, [activeTab, isCategoryHubActive, hubFeedsByCat, feeds]); 
+ 
+  return ( 
+    <div className="min-h-[calc(100vh-64px)] bg-[#000000] text-[#F5F5F5] flex flex-col justify-between pt-3 sm:pt-4 pb-24 select-none overflow-x-hidden w-full max-w-full"> 
+      <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-[120px]"> 
+        <div className="mb-8 w-full max-w-full overflow-hidden"> 
+          <HeroCoverflow items={spotlightPool} resetKey={activeTab} /> 
         </div>
 
         {/* ======================================================== */}
@@ -718,129 +769,164 @@ export function BooksDashboard() {
               </div>
             ) : (
               /* OVERVIEW DASHBOARD SHELVES (ALL LITERATURE OR FAN FAVORITES) */
-              <div className="space-y-8 pb-12">
-                {/* 1. MANHWA SHELF */}
-                {activeTab === "all" && (
-                  viewMode === "carousel" ? (
-                    <div id="section-manhwa" className="scroll-mt-24">
-                      <MediaCarousel
-                        title="Trending this week — Manhwa"
-                        items={feeds.trendingManhwa}
-                        isLoading={isLoadingFeeds}
-                        showTopScore={true}
-                      />
-                    </div>
-                  ) : (
-                    <ShelfGrid
-                      sectionId="section-manhwa"
-                      title="Trending this week — Manhwa"
-                      items={feeds.trendingManhwa}
-                      isLoading={isLoadingFeeds}
-                      onExplore={() => {
-                        setActiveTab("manhwa");
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    />
-                  )
-                )}
-
-                {/* 2. MANGA SHELF */}
-                {activeTab === "all" && (
-                  viewMode === "carousel" ? (
-                    <div id="section-manga" className="scroll-mt-24">
-                      <MediaCarousel
-                        title="Trending this week — Manga"
-                        items={feeds.trendingManga}
-                        isLoading={isLoadingFeeds}
-                        showTopScore={true}
-                      />
-                    </div>
-                  ) : (
-                    <ShelfGrid
-                      sectionId="section-manga"
-                      title="Trending this week — Manga"
-                      items={feeds.trendingManga}
-                      isLoading={isLoadingFeeds}
-                      onExplore={() => {
-                        setActiveTab("manga");
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    />
-                  )
-                )}
-
-                {/* 3. BOOKS & NOVELS SHELF */}
-                {activeTab === "all" && (
-                  viewMode === "carousel" ? (
-                    <div id="section-novels" className="scroll-mt-24">
-                      <MediaCarousel
-                        title="Trending this month — Novels & Books"
-                        items={feeds.trendingBooks}
-                        isLoading={isLoadingFeeds}
-                        showTopScore={true}
-                      />
-                    </div>
-                  ) : (
-                    <ShelfGrid
-                      sectionId="section-novels"
-                      title="Trending this month — Novels & Books"
-                      items={feeds.trendingBooks}
-                      isLoading={isLoadingFeeds}
-                      onExplore={() => {
-                        setActiveTab("novels");
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    />
-                  )
-                )}
-
-                {/* 4. MANHUA SHELF */}
-                {activeTab === "all" && (
-                  viewMode === "carousel" ? (
-                    <div id="section-manhua" className="scroll-mt-24">
-                      <MediaCarousel
-                        title="Trending this month — Manhua"
-                        items={feeds.trendingManhua}
-                        isLoading={isLoadingFeeds}
-                        showTopScore={true}
-                      />
-                    </div>
-                  ) : (
-                    <ShelfGrid
-                      sectionId="section-manhua"
-                      title="Trending this month — Manhua"
-                      items={feeds.trendingManhua}
-                      isLoading={isLoadingFeeds}
-                      onExplore={() => {
-                        setActiveTab("manhua");
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    />
-                  )
-                )}
-
-                {/* 5. FAN FAVORITES SHELF */}
-                {(activeTab === "all" || activeTab === "favorites") && (
-                  viewMode === "carousel" ? (
-                    <div id="section-favorites" className="scroll-mt-24">
-                      <MediaCarousel
-                        title="Fan Favorites — All Time"
-                        items={feeds.fanFavorites}
-                        isLoading={isLoadingFeeds}
-                        showRank={true}
-                        showTopScore={true}
-                      />
-                    </div>
-                  ) : (
-                    <ShelfGrid
-                      sectionId="section-favorites"
-                      title="Fan Favorites — All Time"
-                      items={feeds.fanFavorites}
-                      isLoading={isLoadingFeeds}
-                      showRank={true}
-                    />
-                  )
-                )}
+              <div className="space-y-8 pb-12"> 
+                {/* 1. MANGA SHELF */} 
+                {activeTab === "all" && ( 
+                  viewMode === "carousel" ? ( 
+                    <div id="section-manga" className="scroll-mt-24"> 
+                      <MediaCarousel 
+                        title="Trending this week — Manga" 
+                        items={feeds.trendingManga} 
+                        isLoading={isLoadingFeeds} 
+                        showTopScore={true} 
+                      /> 
+                    </div> 
+                  ) : ( 
+                    <ShelfGrid 
+                      sectionId="section-manga" 
+                      title="Trending this week — Manga" 
+                      items={feeds.trendingManga} 
+                      isLoading={isLoadingFeeds} 
+                      onExplore={() => { 
+                        setActiveTab("manga"); 
+                        setSearchParams({ tab: "manga" }, { replace: true }); 
+                        window.scrollTo({ top: 0, behavior: "smooth" }); 
+                      }} 
+                    /> 
+                  ) 
+                )} 
+ 
+                {/* 2. MANHWA SHELF */} 
+                {activeTab === "all" && ( 
+                  viewMode === "carousel" ? ( 
+                    <div id="section-manhwa" className="scroll-mt-24"> 
+                      <MediaCarousel 
+                        title="Trending this week — Manhwa" 
+                        items={feeds.trendingManhwa} 
+                        isLoading={isLoadingFeeds} 
+                        showTopScore={true} 
+                      /> 
+                    </div> 
+                  ) : ( 
+                    <ShelfGrid 
+                      sectionId="section-manhwa" 
+                      title="Trending this week — Manhwa" 
+                      items={feeds.trendingManhwa} 
+                      isLoading={isLoadingFeeds} 
+                      onExplore={() => { 
+                        setActiveTab("manhwa"); 
+                        setSearchParams({ tab: "manhwa" }, { replace: true }); 
+                        window.scrollTo({ top: 0, behavior: "smooth" }); 
+                      }} 
+                    /> 
+                  ) 
+                )} 
+ 
+                {/* 3. MANHUA SHELF */} 
+                {activeTab === "all" && ( 
+                  viewMode === "carousel" ? ( 
+                    <div id="section-manhua" className="scroll-mt-24"> 
+                      <MediaCarousel 
+                        title="Trending this month — Manhua" 
+                        items={feeds.trendingManhua} 
+                        isLoading={isLoadingFeeds} 
+                        showTopScore={true} 
+                      /> 
+                    </div> 
+                  ) : ( 
+                    <ShelfGrid 
+                      sectionId="section-manhua" 
+                      title="Trending this month — Manhua" 
+                      items={feeds.trendingManhua} 
+                      isLoading={isLoadingFeeds} 
+                      onExplore={() => { 
+                        setActiveTab("manhua"); 
+                        setSearchParams({ tab: "manhua" }, { replace: true }); 
+                        window.scrollTo({ top: 0, behavior: "smooth" }); 
+                      }} 
+                    /> 
+                  ) 
+                )} 
+ 
+                {/* 4. BOOKS SHELF */} 
+                {activeTab === "all" && ( 
+                  viewMode === "carousel" ? ( 
+                    <div id="section-books" className="scroll-mt-24"> 
+                      <MediaCarousel 
+                        title="Trending this month — Books & Nonfiction" 
+                        items={feeds.trendingBooks} 
+                        isLoading={isLoadingFeeds} 
+                        showTopScore={true} 
+                      /> 
+                    </div> 
+                  ) : ( 
+                    <ShelfGrid 
+                      sectionId="section-books" 
+                      title="Trending this month — Books & Nonfiction" 
+                      items={feeds.trendingBooks} 
+                      isLoading={isLoadingFeeds} 
+                      onExplore={() => { 
+                        setActiveTab("books"); 
+                        setSearchParams({ tab: "books" }, { replace: true }); 
+                        window.scrollTo({ top: 0, behavior: "smooth" }); 
+                      }} 
+                    /> 
+                  ) 
+                )} 
+ 
+                {/* 5. NOVELS SHELF */} 
+                {activeTab === "all" && ( 
+                  viewMode === "carousel" ? ( 
+                    <div id="section-novels" className="scroll-mt-24"> 
+                      <MediaCarousel 
+                        title="Trending this month — Novels & Fiction" 
+                        items={feeds.trendingNovels?.length > 0 ? feeds.trendingNovels : feeds.trendingBooks} 
+                        isLoading={isLoadingFeeds} 
+                        showTopScore={true} 
+                      /> 
+                    </div> 
+                  ) : ( 
+                    <ShelfGrid 
+                      sectionId="section-novels" 
+                      title="Trending this month — Novels & Fiction" 
+                      items={feeds.trendingNovels?.length > 0 ? feeds.trendingNovels : feeds.trendingBooks} 
+                      isLoading={isLoadingFeeds} 
+                      onExplore={() => { 
+                        setActiveTab("novels"); 
+                        setSearchParams({ tab: "novels" }, { replace: true }); 
+                        window.scrollTo({ top: 0, behavior: "smooth" }); 
+                      }} 
+                    /> 
+                  ) 
+                )} 
+ 
+                {/* 6. FAN FAVORITES SHELF */} 
+                {(activeTab === "all" || activeTab === "favorites") && ( 
+                  viewMode === "carousel" ? ( 
+                    <div id="section-favorites" className="scroll-mt-24"> 
+                      <MediaCarousel 
+                        title="Fan Favorites — All Time" 
+                        items={feeds.fanFavorites} 
+                        isLoading={isLoadingFeeds} 
+                        showRank={true} 
+                        showTopScore={true} 
+                      /> 
+                    </div> 
+                  ) : ( 
+                    <ShelfGrid 
+                      sectionId="section-favorites" 
+                      title="Fan Favorites — All Time" 
+                      items={feeds.fanFavorites} 
+                      isLoading={isLoadingFeeds} 
+                      showRank={true} 
+                      onExplore={() => { 
+                        setActiveTab("favorites"); 
+                        setSearchParams({ tab: "favorites" }, { replace: true }); 
+                        window.scrollTo({ top: 0, behavior: "smooth" }); 
+                      }} 
+                    /> 
+                  ) 
+                )} 
               </div>
             )}
           </div>

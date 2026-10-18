@@ -29,7 +29,6 @@ import { AiVerdictHero } from "../components/ui/AiVerdictHero";
 import { AiVerdictSkeleton } from "../components/ui/AiVerdictSkeleton"; 
 
 
-
 export function SeriesDetailsPage({
   initialTab = "Overview",
   initialCropHero = false,

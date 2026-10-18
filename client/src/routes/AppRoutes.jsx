@@ -1,5 +1,5 @@
 import React from "react"; 
-import { Routes, Route, Navigate } from "react-router-dom"; 
+import { Routes, Route, Navigate, useParams } from "react-router-dom"; 
 import { Layout } from "../components/layout/Layout"; 
 import { HomePage } from "../pages/HomePage"; 
 import { MovieDetailsPage } from "../pages/MovieDetailsPage"; 
@@ -16,7 +16,12 @@ import { SettingPage } from "../pages/SettingPage";
 import { LoginPage } from "../pages/LoginPage"; 
 import { AuthCallbackPage } from "../pages/AuthCallbackPage"; 
 import { RecommendationPage } from "../pages/RecommendationPage"; 
-
+ 
+function BooksCategoryRedirect() { 
+    const { category } = useParams(); 
+    return <Navigate to={category ? `/books?tab=${category}` : "/books"} replace />; 
+} 
+ 
 export function AppRoutes() { 
     return ( 
         <Routes> 
@@ -72,7 +77,7 @@ export function AppRoutes() {
 
                 {/* Books: Main Dashboard + Subcategories + Details */} 
                 <Route path="/books" element={<BooksDashboard />} /> 
-                <Route path="/books/:category" element={<Navigate to="/books" replace />} /> 
+                <Route path="/books/:category" element={<BooksCategoryRedirect />} /> 
                 <Route path="/books/:category/:id" element={<MovieDetailsPage initialTab="Cast" />} /> 
 
                 <Route path="/login" element={<LoginPage />} /> 

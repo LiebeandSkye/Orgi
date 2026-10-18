@@ -266,10 +266,8 @@ export function HomePage() {
               </BorderBeam> 
             </div> 
 
-            <OrgiPicksButton className="hidden sm:inline-flex" /> 
+            <OrgiPicksButton className="w-full max-w-[620px] sm:w-auto" /> 
           </div> 
-
-          <OrgiPicksButton className="sm:hidden mt-3 w-full max-w-[620px]" /> 
         </section>
 
         {/* ======================================================== */}
