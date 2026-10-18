@@ -38,6 +38,7 @@ export function RecommendationPage() {
     time: isSeries ? "episodes" : "90-120", 
     depth: "deep", 
     bookFormat: queryType || "all",
+    seriesFormat: "all",
     includeGenres: [], 
     excludedGenres: [], 
   }); 
@@ -101,6 +102,7 @@ export function RecommendationPage() {
         _storyDepth: answers.depth, 
         includeGenres: answers.includeGenres || [], 
         excludedGenres: answers.excludedGenres || [], 
+        seriesFormat: answers.seriesFormat || "all",
       }); 
 
       const elapsed = Date.now() - startTime; 

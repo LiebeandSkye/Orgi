@@ -113,6 +113,7 @@ export function buildTmdbDiscoverParams({
   timeBudget, 
   includeGenres = [], 
   excludedGenres = [], 
+  seriesFormat = "all",
 }) { 
   const isTv = medium === "series" || timeBudget === "episodes"; 
   const params = new URLSearchParams({ 
@@ -138,14 +139,35 @@ export function buildTmdbDiscoverParams({
     if (g === "Fantasy" || g === "14") genreIds.add(isTv ? "10765" : "14"); 
   }); 
 
-  if (genreIds.size > 0) { 
+  if (isTv) {
+    if (seriesFormat === "animation") {
+      const otherGenres = Array.from(genreIds).filter((id) => id !== "16").slice(0, 3);
+      if (otherGenres.length > 0) {
+        params.set("with_genres", `16,${otherGenres.join("|")}`);
+      } else {
+        params.set("with_genres", "16");
+      }
+    } else if (seriesFormat === "live_action") {
+      genreIds.delete("16");
+      if (genreIds.size > 0) {
+        params.set("with_genres", Array.from(genreIds).slice(0, 4).join("|"));
+      }
+      params.set("without_genres", "16");
+    } else if (genreIds.size > 0) {
+      params.set("with_genres", Array.from(genreIds).slice(0, 4).join("|"));
+    }
+  } else if (genreIds.size > 0) { 
     params.set("with_genres", Array.from(genreIds).slice(0, 4).join("|")); 
   } 
 
   if (excludedGenres.length > 0) { 
     const filteredExcludes = excludedGenres.filter((id) => !genreIds.has(id)); 
     if (filteredExcludes.length > 0) { 
-      params.set("without_genres", filteredExcludes.join(",")); 
+      const currentWithout = params.get("without_genres");
+      const combinedWithout = currentWithout
+        ? `${currentWithout},${filteredExcludes.join(",")}`
+        : filteredExcludes.join(",");
+      params.set("without_genres", combinedWithout); 
     } 
   } 
 
@@ -190,6 +212,7 @@ export async function fetchOrgiPicks({
   _storyDepth = "deep", 
   includeGenres = [], 
   excludedGenres = [], 
+  seriesFormat = "all",
 }) { 
   if (medium === "book") { 
     const rawPicks = subMedium === "novels"
@@ -207,6 +230,7 @@ export async function fetchOrgiPicks({
     timeBudget, 
     includeGenres, 
     excludedGenres, 
+    seriesFormat,
   }); 
 
   let results = [];
@@ -226,6 +250,13 @@ export async function fetchOrgiPicks({
       "vote_count.gte": isTvEndpoint ? "30" : "100",
       include_adult: "false", 
     }); 
+    if (isTvEndpoint) {
+      if (seriesFormat === "animation") {
+        fallbackParams.set("with_genres", "16");
+      } else if (seriesFormat === "live_action") {
+        fallbackParams.set("without_genres", "16");
+      }
+    }
     try {
       const fallbackRes = await fetch(`${TMDB_DIRECT_URL}${endpoint}?${fallbackParams.toString()}`); 
       if (fallbackRes.ok) { 
