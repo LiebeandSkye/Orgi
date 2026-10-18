@@ -539,7 +539,7 @@ export function BooksDashboard() {
         {/* ======================================================== */}
         {/* 2. CATEGORY TABS & CONTROLS (STICKY)                     */}
         {/* ======================================================== */}
-        <div className="sticky top-16 z-30 bg-black/80 backdrop-blur-xl border-b border-white/[0.05] py-3 -mx-6 px-6 lg:-mx-[120px] lg:px-[120px] mb-8">
+        <div className="sticky top-14 md:top-16 z-30 bg-black/80 backdrop-blur-xl border-b border-white/[0.05] py-3 -mx-6 px-6 lg:-mx-[120px] lg:px-[120px] mb-8">
           <div className="flex items-center justify-between gap-4">
             {/* Tabs */}
             <div className="min-w-0">

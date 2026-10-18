@@ -589,10 +589,10 @@ export function SeriesDetailsPage({
       {/* BELOW THE HERO: Minimal horizontal tab switcher */}
       <div
         ref={contentRef}
-        className="sticky top-16 z-30 bg-[#000000]/95 backdrop-blur-md border-b border-[#1C1C1C]"
+        className="sticky top-14 md:top-16 z-30 bg-[#000000]/95 backdrop-blur-md border-b border-[#1C1C1C]"
       >
-        <div className="max-w-[1440px] mx-auto px-6 lg:px-[120px] flex items-center justify-between">
-          <div className="flex items-center gap-8 h-12">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-[120px] flex items-center justify-between">
+          <div className="flex items-center gap-6 sm:gap-8 h-12 overflow-x-auto no-scrollbar">
             {["Overview", "Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
               const isActive = activeTab === tab;
               return (
@@ -600,7 +600,7 @@ export function SeriesDetailsPage({
                   key={tab}
                   type="button"
                   onClick={() => handleTabChange(tab)}
-                  className={`text-sm tracking-tight transition-colors relative h-full flex items-center cursor-pointer ${
+                  className={`text-sm tracking-tight transition-colors relative h-full flex items-center cursor-pointer whitespace-nowrap shrink-0 ${
                     isActive
                       ? "text-[#F5F5F5] font-medium"
                       : "text-[#7A7A7A] hover:text-[#B5B5B5]"

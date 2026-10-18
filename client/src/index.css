@@ -13,7 +13,7 @@
     --accent-mint: #61F1AC;
 
     /* Community Reviews / Feed Design Tokens */
-    --nav-h: 64px;
+    --nav-h: 56px;
     --feed-bg: #000000;
     --feed-surface: #0B0B0B;
     --feed-surface-hover: #141414;
@@ -23,6 +23,12 @@
     --feed-faint: #7A7A7A;
     --feed-accent: #61F1AC;
     --feed-accent-soft: rgba(97, 241, 172, 0.12);
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --nav-h: 64px;
+    }
   }
 
   body {

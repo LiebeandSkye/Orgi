@@ -294,24 +294,24 @@ export function HomePage() {
                     <span>Clear</span> 
                   </button> 
                 ) : ( 
-                  <kbd className="inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors"> 
-                    / 
-                  </kbd> 
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      to="/picks"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-[#61F1AC]/10 text-xs font-medium text-[#C5C5C5] hover:text-[#61F1AC] border border-white/[0.06] hover:border-[#61F1AC]/40 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(97,241,172,0.15)] group/picks"
+                      title="AI Recommendation Wizard"
+                    >
+                      <Sparkles size={13} className="text-[#61F1AC] group-hover/picks:rotate-12 group-hover/picks:scale-110 transition-transform duration-300 shrink-0" />
+                      <span className="hidden sm:inline">Pick for me</span>
+                      <span className="sm:hidden">Pick</span>
+                    </Link>
+                    <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-mono text-[#7A7A7A] bg-white/[0.04] border border-white/[0.06] rounded-full group-hover:text-[#F5F5F5] transition-colors"> 
+                      / 
+                    </kbd> 
+                  </div>
                 )} 
               </div> 
             </BorderBeam> 
           </div> 
-
-          {/* Centered "Pick for me" button below Search Bar */}
-          <div className="mt-5 flex justify-center">
-            <Link
-              to="/picks"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#121214] border border-white/10 hover:border-[#61F1AC]/60 hover:bg-[#16161A] text-[#E5E5E5] hover:text-white text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer shadow-sm hover:shadow-[0_0_20px_rgba(97,241,172,0.18)] group"
-            >
-              <Sparkles size={15} className="text-[#61F1AC] group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />
-              <span>Pick for me</span>
-            </Link>
-          </div>
         </section>
 
         {/* ======================================================== */}
