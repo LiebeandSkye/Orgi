@@ -6,6 +6,57 @@ import {
 } from "lucide-react";
 import { TimeCheckpointSlider } from "./TimeCheckpointSlider";
 
+/* ---------- Button animations (self-contained, no extra deps) ---------- */
+const BUTTON_ANIMATION_CSS = `
+  .btn-bounce {
+    transition:
+      transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1),
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.25s ease,
+      opacity 0.2s ease;
+  }
+  .btn-bounce:hover:not(:disabled) { transform: translateY(-2px) scale(1.03); }
+  .btn-bounce:active:not(:disabled) {
+    transform: scale(0.96);
+    transition-duration: 0.1s;
+  }
+
+  .btn-nudge { transition: color 0.2s ease; }
+
+  /* Small pop when something becomes selected */
+  @keyframes btn-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+  .btn-pop { animation: btn-pop 0.3s ease-out; }
+
+  .icon-back { transition: transform 0.25s ease; }
+  .btn-back:hover .icon-back { transform: translateX(-3px); }
+
+  @keyframes panel-in {
+    0%   { opacity: 0; transform: translateY(-6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .panel-in { animation: panel-in 0.25s ease-out; }
+
+  @keyframes check-in {
+    0%   { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+  .check-in { animation: check-in 0.25s cubic-bezier(0.34, 1.4, 0.64, 1); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-bounce, .btn-pop, .panel-in, .check-in {
+      animation: none !important;
+      transition-duration: 0.01ms !important;
+    }
+    .btn-bounce:hover { transform: none !important; }
+  }
+`;
+
 const MOVIE_VIBES_INITIAL = [
   { id: "Relaxed", label: "Relaxed", icon: Coffee },
   { id: "Exciting", label: "Exciting", icon: Zap },
@@ -167,6 +218,8 @@ export function StepMoodQuestions({
 
   return (
     <div className="max-w-2xl mx-auto py-6 px-4">
+      <style>{BUTTON_ANIMATION_CSS}</style>
+
       <h2 className="text-center text-3xl sm:text-4xl font-light tracking-tight text-[#F5F5F5] mb-10">
         What's your{" "}
         <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-[#61F1AC] to-[#A7F3D0]">
@@ -186,9 +239,9 @@ export function StepMoodQuestions({
                   key={v.id}
                   type="button"
                   onClick={() => onToggleVibe(v.id)}
-                  className={`px-5 py-3 rounded-full text-sm font-medium border flex items-center gap-2 transition-all cursor-pointer ${
+                  className={`btn-bounce px-5 py-3 rounded-full text-sm font-medium border flex items-center gap-2 cursor-pointer ${
                     active
-                      ? "bg-[#61F1AC] border-[#61F1AC] text-black shadow-[0_0_20px_rgba(97,241,172,0.25)]"
+                      ? "btn-pop bg-[#61F1AC] border-[#61F1AC] text-black shadow-[0_0_20px_rgba(97,241,172,0.25)]"
                       : "bg-[#0B0F13] border-[#1E262F] text-[#C5C5C5] hover:text-white hover:border-white/25"
                   }`}
                 >
@@ -203,7 +256,7 @@ export function StepMoodQuestions({
             <button
               type="button"
               onClick={() => setShowMoreVibes((p) => !p)}
-              className="text-sm text-[#7A7A7A] hover:text-[#61F1AC] transition-colors cursor-pointer"
+              className="btn-nudge text-sm text-[#7A7A7A] hover:text-[#61F1AC] cursor-pointer"
             >
               {showMoreVibes ? "Show less" : "More"}
             </button>
@@ -222,9 +275,9 @@ export function StepMoodQuestions({
                   key={opt.id}
                   type="button"
                   onClick={() => onSelectOption("social", opt.id)}
-                  className={`py-5 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer ${
+                  className={`btn-bounce py-5 rounded-2xl border flex flex-col items-center gap-2 cursor-pointer ${
                     active
-                      ? "bg-[#61F1AC]/15 border-[#61F1AC] text-[#61F1AC]"
+                      ? "btn-pop bg-[#61F1AC]/15 border-[#61F1AC] text-[#61F1AC]"
                       : "bg-[#0B0F13] border-[#1E262F] text-[#9CA3AF] hover:text-white hover:border-white/25"
                   }`}
                 >
@@ -261,9 +314,9 @@ export function StepMoodQuestions({
                   key={opt.id}
                   type="button"
                   onClick={() => onSelectOption("depth", opt.id)}
-                  className={`py-4 px-4 rounded-2xl border text-sm font-medium transition-all cursor-pointer ${
+                  className={`btn-bounce py-4 px-4 rounded-2xl border text-sm font-medium cursor-pointer ${
                     active
-                      ? "bg-[#61F1AC]/15 border-[#61F1AC] text-[#61F1AC]"
+                      ? "btn-pop bg-[#61F1AC]/15 border-[#61F1AC] text-[#61F1AC]"
                       : "bg-[#0B0F13] border-[#1E262F] text-[#C5C5C5] hover:text-white hover:border-white/25"
                   }`}
                 >
@@ -279,14 +332,17 @@ export function StepMoodQuestions({
           <button
             type="button"
             onClick={() => setFineTuneOpen((p) => !p)}
-            className="mx-auto flex items-center gap-2 text-sm text-[#7A7A7A] hover:text-[#C5C5C5] transition-colors cursor-pointer"
+            className="btn-nudge mx-auto flex items-center gap-2 text-sm text-[#7A7A7A] hover:text-[#C5C5C5] cursor-pointer"
           >
-            <ChevronDown size={16} className={`transition-transform duration-300 ${fineTuneOpen ? "rotate-180" : ""}`} />
+            <ChevronDown
+              size={16}
+              className={`transition-transform duration-300 ${fineTuneOpen ? "rotate-180" : ""}`}
+            />
             Fine-tune genres
           </button>
 
           {fineTuneOpen && (
-            <div className="mt-5 p-5 rounded-2xl bg-[#0B0F13] border border-[#1E262F] space-y-5">
+            <div className="panel-in mt-5 p-5 rounded-2xl bg-[#0B0F13] border border-[#1E262F] space-y-5">
               <div>
                 <div className="mb-3 text-sm font-medium text-[#F5F5F5]">Include</div>
                 <div className="flex flex-wrap gap-2">
@@ -297,13 +353,13 @@ export function StepMoodQuestions({
                         key={genre.id}
                         type="button"
                         onClick={() => handleToggleIncludeGenre(genre.id)}
-                        className={`px-4 py-2 rounded-full border text-sm flex items-center gap-1.5 transition-colors cursor-pointer ${
+                        className={`btn-bounce px-4 py-2 rounded-full border text-sm flex items-center gap-1.5 cursor-pointer ${
                           isChecked
-                            ? "bg-[#61F1AC] border-[#61F1AC] text-black font-medium"
+                            ? "btn-pop bg-[#61F1AC] border-[#61F1AC] text-black font-medium"
                             : "bg-black/40 border-[#1E262F] text-[#9CA3AF] hover:text-white"
                         }`}
                       >
-                        {isChecked && <Check size={14} className="stroke-[3]" />}
+                        {isChecked && <Check size={14} className="check-in stroke-[3]" />}
                         {genre.label}
                       </button>
                     );
@@ -321,9 +377,9 @@ export function StepMoodQuestions({
                         key={genre.id}
                         type="button"
                         onClick={() => handleToggleExcludeGenre(genre.id)}
-                        className={`px-4 py-2 rounded-full border text-sm transition-colors cursor-pointer ${
+                        className={`btn-bounce px-4 py-2 rounded-full border text-sm cursor-pointer ${
                           isChecked
-                            ? "bg-[#F87171]/15 border-[#F87171] text-[#F87171] font-medium"
+                            ? "btn-pop bg-[#F87171]/15 border-[#F87171] text-[#F87171] font-medium"
                             : "bg-black/40 border-[#1E262F] text-[#9CA3AF] hover:text-white"
                         }`}
                       >
@@ -342,9 +398,9 @@ export function StepMoodQuestions({
           <button
             type="button"
             onClick={onBack}
-            className="px-5 py-3 rounded-full text-sm font-medium text-[#9CA3AF] hover:text-white transition-colors cursor-pointer flex items-center gap-2"
+            className="btn-bounce btn-back px-5 py-3 rounded-full text-sm font-medium text-[#9CA3AF] hover:text-white cursor-pointer flex items-center gap-2"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={16} className="icon-back" />
             Back
           </button>
 
@@ -352,7 +408,7 @@ export function StepMoodQuestions({
             type="button"
             disabled={isLoading || answers.vibes.length === 0}
             onClick={onSubmit}
-            className="px-8 py-3.5 rounded-full bg-[#61F1AC] hover:bg-[#52deb0] text-black font-semibold text-sm flex items-center gap-2 shadow-xl shadow-[#61F1AC]/20 hover:shadow-[0_0_25px_rgba(97,241,172,0.35)] transition-all cursor-pointer disabled:opacity-50"
+            className={`btn-bounce px-8 py-3.5 rounded-full bg-[#61F1AC] hover:bg-[#52deb0] text-black font-semibold text-sm flex items-center gap-2 shadow-xl shadow-[#61F1AC]/20 hover:shadow-[0_0_25px_rgba(97,241,172,0.35)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <Sparkles size={16} />
             {isLoading ? "Finding..." : "Find my 3 picks"}

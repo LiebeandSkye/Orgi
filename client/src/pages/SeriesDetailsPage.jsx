@@ -22,6 +22,7 @@ import Trailer from "../components/ui/Trailer";
 import { CastCarousel } from "../components/ui/CastCarousel"; 
 import EpisodesSection from "../components/ui/EpisodesSection"; 
 import OverviewTab from "../components/ui/OverviewTab"; 
+import { DetailTabs } from "../components/ui/DetailTabs"; 
 import { useToast } from "../context/ToastContext"; 
 import { isGuestInCollection, toggleGuestCollection } from "../utils/guestCollection"; 
 import { fetchMediaVerdict } from "../services/mediaApi"; 
@@ -586,36 +587,14 @@ export function SeriesDetailsPage({
         )}
       </section>
       
-      {/* BELOW THE HERO: Minimal horizontal tab switcher */}
-      <div
+      {/* BELOW THE HERO: Responsive tab switcher (underline on desktop, tactile pills on mobile) */}
+      <DetailTabs
         ref={contentRef}
-        className="sticky top-14 md:top-16 z-30 bg-[#000000]/95 backdrop-blur-md border-b border-[#1C1C1C]"
-      >
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-[120px] flex items-center justify-between">
-          <div className="flex items-center gap-6 sm:gap-8 h-12 overflow-x-auto no-scrollbar">
-            {["Overview", "Episodes", "Cast", "Reviews", "Media", "Details"].map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => handleTabChange(tab)}
-                  className={`text-sm tracking-tight transition-colors relative h-full flex items-center cursor-pointer whitespace-nowrap shrink-0 ${
-                    isActive
-                      ? "text-[#F5F5F5] font-medium"
-                      : "text-[#7A7A7A] hover:text-[#B5B5B5]"
-                  }`}
-                >
-                  <span>{tab}</span>
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#61F1AC]" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+        tabs={["Overview", "Episodes", "Cast", "Reviews", "Media", "Details"]}
+        activeTab={activeTab}
+        onChange={handleTabChange}
+      />
+
       
       {/* TAB CONTENT */}
       <main className="max-w-[1440px] mx-auto px-6 lg:px-[120px] pt-12">
