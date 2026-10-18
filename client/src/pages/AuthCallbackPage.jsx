@@ -1,43 +1,54 @@
-import React, { useEffect, useState } from "react"; 
+import React, { useEffect, useState, useRef } from "react"; 
 import { useNavigate } from "react-router-dom"; 
 import { useAuth } from "../context/AuthContext"; 
 import { authApi } from "../feature/auth/services/authApi"; 
-
+ 
 export function AuthCallbackPage() { 
     const navigate = useNavigate(); 
     const { saveSession } = useAuth(); 
     const [error, setError] = useState(null); 
-
+    const processedRef = useRef(false); 
+ 
     useEffect(() => { 
+        if (processedRef.current) return; 
+ 
         const handleCallback = async () => { 
             try { 
                 const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash; 
                 const hashParams = new URLSearchParams(hash); 
                 const queryParams = new URLSearchParams(window.location.search); 
-
+ 
                 const errorMsg = hashParams.get("error_description") || queryParams.get("error_description"); 
                 if (errorMsg) throw new Error(decodeURIComponent(errorMsg).replace(/\+/g, " ")); 
-
+ 
                 const accessToken = hashParams.get("access_token"); 
                 const refreshToken = hashParams.get("refresh_token"); 
                 const code = queryParams.get("code"); 
-
+ 
                 if (!accessToken && !code) throw new Error("No authorization tokens received"); 
-
+ 
+                processedRef.current = true; 
+ 
+                const codeVerifier = sessionStorage.getItem("orgi_oauth_verifier"); 
+                sessionStorage.removeItem("orgi_oauth_verifier"); 
+ 
                 const res = await authApi.verifyOAuthSession({ 
                     access_token: accessToken, 
                     refresh_token: refreshToken, 
                     code, 
-                })
-
+                    code_verifier: codeVerifier || undefined, 
+                }); 
+ 
                 saveSession(res.data?.session || res.data); 
                 navigate("/", { replace: true }); 
-            }
-            catch (err) { setError(err.message) }
-        }
-
+            } 
+            catch (err) { 
+                setError(err.message); 
+            } 
+        }; 
+ 
         handleCallback(); 
-    }, [navigate, saveSession])
+    }, [navigate, saveSession]);
 
     return ( 
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-[#F5F5F5]"> 

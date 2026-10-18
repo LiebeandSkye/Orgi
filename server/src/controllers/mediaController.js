@@ -1,5 +1,6 @@
 import { getOrSetCache } from "../services/cacheService.js"; 
 import { generateMediaVerdict } from "../services/geminiService.js"; 
+import { supabase } from "../services/supabase.js"; 
 
 const MANGADEX_BASE = "https://api.mangadex.org";
 const MANGADEX_COVERS = "https://uploads.mangadex.org/covers";
@@ -1110,7 +1111,7 @@ export const mediaController = {
         year = "", 
         synopsis = "", 
       } = req.method === "POST" ? req.body : req.query; 
-
+ 
       if (!title) { 
         return res.json({ 
           success: false, 
@@ -1118,20 +1119,81 @@ export const mediaController = {
           message: "Title is required", 
         }); 
       } 
-
+ 
       const safeId = String(id || title).trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-"); 
-      const cacheKey = `ai:verdict:${provider.toLowerCase()}:${safeId}`; 
-
+      const normalizedProvider = String(provider || "tmdb").trim().toLowerCase(); 
+      const normalizedExternalId = String(id || safeId).trim(); 
+      const cacheKey = `ai:verdict:${normalizedProvider}:${safeId}`; 
+ 
       const data = await getOrSetCache(cacheKey, 30 * 24 * 3600, async () => { 
-        return await generateMediaVerdict({ 
+        if (supabase) { 
+          try { 
+            const { data: dbRow, error: dbErr } = await supabase 
+              .from("media_verdicts") 
+              .select("verdict") 
+              .eq("provider", normalizedProvider) 
+              .eq("external_id", normalizedExternalId) 
+              .maybeSingle(); 
+ 
+            if (!dbErr && dbRow?.verdict) { 
+              return dbRow.verdict; 
+            } 
+          } catch (lookupErr) { 
+            console.warn("[DB Verdict Lookup Warning]", lookupErr.message); 
+          } 
+        } 
+ 
+        const generated = await generateMediaVerdict({ 
           title, 
           type, 
           genres, 
           year, 
           synopsis, 
         }); 
+ 
+        if (supabase && generated && !generated.fallback) { 
+          try { 
+            await supabase 
+              .from("media_verdicts") 
+              .upsert( 
+                { 
+                  provider: normalizedProvider, 
+                  external_id: normalizedExternalId, 
+                  type: String(type || "movie").toLowerCase(), 
+                  title: String(title).trim(), 
+                  verdict: generated, 
+                  updated_at: new Date().toISOString(), 
+                }, 
+                { onConflict: "provider,external_id" } 
+              ); 
+          } catch (insertErr) { 
+            console.warn("[DB Verdict Save Warning]", insertErr.message); 
+          } 
+        } 
+ 
+        return generated; 
       }); 
-
+ 
+      if (supabase && data && !data.fallback) { 
+        Promise.resolve( 
+          supabase 
+            .from("media_verdicts") 
+            .upsert( 
+              { 
+                provider: normalizedProvider, 
+                external_id: normalizedExternalId, 
+                type: String(type || "movie").toLowerCase(), 
+                title: String(title).trim(), 
+                verdict: data, 
+                updated_at: new Date().toISOString(), 
+              }, 
+              { onConflict: "provider,external_id", ignoreDuplicates: true } 
+            ) 
+        ).catch((syncErr) => { 
+          console.warn("[DB Verdict Sync Warning]", syncErr.message); 
+        }); 
+      } 
+ 
       res.json({ success: true, data }); 
     } catch (err) { 
       console.warn("[Gemini AI Error]", err.message, err.details || ""); 

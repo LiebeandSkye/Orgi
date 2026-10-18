@@ -11,6 +11,8 @@ test("schema.sql defines unified reviews table and 3-status user_collections", (
   assert.match(sql, /score INTEGER CHECK \(score >= 1 AND score <= 10\)/); 
   assert.match(sql, /uq_user_item_top_review/); 
   assert.match(sql, /CHECK \(status IN \('plan', 'progress', 'completed'\)\)/); 
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS media_verdicts/); 
+  assert.match(sql, /uq_media_verdicts_target/); 
   assert.doesNotMatch(sql, /CREATE TABLE IF NOT EXISTS ratings/); 
   assert.doesNotMatch(sql, /CREATE TABLE IF NOT EXISTS comments/); 
 }); 
