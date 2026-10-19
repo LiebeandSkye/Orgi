@@ -1,4 +1,5 @@
 import express from "express"; 
+import crypto from "crypto"; 
 import { supabaseAdmin, createAuthClient } from "../services/supabase.js"; 
 import { helperGenerateRandomId } from "../services/functionHelper.js"; 
 import { requireAuth } from "../middlewares/authMiddleware.js"; 
@@ -96,57 +97,111 @@ router.get('/oauth/:provider', async(req, res, next) => {
         const allowedProviders = ['google', 'discord', 'github']; 
         if (!allowedProviders.includes(provider)) throw new Error('Unsupported provider'); 
         
+        const providerScopes = { 
+            google: 'openid email profile', 
+            discord: 'identify email', 
+            github: 'read:user user:email', 
+        }; 
+        
+        const providerQueryParams = { 
+            google: { access_type: 'offline', prompt: 'consent' }, 
+            discord: { prompt: 'consent' }, 
+            github: {}, 
+        }; 
+        
+        const codeVerifier = crypto.randomBytes(32).toString('base64url'); 
+        const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url'); 
+        
+        const allowedOrigins = [ 
+            'http://localhost:5173', 
+            'http://localhost:3000', 
+            'https://orgi-one.vercel.app', 
+        ]; 
+        const rawOrigin = req.query.origin || 
+            req.headers.origin || 
+            (req.headers.referer ? new URL(req.headers.referer).origin : null); 
+        const isAllowed = rawOrigin && ( 
+            allowedOrigins.includes(rawOrigin) || 
+            rawOrigin.endsWith('.vercel.app') 
+        ); 
+        const clientUrl = isAllowed ? rawOrigin : (process.env.CLIENT_URL || 'http://localhost:5173'); 
         const authClient = createAuthClient(); 
-        const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'; 
         const { data, error } = await authClient.auth.signInWithOAuth({ 
             provider, 
             options: { 
                 redirectTo: `${clientUrl}/auth/callback`, 
-            }
-        })
+                scopes: providerScopes[provider], 
+                queryParams: { 
+                    ...providerQueryParams[provider], 
+                    code_challenge: codeChallenge, 
+                    code_challenge_method: 's256', 
+                }, 
+            } 
+        }); 
         if (error) throw error; 
         
-        res.json({ success: true, url: data?.url }); 
-    }
-    catch (err) { next(err) }
-})
-
+        res.json({ success: true, url: data?.url, code_verifier: codeVerifier }); 
+    } 
+    catch (err) { next(err) } 
+}); 
+ 
 router.post('/oauth-session', async(req, res, next) => { 
     try { 
-        const { access_token, refresh_token, code } = req.body; 
+        const { access_token, refresh_token, code, code_verifier } = req.body; 
         let activeToken = access_token; 
         let activeRefreshToken = refresh_token; 
         let authUser = null; 
         
-        if (code) { 
-            const authClient = createAuthClient(); 
-            const { data, error } = await authClient.auth.exchangeCodeForSession(code); 
-            if (error) throw error; 
-            authUser = data.user; 
-            activeToken = data.session?.access_token; 
-            activeRefreshToken = data.session?.refresh_token; 
-        } else if (access_token) { 
+        if (access_token) { 
             const { data: { user }, error } = await supabaseAdmin.auth.getUser(access_token); 
             if (error) throw error; 
             authUser = user; 
             activeToken = access_token; 
             activeRefreshToken = refresh_token; 
+        } else if (code) { 
+            if (code_verifier) { 
+                const tokenResponse = await fetch(`${process.env.SUPABASE_URL}/auth/v1/token?grant_type=pkce`, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY, 
+                    }, 
+                    body: JSON.stringify({ 
+                        auth_code: code, 
+                        code_verifier, 
+                    }), 
+                }); 
+                const tokenData = await tokenResponse.json(); 
+                if (!tokenResponse.ok) { 
+                    throw new Error(tokenData.error_description || tokenData.msg || tokenData.message || 'Failed to exchange authorization code'); 
+                } 
+                authUser = tokenData.user; 
+                activeToken = tokenData.access_token; 
+                activeRefreshToken = tokenData.refresh_token; 
+            } else { 
+                const authClient = createAuthClient(); 
+                const { data, error } = await authClient.auth.exchangeCodeForSession(code); 
+                if (error) throw error; 
+                authUser = data.user; 
+                activeToken = data.session?.access_token; 
+                activeRefreshToken = data.session?.refresh_token; 
+            } 
         } else { 
             throw new Error('Authentication token or code required'); 
-        }
+        } 
         
         if (!authUser) throw new Error('User not found'); 
         
-        const { data: existingUser } = await supabaseAdmin
-            .from('users')
-            .select('*')
-            .eq('id', authUser.id)
+        const { data: existingUser } = await supabaseAdmin 
+            .from('users') 
+            .select('*') 
+            .eq('id', authUser.id) 
             .maybeSingle(); 
         
         let identityData = {}; 
         if (Array.isArray(authUser.identities)) { 
             for (const idn of authUser.identities) { 
-                if (idn && typeof idn.identity_data === "object" && idn.identity_data !== null) { 
+                if (idn && typeof idn.identity_data === 'object' && idn.identity_data !== null) { 
                     identityData = { ...identityData, ...idn.identity_data }; 
                 } 
             } 
@@ -156,7 +211,8 @@ router.post('/oauth-session', async(req, res, next) => {
             ...(authUser.raw_user_meta_data || {}), 
             ...(authUser.user_metadata || {}), 
         }; 
-        const userName = meta.custom_claims?.global_name || 
+        const userName = ( 
+            meta.custom_claims?.global_name || 
             meta.global_name || 
             meta.full_name || 
             meta.name || 
@@ -164,18 +220,25 @@ router.post('/oauth-session', async(req, res, next) => {
             meta.user_name || 
             meta.username || 
             meta.login || 
-            (authUser.email ? authUser.email.split("@")[0] : null) || 
-            ("Unnamed Orgi " + helperGenerateRandomId(4)); 
+            (authUser.email ? authUser.email.split('@')[0] : null) || 
+            ('Unnamed Orgi ' + helperGenerateRandomId(4)) 
+        ).trim(); 
         let profileUrl = meta.avatar_url || meta.picture || null; 
         if (!profileUrl && meta.avatar) { 
-            if (typeof meta.avatar === "string" && meta.avatar.startsWith("http")) { 
+            if (typeof meta.avatar === 'string' && meta.avatar.startsWith('http')) { 
                 profileUrl = meta.avatar; 
-            } else if (typeof meta.avatar === "string") { 
+            } else if (typeof meta.avatar === 'string') { 
                 const discordId = meta.provider_id || meta.id || meta.sub || authUser.id; 
                 profileUrl = `https://cdn.discordapp.com/avatars/${discordId}/${meta.avatar}.png`; 
             } 
         } 
-        const email = (authUser.email || meta.email) ? (authUser.email || meta.email).toLowerCase() : null; 
+        const email = ( 
+            authUser.email || 
+            meta.email || 
+            (Array.isArray(meta.emails) 
+                ? meta.emails.find((e) => e.primary || e.verified)?.email || meta.emails[0]?.email 
+                : null) 
+        )?.trim().toLowerCase() || null; 
         
         let profile = existingUser; 
         if (!existingUser) { 
@@ -201,10 +264,10 @@ router.post('/oauth-session', async(req, res, next) => {
             if (isDefaultOrEmptyName && userName && !userName.startsWith('Unnamed Orgi')) { 
                 updates.user_name = userName; 
             } 
-            if (!existingUser.profile_url && profileUrl) { 
+            if (profileUrl && existingUser.profile_url !== profileUrl) { 
                 updates.profile_url = profileUrl; 
             } 
-            if (!existingUser.email && email) { 
+            if (email && existingUser.email !== email) { 
                 updates.email = email; 
             } 
             updates.last_login_at = new Date().toISOString(); 
@@ -219,7 +282,7 @@ router.post('/oauth-session', async(req, res, next) => {
                     profile = updatedUser; 
                 } 
             } 
-        }
+        } 
         
         res.status(200).json({ 
             success: true, 
@@ -230,11 +293,11 @@ router.post('/oauth-session', async(req, res, next) => {
                     user: profile, 
                 }, 
                 user: profile, 
-            }
-        })
-    }
-    catch (err) { next(err) }
-})
+            } 
+        }); 
+    } 
+    catch (err) { next(err) } 
+});
 
 router.post('/refresh', async(req, res, next) => { 
     try { 

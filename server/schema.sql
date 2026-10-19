@@ -86,12 +86,28 @@ CREATE TABLE IF NOT EXISTS reports (
     resolved_at TIMESTAMPTZ 
 ); 
  
+CREATE TABLE IF NOT EXISTS media_verdicts ( 
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), 
+    provider TEXT NOT NULL, 
+    external_id TEXT NOT NULL, 
+    type TEXT NOT NULL DEFAULT 'movie', 
+    title TEXT NOT NULL, 
+    verdict JSONB NOT NULL, 
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
+    CONSTRAINT uq_media_verdicts_target UNIQUE (provider, external_id) 
+); 
+ 
+CREATE INDEX IF NOT EXISTS idx_media_verdicts_lookup 
+ON media_verdicts (provider, external_id); 
+ 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY; 
 ALTER TABLE items ENABLE ROW LEVEL SECURITY; 
 ALTER TABLE user_collections ENABLE ROW LEVEL SECURITY; 
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY; 
 ALTER TABLE review_likes ENABLE ROW LEVEL SECURITY; 
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY; 
+ALTER TABLE media_verdicts ENABLE ROW LEVEL SECURITY; 
  
 CREATE POLICY "Allow public read access to users" 
 ON users FOR SELECT 
@@ -177,19 +193,38 @@ USING (auth.uid() = reporter_id);
 CREATE POLICY "Allow reporters to delete own reports" 
 ON reports FOR DELETE 
 USING (auth.uid() = reporter_id); 
+ 
+CREATE POLICY "Allow public read access to media_verdicts" 
+ON media_verdicts FOR SELECT 
+USING (true); 
 
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS TRIGGER AS $$ 
 BEGIN 
-    INSERT INTO public.users (id, public_id, user_name, email, anonymous) 
+    INSERT INTO public.users (id, public_id, user_name, email, profile_url, anonymous) 
     VALUES ( 
         NEW.id, 
         UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 16)), 
-        COALESCE(NEW.raw_user_meta_data->>'user_name', 'Unnamed Orgi_' || SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 4)), 
+        COALESCE( 
+            NEW.raw_user_meta_data->>'user_name', 
+            NEW.raw_user_meta_data->>'global_name', 
+            NEW.raw_user_meta_data->>'full_name', 
+            NEW.raw_user_meta_data->>'name', 
+            NEW.raw_user_meta_data->>'preferred_username', 
+            SPLIT_PART(NEW.email, '@', 1), 
+            'Unnamed Orgi_' || SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 4) 
+        ), 
         NEW.email, 
+        COALESCE( 
+            NEW.raw_user_meta_data->>'avatar_url', 
+            NEW.raw_user_meta_data->>'picture' 
+        ), 
         COALESCE(NEW.is_anonymous, false) 
     ) 
-    ON CONFLICT (id) DO NOTHING; 
+    ON CONFLICT (id) DO UPDATE SET 
+        email = COALESCE(EXCLUDED.email, users.email), 
+        profile_url = COALESCE(EXCLUDED.profile_url, users.profile_url), 
+        last_login_at = NOW(); 
     RETURN NEW; 
 END; 
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public; 
