@@ -93,6 +93,20 @@ const BOOK_VIBES_EXTRA = [
   { id: "Cozy", label: "Comfort read", icon: Smile },
 ];
 
+const BOOK_FORMATS = [
+  { id: "all", label: "All" },
+  { id: "manga", label: "Manga" },
+  { id: "manhwa", label: "Manhwa" },
+  { id: "manhua", label: "Manhua" },
+  { id: "novels", label: "Novels" },
+];
+
+const SERIES_FORMATS = [
+  { id: "all", label: "All" },
+  { id: "live_action", label: "TV Shows" },
+  { id: "animation", label: "Animation" },
+];
+
 const MOVIE_SOCIAL = [
   { id: "justMe", label: "Just me", icon: User },
   { id: "partner", label: "Partner", icon: Heart },
@@ -189,6 +203,7 @@ export function StepMoodQuestions({
   const [fineTuneOpen, setFineTuneOpen] = useState(false);
 
   const isBook = medium === "book";
+  const isSeries = medium === "series";
   const initialVibes = isBook ? BOOK_VIBES_INITIAL : MOVIE_VIBES_INITIAL;
   const extraVibes = isBook ? BOOK_VIBES_EXTRA : MOVIE_VIBES_EXTRA;
   const allVibes = showMoreVibes ? [...initialVibes, ...extraVibes] : initialVibes;
@@ -228,6 +243,62 @@ export function StepMoodQuestions({
       </h2>
 
       <div className="flex flex-col gap-10">
+        {/* Book Format Selector */}
+        {isBook && (
+          <section className="text-center">
+            <div className="text-xs uppercase tracking-wider font-semibold text-[#7A7A7A] mb-3">
+              Format
+            </div>
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-2.5">
+              {BOOK_FORMATS.map((fmt) => {
+                const active = (answers.bookFormat || "all") === fmt.id;
+                return (
+                  <button
+                    key={fmt.id}
+                    type="button"
+                    onClick={() => onSelectOption("bookFormat", fmt.id)}
+                    className={`btn-bounce px-5 py-2 rounded-full text-xs sm:text-sm font-medium border cursor-pointer ${
+                      active
+                        ? "btn-pop bg-[#61F1AC] border-[#61F1AC] text-black font-semibold shadow-[0_0_20px_rgba(97,241,172,0.25)]"
+                        : "bg-[#0B0F13] border-[#1E262F] text-[#9CA3AF] hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    {fmt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Series Format Selector */}
+        {isSeries && (
+          <section className="text-center">
+            <div className="text-xs uppercase tracking-wider font-semibold text-[#7A7A7A] mb-3">
+              Format
+            </div>
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-2.5">
+              {SERIES_FORMATS.map((fmt) => {
+                const active = (answers.seriesFormat || "all") === fmt.id;
+                return (
+                  <button
+                    key={fmt.id}
+                    type="button"
+                    onClick={() => onSelectOption("seriesFormat", fmt.id)}
+                    className={`btn-bounce px-5 py-2 rounded-full text-xs sm:text-sm font-medium border cursor-pointer ${
+                      active
+                        ? "btn-pop bg-[#61F1AC] border-[#61F1AC] text-black font-semibold shadow-[0_0_20px_rgba(97,241,172,0.25)]"
+                        : "bg-[#0B0F13] border-[#1E262F] text-[#9CA3AF] hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    {fmt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Vibes */}
         <section>
           <div className="flex flex-wrap justify-center gap-3">

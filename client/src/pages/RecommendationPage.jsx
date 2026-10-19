@@ -20,10 +20,10 @@ export function RecommendationPage() {
   const queryMedium = searchParams.get("medium"); 
   const queryType = searchParams.get("type"); 
 
-  const initialMedium = queryMedium === "book" ? "book" : "movie"; 
+  const initialMedium = queryMedium === "book" ? "book" : queryMedium === "series" ? "series" : "movie"; 
   const isSeries = queryMedium === "series" || queryType === "series"; 
   const initialSubMedium = queryMedium === "book" 
-    ? (queryType || "manga") 
+    ? (queryType || "all") 
     : isSeries 
     ? "series" 
     : "movie"; 
@@ -37,6 +37,8 @@ export function RecommendationPage() {
     social: "justMe", 
     time: isSeries ? "episodes" : "90-120", 
     depth: "deep", 
+    bookFormat: queryType || "all",
+    seriesFormat: "all",
     includeGenres: [], 
     excludedGenres: [], 
   }); 
@@ -55,7 +57,7 @@ export function RecommendationPage() {
 
   const handleSelectMedium = (m) => { 
     setMedium(m); 
-    const nextSubMedium = m === "book" ? "manga" : m === "series" ? "series" : "movie";
+    const nextSubMedium = m === "book" ? (answers.bookFormat || "all") : m === "series" ? "series" : "movie";
     setSubMedium(nextSubMedium); 
     if (m === "series") {
       setAnswers((prev) => ({ ...prev, time: "episodes" }));
@@ -88,7 +90,9 @@ export function RecommendationPage() {
     setLoadingStepIndex(0); 
     const startTime = Date.now(); 
     try { 
-      const effectiveSubMedium = (answers.time === "episodes" || medium === "series") ? "series" : subMedium; 
+      const effectiveSubMedium = medium === "book"
+        ? (answers.bookFormat || "all")
+        : (answers.time === "episodes" || medium === "series") ? "series" : subMedium; 
       const results = await fetchOrgiPicks({ 
         medium: medium === "book" ? "book" : (medium === "series" ? "series" : "movie"), 
         subMedium: effectiveSubMedium, 
@@ -98,6 +102,7 @@ export function RecommendationPage() {
         _storyDepth: answers.depth, 
         includeGenres: answers.includeGenres || [], 
         excludedGenres: answers.excludedGenres || [], 
+        seriesFormat: answers.seriesFormat || "all",
       }); 
 
       const elapsed = Date.now() - startTime; 

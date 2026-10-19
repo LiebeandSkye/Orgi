@@ -146,84 +146,105 @@ export function StepPicksResults({
         </span>
       </h1>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
-        {picks.map((pick) => {
-          const isCollected = Boolean(collectionMap[pick.id]);
-          return (
-            <div
-              key={pick.id}
-              onClick={() => onSelectPick(pick)}
-              className="group cursor-pointer flex flex-col"
-            >
-              {/* Poster */}
-              <div className="relative aspect-[2/3] w-full rounded-3xl overflow-hidden bg-[#0B0F13] border border-[#1E262F] group-hover:border-[#61F1AC]/60 shadow-2xl group-hover:shadow-[0_0_40px_rgba(97,241,172,0.18)] transition-all duration-300">
-                <img
-                  src={pick.poster}
-                  alt={pick.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
+      {/* Cards or Empty State */}
+      {picks.length === 0 ? (
+        <div className="py-16 px-6 text-center max-w-md mx-auto rounded-3xl border border-dashed border-[#1E262F] bg-[#0B0F13]/60">
+          <p className="text-base text-[#F5F5F5] font-medium mb-2">
+            No exact match found for this filter combination.
+          </p>
+          <p className="text-xs text-[#7A7A7A] mb-6 font-light leading-relaxed">
+            Try loosening your vibe tags or choosing another format to discover recommendations.
+          </p>
+          <button
+            type="button"
+            onClick={onRefine}
+            className="px-6 py-2.5 rounded-full bg-[#61F1AC] hover:bg-[#52deb0] text-black font-semibold text-xs inline-flex items-center gap-2 cursor-pointer transition-all shadow-[0_0_20px_rgba(97,241,172,0.25)]"
+          >
+            <SlidersHorizontal size={14} />
+            <span>Adjust Preferences</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+          {picks.map((pick) => {
+            const isCollected = Boolean(collectionMap[pick.id]);
+            return (
+              <div
+                key={pick.id}
+                onClick={() => onSelectPick(pick)}
+                className="group cursor-pointer flex flex-col"
+              >
+                {/* Poster */}
+                <div className="relative aspect-[2/3] w-full rounded-3xl overflow-hidden bg-[#0B0F13] border border-[#1E262F] group-hover:border-[#61F1AC]/60 shadow-2xl group-hover:shadow-[0_0_40px_rgba(97,241,172,0.18)] transition-all duration-300">
+                  <img
+                    src={pick.poster}
+                    alt={pick.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
 
-                {/* Bookmark */}
-                <button
-                  type="button"
-                  aria-label={isCollected ? "Remove from collection" : "Save to collection"}
-                  onClick={(e) => handleToggleCollection(e, pick)}
-                  className={`absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md border transition-colors cursor-pointer ${
-                    isCollected
-                      ? "bg-[#61F1AC] text-black border-[#61F1AC]"
-                      : "bg-black/60 border-white/20 text-white hover:bg-black/80"
-                  }`}
-                >
-                  <Bookmark size={16} className={isCollected ? "fill-black" : ""} />
-                </button>
+                  {/* Bookmark */}
+                  <button
+                    type="button"
+                    aria-label={isCollected ? "Remove from collection" : "Save to collection"}
+                    onClick={(e) => handleToggleCollection(e, pick)}
+                    className={`absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md border transition-colors cursor-pointer ${
+                      isCollected
+                        ? "bg-[#61F1AC] text-black border-[#61F1AC]"
+                        : "bg-black/60 border-white/20 text-white hover:bg-black/80"
+                    }`}
+                  >
+                    <Bookmark size={16} className={isCollected ? "fill-black" : ""} />
+                  </button>
 
-                {/* Rating, one small chip */}
-                {pick.rating && (
-                  <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-xs font-semibold text-[#61F1AC]">
-                    <Star size={12} className="fill-[#61F1AC]" />
-                    {pick.rating}
-                  </div>
-                )}
+                  {/* Rating, one small chip */}
+                  {pick.rating && (
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-xs font-semibold text-[#61F1AC]">
+                      <Star size={12} className="fill-[#61F1AC]" />
+                      {pick.rating}
+                    </div>
+                  )}
+                </div>
+
+                {/* Title + year only */}
+                <div className="mt-4 px-1 text-center">
+                  <h3 className="text-lg font-semibold text-[#F5F5F5] truncate group-hover:text-[#61F1AC] transition-colors">
+                    {pick.title}
+                  </h3>
+                  {pick.year && <div className="text-sm text-[#7A7A7A] mt-0.5">{pick.year}</div>}
+                </div>
               </div>
-
-              {/* Title + year only */}
-              <div className="mt-4 px-1 text-center">
-                <h3 className="text-lg font-semibold text-[#F5F5F5] truncate group-hover:text-[#61F1AC] transition-colors">
-                  {pick.title}
-                </h3>
-                {pick.year && <div className="text-sm text-[#7A7A7A] mt-0.5">{pick.year}</div>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-12">
-        <button
-          type="button"
-          onClick={onRefine}
-          className="w-full sm:w-auto px-6 py-3 rounded-full border border-[#1E262F] bg-[#0B0F13] hover:border-[#61F1AC]/50 text-sm font-medium text-[#F5F5F5] flex items-center justify-center gap-2 transition-all cursor-pointer"
-        >
-          <SlidersHorizontal size={16} className="text-[#61F1AC]" />
-          Refine
-        </button>
+      {picks.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-12">
+          <button
+            type="button"
+            onClick={onRefine}
+            className="w-full sm:w-auto px-6 py-3 rounded-full border border-[#1E262F] bg-[#0B0F13] hover:border-[#61F1AC]/50 text-sm font-medium text-[#F5F5F5] flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <SlidersHorizontal size={16} className="text-[#61F1AC]" />
+            Refine
+          </button>
 
-        <button
-          type="button"
-          disabled={isSavingAll}
-          onClick={handleSaveAll}
-          className={`w-full sm:w-auto px-6 py-3 rounded-full border text-sm font-medium flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 ${
-            allSaved
-              ? "border-[#61F1AC]/50 bg-[#61F1AC]/15 text-[#61F1AC]"
-              : "border-[#1E262F] bg-[#0B0F13] hover:border-white/20 text-[#C5C5C5] hover:text-white"
-          }`}
-        >
-          {allSaved ? <Check size={16} className="stroke-[3]" /> : <Bookmark size={16} />}
-          {isSavingAll ? "Saving..." : allSaved ? "Saved" : "Save all"}
-        </button>
-      </div>
+          <button
+            type="button"
+            disabled={isSavingAll}
+            onClick={handleSaveAll}
+            className={`w-full sm:w-auto px-6 py-3 rounded-full border text-sm font-medium flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 ${
+              allSaved
+                ? "border-[#61F1AC]/50 bg-[#61F1AC]/15 text-[#61F1AC]"
+                : "border-[#1E262F] bg-[#0B0F13] hover:border-white/20 text-[#C5C5C5] hover:text-white"
+            }`}
+          >
+            {allSaved ? <Check size={16} className="stroke-[3]" /> : <Bookmark size={16} />}
+            {isSavingAll ? "Saving..." : allSaved ? "Saved" : "Save all"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
